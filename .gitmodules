@@ -1,0 +1,3 @@
+[submodule "submodules/rovers"]
+	path = submodules/rovers
+	url = git@github.com:gaurav-dixitv/rovers.git
