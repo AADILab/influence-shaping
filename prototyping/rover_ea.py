@@ -105,7 +105,9 @@ def evaluate(individual, num_steps, network: NeuralNetwork):
     """Load up a neural network with the weights from the individual
     Then set up a rover environment
     And run the rover environment for the specified steps
-    Give us the reward of the rover at the end (very sparse, high reward if the rover ends near the POI)
+    Give us the reward of the rover at the end (very sparse, 
+    high reward if the rover ends the episode near a POI)
+
     """
 
     # Set up network for the rover
@@ -117,17 +119,21 @@ def evaluate(individual, num_steps, network: NeuralNetwork):
     Discrete = thyme.spaces.Discrete
     agents = [rovers.Rover[Dense, Discrete](1.0, Dense(90))]
 
-    # Set up a POI. This sets the value of the POI to 1
-    pois = [rovers.POI[rovers.CountConstraint](1)]
+    # Set up the POIs. This sets the value of the POI to 1
+    poi_positions = [
+        [9.0, 9.0],
+        [5.0, 5.0],
+        [9.0, 1.0],
+        [1.0, 9.0]
+    ]
+    num_pois = len(poi_positions)
+    pois = [rovers.POI[rovers.CountConstraint](1) for _ in range(num_pois)]
 
     # I have to actually set up the coupling constraint here to override the default
     pois[0].m_constraint.count_constraint = 1
 
     agent_positions = [
         [1.0, 1.0]
-    ]
-    poi_positions = [
-        [1.0, 1.01]
     ]
 
     Env = rovers.Environment[rovers.CustomInit]
@@ -141,8 +147,13 @@ def evaluate(individual, num_steps, network: NeuralNetwork):
     #     print(state.transpose())
     # exit()
 
-    total_agent_reward = rewards[0]
+    # print("------------------------")
+
+    # reward_list = []
+
+    # total_agent_reward = rewards[0]
     for _ in range(num_steps):
+        # Compute the actions of all the rovers (in this case just one rover)
         actions = []
         for state in states:
             slist = str(state.transpose()).split(" ")
@@ -152,30 +163,23 @@ def evaluate(individual, num_steps, network: NeuralNetwork):
             action_arr = rover_nn.forward(state_arr)
             action = rovers.tensor(action_arr)
             actions.append(action)
-
+        # Step forward the environment with those actions
         states, rewards = env.step(actions)
-        total_agent_reward += rewards[0]
+        # Save the reward to the cumulative reward
+        # total_agent_reward += rewards[0]
 
-    # print("------------------------")
+        # reward_list.append(rewards[0])
+    
+    # if total_agent_reward > 4:
+    #     print("Anomaly: ", total_agent_reward, reward_list)
 
-    # print(env.rovers())
-    # print("Rover position:")
-    # for rover in env.rovers():
-    #     print(rover.position())
-    # print("POI Position")
-    # for poi in env.pois():
-    #     print(poi.position())
-    # print("rewards:")
-    # print(rewards, rewards[0])
-    # exit()
-
-    return total_agent_reward,
+    return rewards[0],
 
 # Register all of our operators for crossover, mutation, selection, and evaluation
 toolbox.register("crossover", tools.cxTwoPoint)
 toolbox.register("mutate", tools.mutGaussian, mu=0, sigma=1, indpb=0.1)
 toolbox.register("select", tools.selTournament, tournsize=3)
-toolbox.register("evaluate", evaluate, num_steps=0, network=toy_nn)
+toolbox.register("evaluate", evaluate, num_steps=30, network=toy_nn)
 
 def main():
     # Create our population with n=50 random individuals
@@ -184,7 +188,7 @@ def main():
     # Define variables for our overall EA
     CXPB = 0.5 # Cross over probability
     MUTPB = 0.2 # Mutation probability
-    NGEN = 0
+    NGEN = 100
 
     # Evaluate the entire population
     # Apply the evaluate function to each invididual in the population
@@ -198,7 +202,7 @@ def main():
         ind.fitness.values = fit
 
 
-    # Do the following loop for the specified number of generations
+    # Do the following loop for the specified number of genfied individuals have their fitness invalidated. The individuals are cloned so returned population is independent of the input erations
     for _ in tqdm(range(NGEN)):
         # Select the next generation individuals using the tournament
         # selection operator we specified earlier
