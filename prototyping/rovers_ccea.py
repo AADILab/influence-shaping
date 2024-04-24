@@ -1,3 +1,6 @@
+"""
+This is attempt #1 at setting up a CCEA with deap and the rovers library.
+"""
 from deap import base
 from deap import creator
 from deap import tools
@@ -27,10 +30,10 @@ class NeuralNetwork:
         self.num_weights = self.calculateNumWeights()
         # self.weights_shape = calculateWeightShape(self.weights)
         # self.total_weights = calculateWeightSize(self.weights)
-    
+
     def shape(self):
         return (self.num_inputs, self.num_hidden, self.num_outputs)
-    
+
     def initWeights(self) -> List[np.ndarray]:
         """Creates the numpy arrays for holding weights. Initialized to zeros """
         weights = []
@@ -52,9 +55,9 @@ class NeuralNetwork:
             # Activate the summations
             a = self.activation(f)
         return a
-    
+
     def setWeights(self, list_of_weights: List[float])->None:
-        """Take a list of weights and set the 
+        """Take a list of weights and set the
         neural network weights according to these weights"""
         # Check the size
         if len(list_of_weights) != self.num_weights:
@@ -89,7 +92,7 @@ toy_nn = NeuralNetwork(num_inputs=8, num_hidden=[10], num_outputs=2)
 IND_SIZE = toy_nn.num_weights
 SUBPOPULATION_SIZE=50
 NUM_AGENTS=2
-NUM_STEPS=1
+NUM_STEPS=20
 
 creator.create("FitnessMax", base.Fitness, weights=(1.0,))
 creator.create("Individual", list, fitness=creator.FitnessMax)
@@ -152,7 +155,7 @@ def evaluate(team, num_steps, network: NeuralNetwork):
 
     # env.set_rovers(agents)
     # env.set_pois(pois)
-    
+
     states, rewards = env.reset()
 
     for _ in range(num_steps):
@@ -193,7 +196,7 @@ def randomTeams(population):
     # Shuffle each subpopulation (this is an in-place operation)
     for subpop in population:
         random.shuffle(subpop)
-    
+
     # Start a list of teams
     teams = []
     # For each individual in a subpopulation
@@ -206,7 +209,7 @@ def randomTeams(population):
             team.append(subpop[i])
         # Save that team
         teams.append(team)
-    
+
     return teams
 
 toolbox.register("randomTeams", randomTeams)
@@ -234,7 +237,7 @@ def main():
         # Perform a binary tournament selection on each subpopulation
         offspring = toolbox.select(pop)
 
-        # Mutate all of the offspring 
+        # Mutate all of the offspring
         for subpop in offspring:
             for individual in subpop:
                 # then mutate this "mutant"
