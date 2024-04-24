@@ -85,11 +85,11 @@ class NeuralNetwork:
         return sum([w.size for w in self.weights])
 
 # Let's make a network so we can get the size figured out
-toy_nn = NeuralNetwork(num_inputs=8, num_hidden=[10,10], num_outputs=2)
+toy_nn = NeuralNetwork(num_inputs=8, num_hidden=[10], num_outputs=2)
 IND_SIZE = toy_nn.num_weights
 SUBPOPULATION_SIZE=50
-NUM_AGENTS = 4
-NUM_STEPS = 0
+NUM_AGENTS=2
+NUM_STEPS=1
 
 creator.create("FitnessMax", base.Fitness, weights=(1.0,))
 creator.create("Individual", list, fitness=creator.FitnessMax)
@@ -104,7 +104,7 @@ toolbox.register("population", tools.initRepeat, list, toolbox.subpopulation, n=
 
 # Create a multi-rover evaluation
 def evaluate(team, num_steps, network: NeuralNetwork):
-    """Load in the rovers
+    """Load in the rovers and evaluate them
 
     team: list of individuals (each individual is a list of weights)
     """
@@ -118,7 +118,8 @@ def evaluate(team, num_steps, network: NeuralNetwork):
     # Set up the rovers
     Dense = rovers.Lidar[rovers.Density]
     Discrete = thyme.spaces.Discrete
-    agents = [rovers.Rover[Dense, Discrete](1.0, Dense(90)) for _ in range(len(team))]
+    Difference = rovers.rewards.Difference
+    agents = [rovers.Rover[Dense, Discrete, Difference](1.0, Dense(90), Difference()) for _ in range(len(team))]
 
     # Set up POI positions
     poi_positions = [
@@ -130,25 +131,27 @@ def evaluate(team, num_steps, network: NeuralNetwork):
     # Save the number of POIS
     num_pois = len(poi_positions)
     # Create the POI objects, each with value of 1
-    pois = [rovers.POI[rovers.CountConstraint](1) for _ in range(num_pois)]
+    countConstraint = rovers.CountConstraint(1)
+    pois = [rovers.POI[rovers.CountConstraint](1,1,countConstraint) for _ in range(num_pois)]
+    # pois = [rovers.POI[rovers.CountConstraint](1) for _ in range(num_pois)]
     # Now set the coupling (count constraint) of each POI to 1
-    for poi in pois:
-        poi.m_constraint.count_constraint = 1
+    # for poi in pois:
+    #     poi.m_constraint.count_constraint = 1
 
     # Set up the agent positions
     agent_positions = [
-        [1.0, 1.0],
         [2.0, 2.0],
-        [2.0, 1.0],
-        [1.0, 2.0]
+        [4.0, 4.0],
+        # [2.0, 2.0],
+        # [2.0, 2.0]
     ]
 
     # Set up an environment with those rovers
     Env = rovers.Environment[rovers.CustomInit]
     env = Env(rovers.CustomInit(agent_positions, poi_positions), agents, pois)
 
-    env.set_rovers(agents)
-    env.set_pois(pois)
+    # env.set_rovers(agents)
+    # env.set_pois(pois)
     
     states, rewards = env.reset()
 
@@ -171,7 +174,7 @@ def evaluate(team, num_steps, network: NeuralNetwork):
     return tuple([(reward,) for reward in rewards])
 
 # Register all of our operators for mutation, selection, evaluation, team formation
-toolbox.register("mutate", tools.mutGaussian, mu=0, sigma=0.5, indpb=0.2)
+toolbox.register("mutate", tools.mutGaussian, mu=0, sigma=0.5, indpb=0.1)
 toolbox.register("selectSubPopulation", tools.selTournament, tournsize=2)
 toolbox.register("evaluate", evaluate, num_steps=NUM_STEPS, network=toy_nn)
 
@@ -209,11 +212,11 @@ def randomTeams(population):
 toolbox.register("randomTeams", randomTeams)
 
 def main():
-    # Create population, with subpopulation for each agent
+    # Create population, with subpopulation for each agentpack
     pop = toolbox.population()
 
-    # Define variables for our overall EA\
-    NGEN = 100
+    # Define variables for our overall EA
+    NGEN = 1000
 
     # Create random teams for evaluation
     teams = toolbox.randomTeams(pop)

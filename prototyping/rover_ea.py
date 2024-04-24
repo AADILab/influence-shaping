@@ -117,21 +117,24 @@ def evaluate(individual, num_steps, network: NeuralNetwork):
     # set up the rover
     Dense = rovers.Lidar[rovers.Density]
     Discrete = thyme.spaces.Discrete
-    agents = [rovers.Rover[Dense, Discrete](1.0, Dense(90))]
+    Global = rovers.rewards.Global
+    rover_obs_radius = 3.0
+    agents = [rovers.Rover[Dense, Discrete, Global](rover_obs_radius, Dense(90), Global())]
+    # agents = [rovers.Rover[Dense, Discrete](1.0, Dense(90))]
 
     # Set up the POIs. This sets the value of the POI to 1
     poi_positions = [
         [9.0, 9.0],
         [5.0, 5.0],
         [9.0, 1.0],
-        [1.0, 9.0]
+        [5.0, 1.0]
     ]
     num_pois = len(poi_positions)
-    pois = [rovers.POI[rovers.CountConstraint](1) for _ in range(num_pois)]
-
-    # I have to actually set up the coupling constraint here to override the default
-    pois[0].m_constraint.count_constraint = 1
-
+    # Create the POI objects, each with value of 1
+    countConstraint = rovers.CountConstraint(1)
+    poi_value = 1.0
+    poi_obs_radius = 3.0
+    pois = [rovers.POI[rovers.CountConstraint](poi_value,poi_obs_radius,countConstraint) for _ in range(num_pois)]
     agent_positions = [
         [1.0, 1.0]
     ]
@@ -139,19 +142,9 @@ def evaluate(individual, num_steps, network: NeuralNetwork):
     Env = rovers.Environment[rovers.CustomInit]
     env = Env(rovers.CustomInit(agent_positions, poi_positions), agents, pois)
 
-    env.set_rovers(agents)
-    env.set_pois(pois)
-    
     states, rewards = env.reset()
-    # for state in states:
-    #     print(state.transpose())
-    # exit()
 
-    # print("------------------------")
-
-    # reward_list = []
-
-    # total_agent_reward = rewards[0]
+    total_agent_reward = rewards[0]
     for _ in range(num_steps):
         # Compute the actions of all the rovers (in this case just one rover)
         actions = []
@@ -166,20 +159,17 @@ def evaluate(individual, num_steps, network: NeuralNetwork):
         # Step forward the environment with those actions
         states, rewards = env.step(actions)
         # Save the reward to the cumulative reward
-        # total_agent_reward += rewards[0]
+        total_agent_reward += rewards[0]
 
-        # reward_list.append(rewards[0])
-    
     # if total_agent_reward > 4:
     #     print("Anomaly: ", total_agent_reward, reward_list)
-
-    return rewards[0],
+    return total_agent_reward,
 
 # Register all of our operators for crossover, mutation, selection, and evaluation
 toolbox.register("crossover", tools.cxTwoPoint)
 toolbox.register("mutate", tools.mutGaussian, mu=0, sigma=1, indpb=0.1)
 toolbox.register("select", tools.selTournament, tournsize=3)
-toolbox.register("evaluate", evaluate, num_steps=30, network=toy_nn)
+toolbox.register("evaluate", evaluate, num_steps=100, network=toy_nn)
 
 def main():
     # Create our population with n=50 random individuals
@@ -188,7 +178,7 @@ def main():
     # Define variables for our overall EA
     CXPB = 0.5 # Cross over probability
     MUTPB = 0.2 # Mutation probability
-    NGEN = 100
+    NGEN = 1000
 
     # Evaluate the entire population
     # Apply the evaluate function to each invididual in the population
