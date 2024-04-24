@@ -1,3 +1,7 @@
+"""
+This is a minimal (as possible) example of using an EA from deap on the rover domain. One rover navigating to POIs.
+I followed the deap tutorial here: https://deap.readthedocs.io/en/master/tutorials/basic/part2.html
+"""
 from deap import base
 from deap import creator
 from deap import tools
@@ -31,10 +35,10 @@ class NeuralNetwork:
         self.num_weights = self.calculateNumWeights()
         # self.weights_shape = calculateWeightShape(self.weights)
         # self.total_weights = calculateWeightSize(self.weights)
-    
+
     def shape(self):
         return (self.num_inputs, self.num_hidden, self.num_outputs)
-    
+
     def initWeights(self) -> List[np.ndarray]:
         """Creates the numpy arrays for holding weights. Initialized to zeros """
         weights = []
@@ -56,9 +60,9 @@ class NeuralNetwork:
             # Activate the summations
             a = self.activation(f)
         return a
-    
+
     def setWeights(self, list_of_weights: List[float])->None:
-        """Take a list of weights and set the 
+        """Take a list of weights and set the
         neural network weights according to these weights"""
         # Check the size
         if len(list_of_weights) != self.num_weights:
@@ -89,7 +93,7 @@ class NeuralNetwork:
         return sum([w.size for w in self.weights])
 
 # Let's make a network so we can get the size figured out
-toy_nn = NeuralNetwork(num_inputs=8, num_hidden=[10,10], num_outputs=2)
+toy_nn = NeuralNetwork(num_inputs=8, num_hidden=[10], num_outputs=2)
 IND_SIZE = toy_nn.num_weights
 
 creator.create("FitnessMax", base.Fitness, weights=(1.0,))
@@ -105,7 +109,7 @@ def evaluate(individual, num_steps, network: NeuralNetwork):
     """Load up a neural network with the weights from the individual
     Then set up a rover environment
     And run the rover environment for the specified steps
-    Give us the reward of the rover at the end (very sparse, 
+    Give us the reward of the rover at the end (very sparse,
     high reward if the rover ends the episode near a POI)
 
     """
@@ -174,7 +178,7 @@ toolbox.register("evaluate", evaluate, num_steps=100, network=toy_nn)
 def main():
     # Create our population with n=50 random individuals
     pop = toolbox.population(n=50)
-    
+
     # Define variables for our overall EA
     CXPB = 0.5 # Cross over probability
     MUTPB = 0.2 # Mutation probability
@@ -198,7 +202,7 @@ def main():
         # selection operator we specified earlier
         offspring = toolbox.select(pop, len(pop))
 
-        # Clone the selected individuals 
+        # Clone the selected individuals
         # (Make 1:1 copies so we don't accidentally overwrite any
         # data while we are still using that data)
         offspring = list(map(toolbox.clone, offspring))
@@ -214,7 +218,7 @@ def main():
             if random.random() < CXPB:
                 # Perform crossover on these offspring
                 toolbox.crossover(child1, child2)
-                # Delete their fitnesses because they 
+                # Delete their fitnesses because they
                 # now have new parameters
                 del child1.fitness.values
                 del child2.fitness.values
@@ -239,7 +243,7 @@ def main():
         # Now let's assign each fitness to the individual that fitness is for
         for ind, fit in zip(invalid_ind, fitnesses):
             ind.fitness.values = fit
-        
+
         # The population is entirely replaced by the offspring
         # (pop may have some additional class methods and attributes that we
         # don't want to get rid of, which is why I think we use [:] to make
