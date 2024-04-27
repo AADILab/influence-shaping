@@ -11,6 +11,8 @@ Create a shared library with make and link to it for production.
 import cppyy
 import os
 
+# os.environ["EXTRA_CLING_ARGS"] = "-g"
+
 try:
     current_dir = os.path.dirname(__file__)
 except NameError:
@@ -40,3 +42,6 @@ eigen = cppyy.gbl.Eigen
 
 # cppyy.set_debug()
 
+# This will give us a python traceback for C++ segfaults
+# import cppyy.ll
+# cppyy.ll.set_signals_as_exception(True)

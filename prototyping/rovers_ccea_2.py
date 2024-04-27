@@ -1,5 +1,9 @@
 """
-This is attempt #1 at setting up a CCEA with deap and the rovers library.
+This is attempt #2 at setting up a CCEA with deap and the rovers library.
+
+I noticed the performance was better with the EA when I used the selection and crossover
+in rover_ea.py. So I want to do something similar here but on the basis of teams of agents.
+The idea is to take what worked in rovers_ea.py and adapt it for a team of rovers.
 """
 from deap import base
 from deap import creator
@@ -28,8 +32,6 @@ class NeuralNetwork:
         self.weights = self.initWeights()
         # Store shape and size for later
         self.num_weights = self.calculateNumWeights()
-        # self.weights_shape = calculateWeightShape(self.weights)
-        # self.total_weights = calculateWeightSize(self.weights)
 
     def shape(self):
         return (self.num_inputs, self.num_hidden, self.num_outputs)
@@ -203,9 +205,10 @@ def evaluate(team, num_steps, network: NeuralNetwork):
     # Each index corresponds to an agent's rewards
     return tuple([(total_reward,) for total_reward in total_agent_rewards])
 
-# Register all of our operators for mutation, selection, evaluation, team formation
-toolbox.register("mutate", tools.mutGaussian, mu=0, sigma=0.5, indpb=0.1)
-toolbox.register("selectSubPopulation", tools.selTournament, tournsize=2)
+# Register all of our operators for crossover, mutation, selection, evaluation, team formation
+toolbox.register("crossover", tools.cxTwoPoint)
+toolbox.register("mutate", tools.mutGaussian, mu=0, sigma=1, indpb=0.1)
+toolbox.register("selectSubPopulation", tools.selTournament, tournsize=3)
 toolbox.register("evaluate", evaluate, num_steps=NUM_STEPS, network=toy_nn)
 
 def select(population):
@@ -219,15 +222,23 @@ def select(population):
 
 toolbox.register("select", select)
 
-def randomTeams(population):
-    # Shuffle each subpopulation (this is an in-place operation)
+def shuffle(population):
     for subpop in population:
         random.shuffle(subpop)
 
+toolbox.register("shuffle", shuffle)
+
+def formTeams(population, inds=None):
     # Start a list of teams
     teams = []
+
+    if inds is None:
+        team_inds = range(SUBPOPULATION_SIZE)
+    else:
+        team_inds = inds
+
     # For each individual in a subpopulation
-    for i in range(len(subpop)):
+    for i in team_inds:
         # Make a team
         team = []
         # For each subpopulation in the population
@@ -239,17 +250,22 @@ def randomTeams(population):
 
     return teams
 
-toolbox.register("randomTeams", randomTeams)
+toolbox.register("formTeams", formTeams)
 
 def main():
     # Create population, with subpopulation for each agentpack
     pop = toolbox.population()
 
     # Define variables for our overall EA
+    CXPB = 0.5 # Cross over probability
+    MUTPB = 0.2 # Mutation probability
     NGEN = 1000
 
-    # Create random teams for evaluation
-    teams = toolbox.randomTeams(pop)
+    # Shuffle each subpopulation
+    toolbox.shuffle(pop)
+
+    # Form teams
+    teams = toolbox.formTeams(pop)
 
     # Evaluate each team
     team_fitnesses = map(toolbox.evaluate, teams)
@@ -261,20 +277,38 @@ def main():
 
     # For each generation
     for _ in tqdm(range(NGEN)):
-        # Perform a binary tournament selection on each subpopulation
+        # Perform a 3-agent tournament selection on each subpopulation
         offspring = toolbox.select(pop)
 
-        # Mutate all of the offspring
-        for subpop in offspring:
-            for individual in subpop:
-                # then mutate this "mutant"
-                toolbox.mutate(individual)
-                # And delete its fitness values because this mutant
-                # has different parameters now
-                del individual.fitness.values
+        # Shuffle the subpopulations
+        toolbox.shuffle(pop)
 
-        # Create random teams for evaluation
-        teams = toolbox.randomTeams(pop)
+        # Make deepcopies so we don't accidentally overwrite anything
+        offspring = list(map(toolbox.clone, offspring))
+
+        # Track which fitnesses are going to be invalid
+        invalid_ind = []
+
+        # Crossover
+        for num_individual in range(int(SUBPOPULATION_SIZE/2)):
+            if random.random() < CXPB:
+                invalid_ind.append(num_individual*2)
+                invalid_ind.append(num_individual*2+1)
+                for subpop in pop:
+                    toolbox.crossover(subpop[num_individual*2], subpop[num_individual*2+1])
+                    del subpop[num_individual*2].fitness.values
+                    del subpop[num_individual*2+1].fitness.values
+
+        # Mutation
+        for num_individual in range(SUBPOPULATION_SIZE):
+            if random.random() < MUTPB:
+                invalid_ind.append(num_individual)
+                for subpop in pop:
+                    toolbox.mutate(subpop[num_individual])
+                    del subpop[num_individual].fitness.values
+
+        # Create teams of individuals with invalid fitnesses
+        teams = formTeams(pop, inds=invalid_ind)
 
         # Evaluate each team
         team_fitnesses = map(toolbox.evaluate, teams)
