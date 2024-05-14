@@ -80,3 +80,7 @@ thyme.creator.user
 thyme.cxxflags
 thyme.files
 thyme.includes
+
+# Random folders
+debugging/
+env_backup/

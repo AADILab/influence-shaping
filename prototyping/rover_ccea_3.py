@@ -1,10 +1,14 @@
 """
-This is attempt #2 at setting up a CCEA with deap and the rovers library.
+The rovers are learning now and I think it's time to experiment with different types of agents.
 
-I noticed the performance was better with the EA when I used the selection and crossover
-in rover_ea.py. So I want to do something similar here but on the basis of teams of agents.
-The idea is to take what worked in rovers_ea.py and adapt it for a team of rovers.
+More specifically, I want to have a rover-type with a small observation radius that is capable of observing POIs
+to get a higher team reward. And then a UAV type that has a large observation radius, but cannot "observe" POIs
+in service of the team reward
+
+Maybe rather than "observe" POIs, the agents are "capturing" POIs. Both agents can see the POIs, but only one
+has the capability to capture POIs
 """
+
 from deap import base
 from deap import creator
 from deap import tools
@@ -108,11 +112,14 @@ toolbox.register("subpopulation", tools.initRepeat, list, toolbox.individual, n=
 toolbox.register("population", tools.initRepeat, list, toolbox.subpopulation, n=NUM_AGENTS)
 
 # Create a multi-rover evaluation
+# This rover evaluation will have UAVs and rovers. And only rovers can observe POIs
 def evaluate(team, num_steps, network: NeuralNetwork):
     """Load in the rovers and evaluate them
 
     team: list of individuals (each individual is a list of weights)
     """
+    # Let's do 2 rovers and 2 UAVs
+    # Initializing the networks is the same
 
     # Create a neural network for each rover
     rover_nns = [deepcopy(network) for _ in range(len(team))]
@@ -120,12 +127,23 @@ def evaluate(team, num_steps, network: NeuralNetwork):
     for rover_nn, individual in zip(rover_nns, team):
         rover_nn.setWeights(individual)
 
-    # Set up the rovers
+    # Set up the rovers and uavs
     Dense = rovers.Lidar[rovers.Density]
     Discrete = thyme.spaces.Discrete
     Difference = rovers.rewards.Difference
-    rover_obs_radius = 3.0
-    agents = [rovers.Rover[Dense, Discrete, Difference](rover_obs_radius, Dense(90), Difference()) for _ in range(len(team))]
+    rover_obs_radius = 1.0
+    uav_obs_radius = 100.0
+    num_rovers = 2
+    num_uavs = 2
+
+    agents = []
+    for i in range(num_rovers):
+        agents.append( rovers.Rover[Dense, Discrete, Difference](rover_obs_radius, Dense(90), Difference()) )
+        # We'll see if I can just set the type like this
+        agents[i].type = "rover"
+    for i in range(num_uavs):
+        agents.append( rovers.Rover[Dense, Discrete, Difference](uav_obs_radius, Dense(30), Difference()) )
+        agents[num_rovers+i] = "uav"
 
     # Set up POI positions
     poi_positions = [
@@ -149,9 +167,9 @@ def evaluate(team, num_steps, network: NeuralNetwork):
     # Set up the agent positions
     agent_positions = [
         [1.0, 1.0],
+        [9.0, 1.0],
         [1.0, 1.0],
-        # [2.0, 2.0],
-        # [2.0, 2.0]
+        [9.0, 1.0]
     ]
 
     # Set up an environment with those rovers
