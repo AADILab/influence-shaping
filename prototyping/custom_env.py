@@ -1,5 +1,6 @@
 from librovers import rovers, thyme
 import numpy as np
+import cppyy
 
 def calculateDistance(position_0, position_1):
     return np.linalg.norm([position_0.x-position_1.x, position_0.y-position_1.y])
@@ -52,15 +53,20 @@ class SmartLidar(rovers.Lidar[rovers.Density]):
         print("Observe Agents")
         # Observe agents
         for i in range(agent_pack.agents.size()):
+            print("Sensing agent")
             # Do not observe yourself
             if i == agent_pack.agent_index:
+                print("Nope, that one is me")
                 continue
             # Get angle and distance to sensed agent
             sensed_agent = agent_pack.agents[i]
             angle = calculateAngle(agent.position(), sensed_agent.position())
             distance = calculateDistance(agent.position(), sensed_agent.position())
+            print("angle: ", angle)
+            print("distance: ", distance)
             # Skip the agent if the sensed agent is out of range
-            if distance < agent.obs_radius():
+            if distance > agent.obs_radius():
+                print("continue, out of range")
                 continue
             # Get the bin for this agent
             if angle < 360.0:
@@ -73,26 +79,45 @@ class SmartLidar(rovers.Lidar[rovers.Density]):
             elif self.agent_types[i] == "uav":
                 uav_values[sector].append(1.0 / max([0.001, distance**2]))
 
+        print("rover_values: ", rover_values)
+        print("uav_values: ", uav_values)
+        print("poi_values: ", poi_values)
+
         # Encode the state
         print("Encoding state")
         state = np.array([-1.0 for _ in range(num_sectors*3)])
+        print("state: ", state)
         for i in range(num_sectors):
+            print("Building sector ", i)
             num_rovers = len(rover_values[i])
             num_uavs = len(uav_values[i])
             num_pois = len(poi_values[i])
 
             if num_rovers > 0:
+                print("num_rovers > 0")
+                print("rover_values["+str(i)+"]: ", rover_values[i], type(rover_values[i]), type(rover_values[i][0]))
+                print("num_rovers: ", type(num_rovers))
                 state[i] = self.m_composition.compose(rover_values[i], 0.0, num_rovers)
             if num_uavs > 0:
+                print("num_uavs > 0")
+                print("uav_values["+str(i)+"]: ", uav_values[i], type(uav_values[i]), type(uav_values[i][0]))
+                print("num_uavs: ", type(num_uavs))
                 state[num_sectors + i] = self.m_composition.compose(uav_values[i], 0.0, num_uavs)
             if num_pois > 0:
-                state[num_sectors*2 + i] = self.m_composition.compose(poi_values[i], 0.0, num_pois)
+                print("num_pois > 0")
+                print("poi_values["+str(i)+"]: ", poi_values[i], type(poi_values[i]), type(poi_values[i][0]))
+                print("num_pois: ", type(num_pois))
+                # Convert poi_values[i] to a std::vector<double> to satisfy cppyy
+                # Not sure why this is necessary for poi_values but not rover_values or uav_values
+                cpp_vector = cppyy.gbl.std.vector[cppyy.gbl.double]()
+                for p in poi_values[i]:
+                    cpp_vector.push_back(p)
+                state[num_sectors*2 + i] = self.m_composition.compose(cpp_vector, 0.0, num_pois)
 
         return rovers.tensor(state)
 
 # First we're going to create a simple rover
 def createRover(obs_radius, reward_type = "Global"):
-    # Dense = SmartLidar
     Discrete = thyme.spaces.Discrete
     if reward_type == "Global":
         Reward = rovers.rewards.Global
@@ -104,13 +129,12 @@ def createRover(obs_radius, reward_type = "Global"):
 
 # Now create a UAV
 def createUAV(obs_radius, reward_type = "Global"):
-    Dense = rovers.Lidar[rovers.Density]
     Discrete = thyme.spaces.Discrete
     if reward_type == "Global":
         Reward = rovers.rewards.Global
     elif reward_type == "Difference":
         Reward = rovers.rewards.Difference
-    uav = rovers.Rover[Dense, Discrete, Reward](obs_radius, Dense(30), Reward())
+    uav = rovers.Rover[SmartLidar, Discrete, Reward](obs_radius, SmartLidar(resolution=30, composition_policy=rovers.Density(), agent_types=["rover", "rover", "uav", "uav"]), Reward())
     uav.type = "uav"
     return uav
 
@@ -148,22 +172,22 @@ def createPOI(value, obs_rad, coupling, is_rover_list):
 def main():
     Env = rovers.Environment[rovers.CustomInit]
     agent_positions = [
-        [9. , 9.],
-        [1. , 1.],
-        [1. , 1.],
-        [9. , 9.]
+        [5. , 5.],
+        [3. , 3.],
+        # [1. , 1.],
+        # [9. , 9.]
     ]
     poi_positions = [
         [1. , 9.],
         [9. , 9.]
     ]
-    rover_obs_rad = 1.
+    rover_obs_rad = 100.
     uav_obs_rad = 100.
     agents = [
         createRover(rover_obs_rad, reward_type = "Difference"),
         createRover(rover_obs_rad, reward_type = "Difference"),
-        createUAV(uav_obs_rad, reward_type = "Difference"),
-        createUAV(uav_obs_rad, reward_type = "Difference")
+        # createUAV(uav_obs_rad, reward_type = "Difference"),
+        # createUAV(uav_obs_rad, reward_type = "Difference")
     ]
     pois = [
         createRoverPOI(value=1. , obs_rad=1. , coupling=1, is_rover_list=[True, True, False, False]),
