@@ -2,20 +2,26 @@ from librovers import rovers, thyme
 import numpy as np
 
 # First we're going to create a simple rover
-def createRover(obs_radius):
+def createRover(obs_radius, reward_type = "Global"):
     Dense = rovers.Lidar[rovers.Density]
     Discrete = thyme.spaces.Discrete
-    Difference = rovers.rewards.Difference
-    rover = rovers.Rover[Dense, Discrete, Difference](obs_radius, Dense(90), Difference())
+    if reward_type == "Global":
+        Reward = rovers.rewards.Global
+    elif reward_type == "Difference":
+        Reward = rovers.rewards.Difference
+    rover = rovers.Rover[Dense, Discrete, Reward](obs_radius, Dense(90), Reward())
     rover.type = "rover"
     return rover
 
 # Now create a UAV
-def createUAV(obs_radius):
+def createUAV(obs_radius, reward_type = "Global"):
     Dense = rovers.Lidar[rovers.Density]
     Discrete = thyme.spaces.Discrete
-    Difference = rovers.rewards.Difference
-    uav = rovers.Rover[Dense, Discrete, Difference](obs_radius, Dense(30), Difference())
+    if reward_type == "Global":
+        Reward = rovers.rewards.Global
+    elif reward_type == "Difference":
+        Reward = rovers.rewards.Difference
+    uav = rovers.Rover[Dense, Discrete, Reward](obs_radius, Dense(30), Reward())
     uav.type = "uav"
     return uav
 
@@ -56,10 +62,10 @@ def createPOI(value, obs_rad, coupling, is_rover_list):
 def main():
     Env = rovers.Environment[rovers.CustomInit]
     agent_positions = [
-        [9. , 1.],
         [9. , 9.],
-        [1. , 9.],
-        [1. , 9.]
+        [1. , 1.],
+        [1. , 1.],
+        [9. , 9.]
     ]
     poi_positions = [
         [1. , 9.],
@@ -68,14 +74,14 @@ def main():
     rover_obs_rad = 1.
     uav_obs_rad = 100.
     agents = [
-        createRover(rover_obs_rad),
-        createRover(rover_obs_rad),
-        createUAV(uav_obs_rad),
-        createUAV(uav_obs_rad)
+        createRover(rover_obs_rad, reward_type = "Difference"),
+        createRover(rover_obs_rad, reward_type = "Difference"),
+        createUAV(uav_obs_rad, reward_type = "Difference"),
+        createUAV(uav_obs_rad, reward_type = "Difference")
     ]
     pois = [
-        createPOI(value=1. , obs_rad=1. , coupling=1, is_rover_list=[True, True, False, False]),
-        createPOI(value=1. , obs_rad=1. , coupling=1, is_rover_list=[True, True, False, False])
+        createRoverPOI(value=1. , obs_rad=1. , coupling=1, is_rover_list=[True, True, False, False]),
+        createRoverPOI(value=1. , obs_rad=1. , coupling=1, is_rover_list=[True, True, False, False])
     ]
     env = Env(rovers.CustomInit(agent_positions, poi_positions), agents, pois)
 
