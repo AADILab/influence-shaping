@@ -1,15 +1,104 @@
 from librovers import rovers, thyme
 import numpy as np
 
+def calculateDistance(position_0, position_1):
+    return np.linalg.norm([position_0.x-position_1.x, position_0.y-position_1.y])
+
+def calculateAngle(position_0, position_1):
+    pos0 = np.array([position_0.x, position_0.y])
+    pos1 = np.array([position_1.x, position_1.y])
+    # Create a vector from position 0 to 1
+    vec = pos1 - pos0
+    # Take the arctan2 of the y, x of that vector
+    return np.arctan2(vec[1], vec[0]) * 180./np.pi
+
+# Agents should be able to distinguish between rovers and uavs...
+# Unfortunately this means writing my own Lidar class that can differentiate between agent types
+class SmartLidar(rovers.Lidar[rovers.Density]):
+    def __init__(self, resolution, composition_policy, agent_types):
+        super().__init__(resolution, composition_policy)
+        self.agent_types = agent_types
+        self.m_resolution = resolution
+        self.m_composition = composition_policy
+
+    def scan(self, agent_pack):
+        num_sectors = int(360. / self.m_resolution)
+        poi_values = [[] for _ in range(num_sectors)]
+        rover_values = [[] for _ in range(num_sectors)]
+        uav_values = [[] for _ in range(num_sectors)]
+        agent = agent_pack.agents[agent_pack.agent_index]
+
+        # Observe POIs
+        print("Observe POIs")
+        for sensed_poi in agent_pack.entities:
+            print("Sensing POI")
+            # Get angle and distance to POI
+            angle = calculateAngle(agent.position(), sensed_poi.position())
+            distance = calculateDistance(agent.position(), sensed_poi.position())
+            print("angle: ", angle)
+            print("distance: ", distance)
+            # Skip this POI if it is out of range
+            if distance > agent.obs_radius():
+                print("continue, out of range")
+                continue
+            # Bin the POI according to where it was sensed
+            if angle < 360.0:
+                sector = int( angle / self.m_resolution )
+            else:
+                sector = 0
+            print("sector: ", sector, type(sector))
+            poi_values[sector].append(sensed_poi.value() / max([0.001, distance**2]))
+
+        print("Observe Agents")
+        # Observe agents
+        for i in range(agent_pack.agents.size()):
+            # Do not observe yourself
+            if i == agent_pack.agent_index:
+                continue
+            # Get angle and distance to sensed agent
+            sensed_agent = agent_pack.agents[i]
+            angle = calculateAngle(agent.position(), sensed_agent.position())
+            distance = calculateDistance(agent.position(), sensed_agent.position())
+            # Skip the agent if the sensed agent is out of range
+            if distance < agent.obs_radius():
+                continue
+            # Get the bin for this agent
+            if angle < 360.0:
+                sector = int( angle / self.m_resolution )
+            else:
+                sector = 0
+            # Bin the agent according to type
+            if self.agent_types[i] == "rover":
+                rover_values[sector].append(1.0 / max([0.001, distance**2]))
+            elif self.agent_types[i] == "uav":
+                uav_values[sector].append(1.0 / max([0.001, distance**2]))
+
+        # Encode the state
+        print("Encoding state")
+        state = np.array([-1.0 for _ in range(num_sectors*3)])
+        for i in range(num_sectors):
+            num_rovers = len(rover_values[i])
+            num_uavs = len(uav_values[i])
+            num_pois = len(poi_values[i])
+
+            if num_rovers > 0:
+                state[i] = self.m_composition.compose(rover_values[i], 0.0, num_rovers)
+            if num_uavs > 0:
+                state[num_sectors + i] = self.m_composition.compose(uav_values[i], 0.0, num_uavs)
+            if num_pois > 0:
+                state[num_sectors*2 + i] = self.m_composition.compose(poi_values[i], 0.0, num_pois)
+
+        return rovers.tensor(state)
+
 # First we're going to create a simple rover
 def createRover(obs_radius, reward_type = "Global"):
-    Dense = rovers.Lidar[rovers.Density]
+    # Dense = SmartLidar
     Discrete = thyme.spaces.Discrete
     if reward_type == "Global":
         Reward = rovers.rewards.Global
     elif reward_type == "Difference":
         Reward = rovers.rewards.Difference
-    rover = rovers.Rover[Dense, Discrete, Reward](obs_radius, Dense(90), Reward())
+    rover = rovers.Rover[SmartLidar, Discrete, Reward](obs_radius, SmartLidar(resolution=90, composition_policy=rovers.Density(), agent_types=["rover", "rover", "uav", "uav"]), Reward())
     rover.type = "rover"
     return rover
 
@@ -24,9 +113,6 @@ def createUAV(obs_radius, reward_type = "Global"):
     uav = rovers.Rover[Dense, Discrete, Reward](obs_radius, Dense(30), Reward())
     uav.type = "uav"
     return uav
-
-def calculateDistance(position_0, position_1):
-    return np.linalg.norm([position_0.x-position_1.x, position_0.y-position_1.y])
 
 # Now create a POI constraint where this POI can only be observed by rovers with "rover" type
 class RoverConstraint(rovers.IConstraint):
