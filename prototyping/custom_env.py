@@ -11,7 +11,10 @@ def calculateAngle(position_0, position_1):
     # Create a vector from position 0 to 1
     vec = pos1 - pos0
     # Take the arctan2 of the y, x of that vector
-    return np.arctan2(vec[1], vec[0]) * 180./np.pi
+    angle = np.arctan2(vec[1], vec[0]) * 180./np.pi
+    if angle < 0:
+        angle += 360.
+    return angle
 
 # Agents should be able to distinguish between rovers and uavs...
 # Unfortunately this means writing my own Lidar class that can differentiate between agent types
@@ -30,43 +33,43 @@ class SmartLidar(rovers.Lidar[rovers.Density]):
         agent = agent_pack.agents[agent_pack.agent_index]
 
         # Observe POIs
-        print("Observe POIs")
+        # print("Observe POIs")
         for sensed_poi in agent_pack.entities:
-            print("Sensing POI")
+            # print("Sensing POI")
             # Get angle and distance to POI
             angle = calculateAngle(agent.position(), sensed_poi.position())
             distance = calculateDistance(agent.position(), sensed_poi.position())
-            print("angle: ", angle)
-            print("distance: ", distance)
+            # print("angle: ", angle)
+            # print("distance: ", distance)
             # Skip this POI if it is out of range
             if distance > agent.obs_radius():
-                print("continue, out of range")
+                # print("continue, out of range")
                 continue
             # Bin the POI according to where it was sensed
             if angle < 360.0:
                 sector = int( angle / self.m_resolution )
             else:
                 sector = 0
-            print("sector: ", sector, type(sector))
+            # print("sector: ", sector, type(sector))
             poi_values[sector].append(sensed_poi.value() / max([0.001, distance**2]))
 
-        print("Observe Agents")
+        # print("Observe Agents")
         # Observe agents
         for i in range(agent_pack.agents.size()):
-            print("Sensing agent")
+            # print("Sensing agent")
             # Do not observe yourself
             if i == agent_pack.agent_index:
-                print("Nope, that one is me")
+                # print("Nope, that one is me")
                 continue
             # Get angle and distance to sensed agent
             sensed_agent = agent_pack.agents[i]
             angle = calculateAngle(agent.position(), sensed_agent.position())
             distance = calculateDistance(agent.position(), sensed_agent.position())
             print("angle: ", angle)
-            print("distance: ", distance)
+            # print("distance: ", distance)
             # Skip the agent if the sensed agent is out of range
             if distance > agent.obs_radius():
-                print("continue, out of range")
+                # print("continue, out of range")
                 continue
             # Get the bin for this agent
             if angle < 360.0:
@@ -79,36 +82,42 @@ class SmartLidar(rovers.Lidar[rovers.Density]):
             elif self.agent_types[i] == "uav":
                 uav_values[sector].append(1.0 / max([0.001, distance**2]))
 
-        print("rover_values: ", rover_values)
-        print("uav_values: ", uav_values)
-        print("poi_values: ", poi_values)
+        # print("rover_values: ", rover_values)
+        # print("uav_values: ", uav_values)
+        # print("poi_values: ", poi_values)
 
         # Encode the state
-        print("Encoding state")
+        # print("Encoding state")
         state = np.array([-1.0 for _ in range(num_sectors*3)])
-        print("state: ", state)
+        # print("state: ", state)
         for i in range(num_sectors):
-            print("Building sector ", i)
+            # print("Building sector ", i)
             num_rovers = len(rover_values[i])
             num_uavs = len(uav_values[i])
             num_pois = len(poi_values[i])
 
             if num_rovers > 0:
-                print("num_rovers > 0")
-                print("rover_values["+str(i)+"]: ", rover_values[i], type(rover_values[i]), type(rover_values[i][0]))
-                print("num_rovers: ", type(num_rovers))
-                state[i] = self.m_composition.compose(rover_values[i], 0.0, num_rovers)
+                # print("num_rovers > 0")
+                # print("rover_values["+str(i)+"]: ", rover_values[i], type(rover_values[i]), type(rover_values[i][0]))
+                # print("num_rovers: ", type(num_rovers))
+                cpp_vector = cppyy.gbl.std.vector[cppyy.gbl.double]()
+                for r in rover_values[i]:
+                    cpp_vector.push_back(r)
+                state[i] = self.m_composition.compose(cpp_vector, 0.0, num_rovers)
             if num_uavs > 0:
-                print("num_uavs > 0")
-                print("uav_values["+str(i)+"]: ", uav_values[i], type(uav_values[i]), type(uav_values[i][0]))
-                print("num_uavs: ", type(num_uavs))
-                state[num_sectors + i] = self.m_composition.compose(uav_values[i], 0.0, num_uavs)
+                # print("num_uavs > 0")
+                # print("uav_values["+str(i)+"]: ", uav_values[i], type(uav_values[i]), type(uav_values[i][0]))
+                # print("num_uavs: ", type(num_uavs))
+                cpp_vector = cppyy.gbl.std.vector[cppyy.gbl.double]()
+                for u in uav_values[i]:
+                    cpp_vector.push_back(u)
+                state[num_sectors + i] = self.m_composition.compose(cpp_vector, 0.0, num_uavs)
             if num_pois > 0:
-                print("num_pois > 0")
-                print("poi_values["+str(i)+"]: ", poi_values[i], type(poi_values[i]), type(poi_values[i][0]))
-                print("num_pois: ", type(num_pois))
+                # print("num_pois > 0")
+                # print("poi_values["+str(i)+"]: ", poi_values[i], type(poi_values[i]), type(poi_values[i][0]))
+                # print("num_pois: ", type(num_pois))
                 # Convert poi_values[i] to a std::vector<double> to satisfy cppyy
-                # Not sure why this is necessary for poi_values but not rover_values or uav_values
+                # Not sure why this is necessary sometimes and other times not necessary
                 cpp_vector = cppyy.gbl.std.vector[cppyy.gbl.double]()
                 for p in poi_values[i]:
                     cpp_vector.push_back(p)
@@ -173,7 +182,7 @@ def main():
     Env = rovers.Environment[rovers.CustomInit]
     agent_positions = [
         [5. , 5.],
-        [3. , 3.],
+        [3. , 7.],
         # [1. , 1.],
         # [9. , 9.]
     ]
