@@ -126,24 +126,28 @@ class SmartLidar(rovers.Lidar[rovers.Density]):
         return rovers.tensor(state)
 
 # First we're going to create a simple rover
-def createRover(obs_radius, reward_type = "Global"):
+def createRover(obs_radius, reward_type = "Global", agent_types = []):
+    if len(agent_types) == 0:
+        raise Exception("Must define agent_types for this rover class")
     Discrete = thyme.spaces.Discrete
     if reward_type == "Global":
         Reward = rovers.rewards.Global
     elif reward_type == "Difference":
         Reward = rovers.rewards.Difference
-    rover = rovers.Rover[SmartLidar, Discrete, Reward](obs_radius, SmartLidar(resolution=90, composition_policy=rovers.Density(), agent_types=["rover", "rover", "uav", "uav"]), Reward())
+    rover = rovers.Rover[SmartLidar, Discrete, Reward](obs_radius, SmartLidar(resolution=90, composition_policy=rovers.Density(), agent_types=agent_types), Reward())
     rover.type = "rover"
     return rover
 
 # Now create a UAV
-def createUAV(obs_radius, reward_type = "Global"):
+def createUAV(obs_radius, reward_type = "Global", agent_types = []):
+    if len(agent_types) == 0:
+        raise Exception("Must define agent_types for this uav class")
     Discrete = thyme.spaces.Discrete
     if reward_type == "Global":
         Reward = rovers.rewards.Global
     elif reward_type == "Difference":
         Reward = rovers.rewards.Difference
-    uav = rovers.Rover[SmartLidar, Discrete, Reward](obs_radius, SmartLidar(resolution=30, composition_policy=rovers.Density(), agent_types=["rover", "rover", "uav", "uav"]), Reward())
+    uav = rovers.Rover[SmartLidar, Discrete, Reward](obs_radius, SmartLidar(resolution=30, composition_policy=rovers.Density(), agent_types=agent_types), Reward())
     uav.type = "uav"
     return uav
 
@@ -181,28 +185,36 @@ def createPOI(value, obs_rad, coupling, is_rover_list):
 def main():
     Env = rovers.Environment[rovers.CustomInit]
     agent_positions = [
-        [5. , 5.],
-        [3. , 7.],
-        # [1. , 1.],
-        # [9. , 9.]
+        [24. , 24.],
+        [26. , 24.],
+        [24. , 26.],
+        [26. , 26.]
     ]
     poi_positions = [
-        [1. , 9.],
-        [9. , 9.]
+        [5. , 10.],
+        [5. , 25.],
+        [5. , 40],
+        [45., 10],
+        [45., 25],
+        [45., 40]
     ]
     rover_obs_rad = 100.
     uav_obs_rad = 100.
     agents = [
-        createRover(rover_obs_rad, reward_type = "Difference"),
-        createRover(rover_obs_rad, reward_type = "Difference"),
-        # createUAV(uav_obs_rad, reward_type = "Difference"),
-        # createUAV(uav_obs_rad, reward_type = "Difference")
+        createRover(rover_obs_rad, reward_type = "Difference", agent_types=["rover", "rover", "uav", "uav"]),
+        createRover(rover_obs_rad, reward_type = "Difference", agent_types=["rover", "rover", "uav", "uav"]),
+        createUAV(uav_obs_rad, reward_type = "Difference", agent_types=["rover", "rover", "uav", "uav"]),
+        createUAV(uav_obs_rad, reward_type = "Difference", agent_types=["rover", "rover", "uav", "uav"])
     ]
     pois = [
+        createRoverPOI(value=5. , obs_rad=1. , coupling=1, is_rover_list=[True, True, False, False]),
         createRoverPOI(value=1. , obs_rad=1. , coupling=1, is_rover_list=[True, True, False, False]),
-        createRoverPOI(value=1. , obs_rad=1. , coupling=1, is_rover_list=[True, True, False, False])
+        createRoverPOI(value=5. , obs_rad=1. , coupling=1, is_rover_list=[True, True, False, False]),
+        createRoverPOI(value=5. , obs_rad=1. , coupling=1, is_rover_list=[True, True, False, False]),
+        createRoverPOI(value=1. , obs_rad=1. , coupling=1, is_rover_list=[True, True, False, False]),
+        createRoverPOI(value=5. , obs_rad=1. , coupling=1, is_rover_list=[True, True, False, False])
     ]
-    env = Env(rovers.CustomInit(agent_positions, poi_positions), agents, pois)
+    env = Env(rovers.CustomInit(agent_positions, poi_positions), agents, pois, width=cppyy.gbl.ulong(50.), height=cppyy.gbl.ulong(50.))
 
     states, rewards = env.reset()
 
