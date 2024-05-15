@@ -58,16 +58,29 @@ def setupToolbox(
     # Register all of our operators for crossover, mutation, selection, evaluation, team formation
     toolbox.register("crossover", tools.cxTwoPoint)
     toolbox.register("mutate", tools.mutGaussian, mu=0, sigma=1, indpb=0.1)
-    toolbox.register("selectSubPopulation", tools.selTournament, tournsize=3)
+
+    def selectNElitesBinaryTournament(population, N):
+        # Get the best N individuals
+        offspring = tools.selBest(population, N)
+
+        # Get the remaining worse individuals
+        remaining_offspring = tools.selWorst(population, len(population)-N)
+
+        # Add those remaining individuals through a binary tournament
+        offspring += tools.selTournament(remaining_offspring, len(remaining_offspring), tournsize=2)
+
+        return offspring
+
+    toolbox.register("selectSubPopulation", selectNElitesBinaryTournament)
     toolbox.register("evaluate", evaluate, num_steps=NUM_STEPS, rover_network=rover_nn, uav_network=uav_nn, include_uavs=include_uavs, reward_types=reward_types)
 
-    def select(population):
+    def select(population, N):
         # Offspring is a list of subpopulation
         offspring = []
         # For each subpopulation in the population
         for subpop in population:
             # Perform a selection on that subpopulation, and add it to the offspring population
-            offspring.append(toolbox.selectSubPopulation(subpop, len(subpop)))
+            offspring.append(toolbox.selectSubPopulation(subpop, N))
         return offspring
 
     toolbox.register("select", select)

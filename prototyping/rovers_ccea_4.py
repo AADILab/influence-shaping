@@ -34,6 +34,7 @@ if __name__ == "__main__":
         "Global",
         "Global"
     ]
+    N_ELITES = 5
 
     # Let's save data
     save_dir = os.path.expanduser("~")+"/hpc-share/influence/preliminary/2_rovers_2_uavs_G/trial_0"
@@ -66,8 +67,8 @@ if __name__ == "__main__":
         # exit()
 
         # Define variables for our overall EA
-        CXPB = 0.5 # Cross over probability
-        MUTPB = 0.2 # Mutation probability
+        # CXPB = 0.5 # Cross over probability
+        MUTPB = 0.8 # Mutation probability
         NGEN = 1000
 
         # Shuffle each subpopulation
@@ -99,11 +100,11 @@ if __name__ == "__main__":
 
         # For each generation
         for gen in tqdm(range(NGEN)):
-            # Perform a 3-agent tournament selection on each subpopulation
-            offspring = toolbox.select(pop)
+            # Perform a N-elites binary tournament selection on each subpopulation
+            offspring = toolbox.select(pop, N=N_ELITES)
 
             # Shuffle the subpopulations
-            toolbox.shuffle(pop)
+            # toolbox.shuffle(pop)
 
             # Make deepcopies so we don't accidentally overwrite anything
             offspring = list(map(toolbox.clone, offspring))
@@ -111,23 +112,13 @@ if __name__ == "__main__":
             # Track which fitnesses are going to be invalid
             invalid_ind = []
 
-            # Crossover
-            for num_individual in range(int(SUBPOPULATION_SIZE/2)):
-                if random.random() < CXPB:
-                    invalid_ind.append(num_individual*2)
-                    invalid_ind.append(num_individual*2+1)
-                    for subpop in pop:
-                        toolbox.crossover(subpop[num_individual*2], subpop[num_individual*2+1])
-                        del subpop[num_individual*2].fitness.values
-                        del subpop[num_individual*2+1].fitness.values
-
             # Mutation
-            for num_individual in range(SUBPOPULATION_SIZE):
-                if random.random() < MUTPB:
-                    invalid_ind.append(num_individual)
-                    for subpop in pop:
-                        toolbox.mutate(subpop[num_individual])
-                        del subpop[num_individual].fitness.values
+            for num_individual in range(SUBPOPULATION_SIZE-N_ELITES):
+                # if random.random() < MUTPB:
+                invalid_ind.append(num_individual+N_ELITES)
+                for subpop in pop:
+                    toolbox.mutate(subpop[num_individual+N_ELITES])
+                    del subpop[num_individual+N_ELITES].fitness.values
 
             # Create teams of individuals with invalid fitnesses
             teams = toolbox.formTeams(pop, inds=invalid_ind)
