@@ -182,14 +182,26 @@ def createPOI(value, obs_rad, coupling, is_rover_list):
     return poi
 
 # Let's have a function that builds out the environment
-def createEnv():
+def createEnv(
+        rover_obs_rad=1.,
+        include_uavs=True,
+        reward_types=[
+            "Global",
+            "Global",
+            "Global",
+            "Global"
+        ]
+    ):
     Env = rovers.Environment[rovers.CustomInit]
     agent_positions = [
         [24. , 24.],
-        [26. , 24.],
-        [24. , 26.],
-        [26. , 26.]
+        [26. , 24.]
     ]
+    if include_uavs:
+        agent_positions += [
+            [24. , 26.],
+            [26. , 26.]
+        ]
     poi_positions = [
         [5. , 10.],
         [5. , 25.],
@@ -198,14 +210,20 @@ def createEnv():
         [45., 25],
         [45., 40]
     ]
-    rover_obs_rad = 100.
-    uav_obs_rad = 100.
+    agent_types = ["rover", "rover"]
+    if include_uavs:
+        agent_types += ["uav", "uav"]
+    rover_obs_rad = 3.
     agents = [
-        createRover(rover_obs_rad, reward_type = "Global", agent_types=["rover", "rover", "uav", "uav"]),
-        createRover(rover_obs_rad, reward_type = "Global", agent_types=["rover", "rover", "uav", "uav"]),
-        createUAV(uav_obs_rad, reward_type = "Global", agent_types=["rover", "rover", "uav", "uav"]),
-        createUAV(uav_obs_rad, reward_type = "Global", agent_types=["rover", "rover", "uav", "uav"])
+        createRover(rover_obs_rad, reward_type = reward_types[0], agent_types=agent_types),
+        createRover(rover_obs_rad, reward_type = reward_types[1], agent_types=agent_types)
     ]
+    if include_uavs:
+        uav_obs_rad = 100.
+        agents += [
+            createUAV(uav_obs_rad, reward_type = reward_types[2], agent_types=agent_types),
+            createUAV(uav_obs_rad, reward_type = reward_types[3], agent_types=agent_types)
+        ]
     pois = [
         createRoverPOI(value=5. , obs_rad=1. , coupling=1, is_rover_list=[True, True, False, False]),
         createRoverPOI(value=1. , obs_rad=1. , coupling=1, is_rover_list=[True, True, False, False]),
@@ -219,7 +237,7 @@ def createEnv():
 
 # Alright let's give this a try
 def main():
-    env = createEnv()
+    env = createEnv(include_uavs=False)
 
     states, rewards = env.reset()
 
