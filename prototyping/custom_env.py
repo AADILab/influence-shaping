@@ -65,7 +65,7 @@ class SmartLidar(rovers.Lidar[rovers.Density]):
             sensed_agent = agent_pack.agents[i]
             angle = calculateAngle(agent.position(), sensed_agent.position())
             distance = calculateDistance(agent.position(), sensed_agent.position())
-            print("angle: ", angle)
+            # print("angle: ", angle)
             # print("distance: ", distance)
             # Skip the agent if the sensed agent is out of range
             if distance > agent.obs_radius():
@@ -181,8 +181,8 @@ def createPOI(value, obs_rad, coupling, is_rover_list):
     poi = rovers.POI[rovers.CountConstraint](value, obs_rad, countConstraint)
     return poi
 
-# Alright let's give this a try
-def main():
+# Let's have a function that builds out the environment
+def createEnv():
     Env = rovers.Environment[rovers.CustomInit]
     agent_positions = [
         [24. , 24.],
@@ -201,10 +201,10 @@ def main():
     rover_obs_rad = 100.
     uav_obs_rad = 100.
     agents = [
-        createRover(rover_obs_rad, reward_type = "Difference", agent_types=["rover", "rover", "uav", "uav"]),
-        createRover(rover_obs_rad, reward_type = "Difference", agent_types=["rover", "rover", "uav", "uav"]),
-        createUAV(uav_obs_rad, reward_type = "Difference", agent_types=["rover", "rover", "uav", "uav"]),
-        createUAV(uav_obs_rad, reward_type = "Difference", agent_types=["rover", "rover", "uav", "uav"])
+        createRover(rover_obs_rad, reward_type = "Global", agent_types=["rover", "rover", "uav", "uav"]),
+        createRover(rover_obs_rad, reward_type = "Global", agent_types=["rover", "rover", "uav", "uav"]),
+        createUAV(uav_obs_rad, reward_type = "Global", agent_types=["rover", "rover", "uav", "uav"]),
+        createUAV(uav_obs_rad, reward_type = "Global", agent_types=["rover", "rover", "uav", "uav"])
     ]
     pois = [
         createRoverPOI(value=5. , obs_rad=1. , coupling=1, is_rover_list=[True, True, False, False]),
@@ -215,6 +215,11 @@ def main():
         createRoverPOI(value=5. , obs_rad=1. , coupling=1, is_rover_list=[True, True, False, False])
     ]
     env = Env(rovers.CustomInit(agent_positions, poi_positions), agents, pois, width=cppyy.gbl.ulong(50.), height=cppyy.gbl.ulong(50.))
+    return env
+
+# Alright let's give this a try
+def main():
+    env = createEnv()
 
     states, rewards = env.reset()
 
