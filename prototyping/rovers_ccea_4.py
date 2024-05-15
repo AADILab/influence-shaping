@@ -47,6 +47,8 @@ if __name__ == "__main__":
     if INCLUDE_UAVS:
         for i in range(2):
             top_line += ", uav_"+str(i)
+    for s in range(SUBPOPULATION_SIZE):
+        top_line += ", team_fitness_train_"+str(s)
     with open(save_dir+"/fitness.csv", 'w') as file:
         file.write(top_line)
         file.write('\n')
@@ -78,14 +80,19 @@ if __name__ == "__main__":
         jobs = toolbox.map(toolbox.evaluate, teams)
         team_fitnesses = jobs.get()
 
+        training_fitnesses = []
         # Now we go back through each team and assign fitnesses to individuals on teams
         for team, fitnesses in zip(teams, team_fitnesses):
+            # Save the team fitness from training
+            training_fitnesses.append(fitnesses[-1][0])
             for individual, fit in zip(team, fitnesses):
                 individual.fitness.values = fit
 
         # Evaluate the champions and save the fitnesses
         fitnesses = toolbox.evaluateBestTeam(pop)
-        fit_list = ["0"] + [str(fitnesses[-1][0])] + [str(fit[0]) for fit in fitnesses[:-1]]
+        fit_list = ["0"] + [str(fitnesses[-1][0])] + \
+            [str(fit[0]) for fit in fitnesses[:-1]] + \
+            [str(fit) for fit in training_fitnesses]
         with open(save_dir+"/fitness.csv", 'a') as file:
             fit_str = ','.join(fit_list)
             file.write(fit_str+'\n')
@@ -130,13 +137,18 @@ if __name__ == "__main__":
             team_fitnesses = jobs.get()
 
             # Now we go back through each team and assign fitnesses to individuals on teams
+            training_fitnesses = []
             for team, fitnesses in zip(teams, team_fitnesses):
+                # Save the team fitness from training
+                training_fitnesses.append(fitnesses[-1][0])
                 for individual, fit in zip(team, fitnesses):
                     individual.fitness.values = fit
 
             # Evaluate the champions and save the fitnesses
             fitnesses = toolbox.evaluateBestTeam(pop)
-            fit_list = [str(gen+1)] + [str(fitnesses[-1][0])] + [str(fit[0]) for fit in fitnesses[:-1]]
+            fit_list = [str(gen+1)] + [str(fitnesses[-1][0])] + \
+                [str(fit[0]) for fit in fitnesses[:-1]] + \
+                [str(fit) for fit in training_fitnesses]
             with open(save_dir+"/fitness.csv", 'a') as file:
                 fit_str = ','.join(fit_list)
                 file.write(fit_str+'\n')

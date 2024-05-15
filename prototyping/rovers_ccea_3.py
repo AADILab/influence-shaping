@@ -291,8 +291,8 @@ if __name__ == "__main__":
         pop = toolbox.population()
 
         # Define variables for our overall EA
-        CXPB = 0.5 # Cross over probability
-        MUTPB = 0.2 # Mutation probability
+        CXPB = 0.0 # Cross over probability
+        MUTPB = 0.8 # Mutation probability
         NGEN = 1000
 
         # Shuffle each subpopulation
