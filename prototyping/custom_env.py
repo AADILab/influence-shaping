@@ -161,14 +161,25 @@ class RoverConstraint(rovers.IConstraint):
 
     def is_satisfied(self, entity_pack):
         count = 0
+        dists = []
+        constraint_satisfied = False
         for is_rover, agent in zip(self.is_rover_list, entity_pack.agents):
             if is_rover:
                 dist = calculateDistance(agent.position(), entity_pack.entity.position())
+                dists.append(dist)
                 if dist <= agent.obs_radius() and dist <= entity_pack.entity.obs_radius():
                     count += 1
                     if count >= self.coupling:
-                        return True
-        return False
+                        constraint_satisfied = True
+        if constraint_satisfied:
+            dists.sort()
+            dists = [max(1.0, dist) for dist in dists]
+            constraint_value = float(self.coupling)
+            for dist in dists:
+                constraint_value = constraint_value*1.0/dist
+            # print("constraint_value: ", constraint_value)
+            return constraint_value
+        return 0.0
 
 def createRoverPOI(value, obs_rad, coupling, is_rover_list):
     roverConstraint = RoverConstraint(coupling, is_rover_list)
@@ -288,9 +299,9 @@ def main():
                 "hidden_pois": [
                     {
                         "value": 5.0,
-                        "observation_radius": 1.0,
+                        "observation_radius": 5.0,
                         "coupling": 1,
-                        "position": [24.0, 24.0]
+                        "position": [13.0, 10.0]
                     }
                 ]
             },
