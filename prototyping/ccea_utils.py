@@ -113,3 +113,19 @@ def formTeams(population, inds=None):
         teams.append(team)
 
     return teams
+
+def formHOFTeams(population, hall_of_fame_team):
+    """Every single individual is substituted into the hall of fame team
+    So if there are S subpopulations and I individuals in each subpopulation
+    This will form S*I teams
+    """
+    teams = []
+    for index, subpop in enumerate(population):
+        for individual in subpop:
+            # Make a copy of the hall of fame team
+            team = deepcopy(hall_of_fame_team)
+            # Now substitue this individual for the associated
+            # individual in the hall of fame team
+            team[index] = individual
+            teams.append(team)
+    return teams

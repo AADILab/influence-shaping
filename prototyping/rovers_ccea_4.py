@@ -31,9 +31,10 @@ for t in range(20):
             "Global"
         ]
         N_ELITES = 5
+        ALPHA = 0.5
 
         # Let's save data
-        save_dir = os.path.expanduser("~")+"/hpc-share/influence/preliminary/2roversD_2uavsG/trial_"+str(t)
+        save_dir = os.path.expanduser("~")+"/hpc-share/influence/preliminary/coding/trial_"+str(t)
         if not os.path.isdir(save_dir):
             os.makedirs(save_dir)
 
@@ -50,7 +51,7 @@ for t in range(20):
             file.write(top_line)
             file.write('\n')
 
-        toolbox = setupToolbox(include_uavs=INCLUDE_UAVS, reward_types=REWARD_TYPES)
+        toolbox = setupToolbox(include_uavs=INCLUDE_UAVS, reward_types=REWARD_TYPES, use_multiprocessing=True)
 
         def main():
             # Create population, with subpopulation for each agentpack
@@ -63,19 +64,19 @@ for t in range(20):
             # exit()
 
             # Define variables for our overall EA
-            # CXPB = 0.5 # Cross over probability
-            MUTPB = 0.8 # Mutation probability
             NGEN = 1000
-
-            # Shuffle each subpopulation
-            toolbox.shuffle(pop)
 
             # Form teams
             teams = toolbox.formTeams(pop)
 
             # Evaluate each team
-            jobs = toolbox.map(toolbox.evaluate, teams)
+            jobs = toolbox.map(toolbox.evaluateWithTeamFitness, teams)
             team_fitnesses = jobs.get()
+
+            # Save the Hall of Fame champion team
+            team_pairs = zip(teams, team_fitnesses)
+            hall_of_fame_team_pair = max(team_pairs, key=lambda team_pair: team_pair[1][-1][0])
+            hall_of_fame_team = hall_of_fame_team_pair[0]
 
             training_fitnesses = []
             # Now we go back through each team and assign fitnesses to individuals on teams
@@ -84,6 +85,7 @@ for t in range(20):
                 training_fitnesses.append(fitnesses[-1][0])
                 for individual, fit in zip(team, fitnesses):
                     individual.fitness.values = fit
+
 
             # Evaluate the champions and save the fitnesses
             fitnesses = toolbox.evaluateBestTeam(pop)
@@ -99,9 +101,6 @@ for t in range(20):
                 # Perform a N-elites binary tournament selection on each subpopulation
                 offspring = toolbox.select(pop, N=N_ELITES)
 
-                # Shuffle the subpopulations
-                # toolbox.shuffle(pop)
-
                 # Make deepcopies so we don't accidentally overwrite anything
                 offspring = list(map(toolbox.clone, offspring))
 
@@ -112,27 +111,57 @@ for t in range(20):
                 for num_individual in range(SUBPOPULATION_SIZE-N_ELITES):
                     # if random.random() < MUTPB:
                     invalid_ind.append(num_individual+N_ELITES)
-                    for subpop in pop:
+                    for subpop in offspring:
                         toolbox.mutate(subpop[num_individual+N_ELITES])
                         del subpop[num_individual+N_ELITES].fitness.values
 
-                # Create teams of individuals with invalid fitnesses
-                teams = toolbox.formTeams(pop, inds=invalid_ind)
+                # Shuffle subpopulations in the offspring
+                toolbox.shuffle(offspring)
+
+                # Form random teams of individuals
+                random_teams = toolbox.formTeams(offspring)
+
+                # Now form teams using the hall of fame for each individual
+                hof_teams = toolbox.formHOFTeams(offspring, hall_of_fame_team)
+
+                # Aggregate all the teams
+                teams = random_teams + hof_teams
 
                 # Evaluate each team
-                jobs = toolbox.map(toolbox.evaluate, teams)
+                jobs = toolbox.map(toolbox.evaluateWithTeamFitness, teams)
                 team_fitnesses = jobs.get()
 
                 # Now we go back through each team and assign fitnesses to individuals on teams
+                # (This is just based on the fitnesses from the random teams)
                 training_fitnesses = []
-                for team, fitnesses in zip(teams, team_fitnesses):
+                # total_individuals = SUBPOPULATION_SIZE*len(offspring)
+                for team, fitnesses in zip(teams[:SUBPOPULATION_SIZE], team_fitnesses[:SUBPOPULATION_SIZE]):
                     # Save the team fitness from training
                     training_fitnesses.append(fitnesses[-1][0])
                     for individual, fit in zip(team, fitnesses):
                         individual.fitness.values = fit
 
-                # Evaluate the champions and save the fitnesses
-                fitnesses = toolbox.evaluateBestTeam(pop)
+                # Now we are going to add the hall of fame values
+                individual_index = 0
+                for subpop in offspring:
+                    for individual in subpop:
+                        # print("total_individuals: ", total_individuals)
+                        # print("individual.fitness.values: ", individual.fitness.values)
+                        # print("len(teams): ", len(teams))
+                        # print("total_individuals+individual_index: ", total_individuals+individual_index)
+                        individual.fitness.values = \
+                            (individual.fitness.values[0]*ALPHA + (1-ALPHA)*team_fitnesses[SUBPOPULATION_SIZE+individual_index][-1][0],)
+                        individual_index+=1
+
+                # And now we check if there is a new hall of fame team
+                team_pairs = zip(teams, team_fitnesses)
+                new_hall_of_fame_team_pair = max(team_pairs, key=lambda team_pair: team_pair[1][-1][0])
+                if new_hall_of_fame_team_pair[1][-1][0] > hall_of_fame_team_pair[1][-1][0]:
+                    hall_of_fame_team_pair = new_hall_of_fame_team_pair
+                    hall_of_fame_team = new_hall_of_fame_team_pair[0]
+
+                # Save the fitnesses of the HOF team
+                fitnesses = hall_of_fame_team_pair[1]
                 fit_list = [str(gen+1)] + [str(fitnesses[-1][0])] + \
                     [str(fit[0]) for fit in fitnesses[:-1]] + \
                     [str(fit) for fit in training_fitnesses]

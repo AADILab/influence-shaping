@@ -6,7 +6,7 @@ import multiprocessing
 import random
 
 from evo_network import NeuralNetwork
-from ccea_utils import evaluate, shuffle, formTeams, formChampionTeam
+from ccea_utils import evaluate, shuffle, formTeams, formChampionTeam, formHOFTeams
 
 def setupToolbox(
         num_hidden=[10],
@@ -37,9 +37,11 @@ def setupToolbox(
     # Now set up our evolutionary toolbox
     toolbox = base.Toolbox()
     if use_multiprocessing:
+        print("using multiprocessing")
         pool = multiprocessing.Pool(processes=num_threads)
         toolbox.register("map", pool.map_async)
     else:
+        print("not multiprocessing")
         toolbox.register("map", map)
     toolbox.register("attr_float", random.uniform, -0.5, 0.5)
     # rover or uav individual
@@ -73,6 +75,7 @@ def setupToolbox(
 
     toolbox.register("selectSubPopulation", selectNElitesBinaryTournament)
     toolbox.register("evaluate", evaluate, num_steps=NUM_STEPS, rover_network=rover_nn, uav_network=uav_nn, include_uavs=include_uavs, reward_types=reward_types)
+    toolbox.register("evaluateWithTeamFitness", evaluate, num_steps=NUM_STEPS, rover_network=rover_nn, uav_network=uav_nn, include_uavs=include_uavs, reward_types=reward_types, compute_team_fitness=True)
 
     def select(population, N):
         # Offspring is a list of subpopulation
@@ -86,6 +89,7 @@ def setupToolbox(
     toolbox.register("select", select)
     toolbox.register("shuffle", shuffle)
     toolbox.register("formTeams", formTeams)
+    toolbox.register("formHOFTeams", formHOFTeams)
 
     def evaluateBestTeam(population):
         """
