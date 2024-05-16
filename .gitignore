@@ -84,3 +84,4 @@ thyme.includes
 # Random folders
 debugging/
 env_backup/
+prototyping/configs/trial_*

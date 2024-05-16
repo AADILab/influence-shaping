@@ -64,6 +64,13 @@ env:
         coupling: 1,
         position: [45.0, 40.0]
       }
+    hidden_pois:
+      - {
+        value: 5.0,
+        observation_radius: 1.0,
+        coupling: 1,
+        position: [50.0, 50.0]
+      }
   map_size: [50.0, 50.0]
 ccea:
   weight_initialization:
@@ -72,7 +79,7 @@ ccea:
   network:
     hidden_layers: [10]
     rover_max_velocity: 1.0
-    uav_max_velocity: 1.0
+    uav_max_velocity: 2.0
   population:
     subpopulation_size: 50
   evaluation:

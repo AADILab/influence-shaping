@@ -53,12 +53,19 @@ def evaluate(team, rover_network, uav_network, compute_team_fitness, config):
         states_arrs = []
         actions_arrs = []
         actions = []
-        for state, agent_nn in zip(states, agent_nns):
+        for ind, (state, agent_nn) in enumerate(zip(states, agent_nns)):
             slist = str(state.transpose()).split(" ")
             flist = list(filter(None, slist))
             nlist = [float(s) for s in flist]
             state_arr = np.array(nlist, dtype=np.float64)
             action_arr = agent_nn.forward(state_arr)
+            # Multiply by agent velocity
+            if ind <= NUM_ROVERS:
+                # This is a rover
+                action_arr*=config["ccea"]["network"]["rover_max_velocity"]
+            else:
+                # This is a uav
+                action_arr*=config["ccea"]["network"]["uav_max_velocity"]
             # Save this info for debugging purposes
             states_arrs.append(state_arr)
             actions_arrs.append(action_arr)
@@ -165,7 +172,7 @@ def setupToolbox(config):
     else:
         print("not multiprocessing")
         toolbox.register("map", map)
-    toolbox.register("attr_float", random.uniform, -0.5, 0.5)
+    toolbox.register("attr_float", random.uniform, config["ccea"]["weight_initialization"]["lower_bound"], config["ccea"]["weight_initialization"]["upper_bound"])
     # rover or uav individual
     toolbox.register("rover_individual", tools.initRepeat, creator.Individual, toolbox.attr_float, n=ROVER_IND_SIZE)
     toolbox.register("uav_individual", tools.initRepeat, creator.Individual, toolbox.attr_float, n=UAV_IND_SIZE)
@@ -181,7 +188,7 @@ def setupToolbox(config):
 
     # Register all of our operators for crossover, mutation, selection, evaluation, team formation
     toolbox.register("crossover", tools.cxTwoPoint)
-    toolbox.register("mutate", tools.mutGaussian, mu=0, sigma=1, indpb=0.1)
+    toolbox.register("mutate", tools.mutGaussian, mu=config["ccea"]["mutation"]["mean"], sigma=config["ccea"]["mutation"]["std_deviation"], indpb=config["ccea"]["mutation"]["independent_probability"])
 
     def selectNElitesBinaryTournament(population, N):
         # Get the best N individuals
