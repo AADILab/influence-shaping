@@ -19,9 +19,10 @@ def calculateAngle(position_0, position_1):
 # Agents should be able to distinguish between rovers and uavs...
 # Unfortunately this means writing my own Lidar class that can differentiate between agent types
 class SmartLidar(rovers.Lidar[rovers.Density]):
-    def __init__(self, resolution, composition_policy, agent_types):
+    def __init__(self, resolution, composition_policy, agent_types, poi_types):
         super().__init__(resolution, composition_policy)
         self.agent_types = agent_types
+        self.poi_types = poi_types
         self.m_resolution = resolution
         self.m_composition = composition_policy
 
@@ -31,10 +32,11 @@ class SmartLidar(rovers.Lidar[rovers.Density]):
         rover_values = [[] for _ in range(num_sectors)]
         uav_values = [[] for _ in range(num_sectors)]
         agent = agent_pack.agents[agent_pack.agent_index]
+        my_type = self.agent_types[agent_pack.agent_index]
 
         # Observe POIs
         # print("Observe POIs")
-        for sensed_poi in agent_pack.entities:
+        for poi_ind, sensed_poi in enumerate(agent_pack.entities):
             # print("Sensing POI")
             # Get angle and distance to POI
             angle = calculateAngle(agent.position(), sensed_poi.position())
@@ -44,6 +46,9 @@ class SmartLidar(rovers.Lidar[rovers.Density]):
             # Skip this POI if it is out of range
             if distance > agent.obs_radius():
                 # print("continue, out of range")
+                continue
+            # Skip this POI if I am not capable of observing this POI
+            if my_type == "rover" and self.poi_types[poi_ind] == "hidden":
                 continue
             # Bin the POI according to where it was sensed
             if angle < 360.0:
@@ -126,24 +131,24 @@ class SmartLidar(rovers.Lidar[rovers.Density]):
         return rovers.tensor(state)
 
 # First we're going to create a simple rover
-def createRover(obs_radius, reward_type, resolution, agent_types):
+def createRover(obs_radius, reward_type, resolution, agent_types, poi_types):
     Discrete = thyme.spaces.Discrete
     if reward_type == "Global":
         Reward = rovers.rewards.Global
     elif reward_type == "Difference":
         Reward = rovers.rewards.Difference
-    rover = rovers.Rover[SmartLidar, Discrete, Reward](obs_radius, SmartLidar(resolution=resolution, composition_policy=rovers.Density(), agent_types=agent_types), Reward())
+    rover = rovers.Rover[SmartLidar, Discrete, Reward](obs_radius, SmartLidar(resolution=resolution, composition_policy=rovers.Density(), agent_types=agent_types, poi_types=poi_types), Reward())
     rover.type = "rover"
     return rover
 
 # Now create a UAV
-def createUAV(obs_radius, reward_type, resolution, agent_types):
+def createUAV(obs_radius, reward_type, resolution, agent_types, poi_types):
     Discrete = thyme.spaces.Discrete
     if reward_type == "Global":
         Reward = rovers.rewards.Global
     elif reward_type == "Difference":
         Reward = rovers.rewards.Difference
-    uav = rovers.Rover[SmartLidar, Discrete, Reward](obs_radius, SmartLidar(resolution=resolution, composition_policy=rovers.Density(), agent_types=agent_types), Reward())
+    uav = rovers.Rover[SmartLidar, Discrete, Reward](obs_radius, SmartLidar(resolution=resolution, composition_policy=rovers.Density(), agent_types=agent_types, poi_types=poi_types), Reward())
     uav.type = "uav"
     return uav
 
@@ -170,6 +175,10 @@ def createRoverPOI(value, obs_rad, coupling, is_rover_list):
     poi = rovers.POI[RoverConstraint](value, obs_rad, roverConstraint)
     return poi
 
+# This is just to help me track which POIs are nominally hidden from rovers
+def createHiddenPOI(value, obs_rad, coupling, is_rover_list):
+    return createRoverPOI(value, obs_rad, coupling, is_rover_list)
+
 # Running into errors setting up the environment
 # Let's try it with regular POIs
 def createPOI(value, obs_rad, coupling, is_rover_list):
@@ -186,16 +195,19 @@ def createEnv(config):
     agent_positions = rover_positions + uav_positions
 
     rover_poi_positions = [poi["position"] for poi in config["env"]["pois"]["rover_pois"]]
-    poi_positions = rover_poi_positions
+    hidden_poi_positions = [poi["position"] for poi in config["env"]["pois"]["hidden_pois"]]
+    poi_positions = rover_poi_positions + hidden_poi_positions
 
     agent_types = ["rover"]*len(rover_positions) + ["uav"]*len(uav_positions)
+    poi_types = ["rover"]*len(rover_poi_positions)+["hidden"]*len(hidden_poi_positions)
 
     rovers_ = [
         createRover(
             obs_radius=rover["observation_radius"],
             reward_type=rover["reward_type"],
             resolution=rover["resolution"],
-            agent_types=agent_types
+            agent_types=agent_types,
+            poi_types=poi_types
         )
         for rover in config["env"]["agents"]["rovers"]
     ]
@@ -204,7 +216,8 @@ def createEnv(config):
             obs_radius=uav["observation_radius"],
             reward_type=uav["reward_type"],
             resolution=uav["resolution"],
-            agent_types=agent_types
+            agent_types=agent_types,
+            poi_types=poi_types
         )
         for uav in config["env"]["agents"]["uavs"]
     ]
@@ -221,8 +234,16 @@ def createEnv(config):
         )
         for poi in config["env"]["pois"]["rover_pois"]
     ]
-
-    pois = rover_pois
+    hidden_pois = [
+        createHiddenPOI(
+            value=poi["value"],
+            obs_rad=poi["observation_radius"],
+            coupling=poi["coupling"],
+            is_rover_list=is_rover_list
+        )
+        for poi in config["env"]["pois"]["hidden_pois"]
+    ]
+    pois = rover_pois + hidden_pois
 
     env = Env(
         rovers.CustomInit(agent_positions, poi_positions),
@@ -243,43 +264,33 @@ def main():
                         "observation_radius": 3.0,
                         "reward_type": "Global",
                         "resolution": 90,
-                        "position": [24.0, 24.0]
-                    },
-                    {
-                        "observation_radius": 3.0,
-                        "reward_type": "Global",
-                        "resolution": 90,
-                        "position": [26.0, 24.0]
+                        "position": [10.0, 10.0]
                     }
                 ],
                 "uavs": [
                     {
                         "observation_radius": 100.0,
                         "reward_type": "Global",
-                        "resolution": 30,
-                        "position": [24.0, 26.0]
-                    },
-                    {
-                        "observation_radius": 100.0,
-                        "reward_type": "Global",
-                        "resolution": 30,
-                        "position": [26.0, 26.0]
+                        "resolution": 90,
+                        "position": [25.0, 25.0]
                     }
                 ]
             },
             "pois": {
                 "rover_pois": [
                     {
-                        "value": 5.0,
-                        "observation_radius": 1.0,
-                        "coupling": 1,
-                        "position": [5.0, 10.0],
-                    },
-                    {
                         "value": 1.0,
                         "observation_radius": 1.0,
                         "coupling": 1,
-                        "position": [5.0, 25.0],
+                        "position": [40, 40.0],
+                    }
+                ],
+                "hidden_pois": [
+                    {
+                        "value": 5.0,
+                        "observation_radius": 1.0,
+                        "coupling": 1,
+                        "position": [24.0, 24.0]
                     }
                 ]
             },
@@ -292,11 +303,13 @@ def main():
     states, rewards = env.reset()
 
     print("States:")
-    for state in states:
+    for ind, state in enumerate(states):
+        print("agent "+str(ind))
         print(state.transpose())
 
     print("Rewards:")
-    for reward in rewards:
+    for ind, reward in enumerate(rewards):
+        print("reward "+str(ind))
         print(reward)
 
 if __name__ == "__main__":
