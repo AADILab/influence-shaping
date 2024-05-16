@@ -213,7 +213,7 @@ def createEnv(
     agent_types = ["rover", "rover"]
     if include_uavs:
         agent_types += ["uav", "uav"]
-    rover_obs_rad = 3.
+    rover_obs_rad = 100.
     agents = [
         createRover(rover_obs_rad, reward_type = reward_types[0], agent_types=agent_types),
         createRover(rover_obs_rad, reward_type = reward_types[1], agent_types=agent_types)

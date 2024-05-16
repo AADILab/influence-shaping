@@ -98,6 +98,7 @@ def formTeams(population, inds=None):
     if inds is None:
         SUBPOPULATION_SIZE = len(population[0])
         team_inds = range(SUBPOPULATION_SIZE)
+        # print("formTeams(), SUBPOPULATION_SIZE: ", SUBPOPULATION_SIZE)
     else:
         team_inds = inds
 

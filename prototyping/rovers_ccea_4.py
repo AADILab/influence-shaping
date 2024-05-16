@@ -22,11 +22,11 @@ from ccea_toolbox import setupToolbox
 for t in range(20):
     if __name__ == "__main__":
         # Set variables
-        SUBPOPULATION_SIZE = 50
-        INCLUDE_UAVS=True
+        SUBPOPULATION_SIZE = 20
+        INCLUDE_UAVS=False
         REWARD_TYPES=[
-            "Difference",
-            "Difference",
+            "Global",
+            "Global",
             "Global",
             "Global"
         ]
@@ -34,7 +34,7 @@ for t in range(20):
         ALPHA = 0.5
 
         # Let's save data
-        save_dir = os.path.expanduser("~")+"/hpc-share/influence/preliminary/coding/trial_"+str(t)
+        save_dir = os.path.expanduser("~")+"/hpc-share/influence/preliminary/no_uavs/trial_"+str(t)
         if not os.path.isdir(save_dir):
             os.makedirs(save_dir)
 
@@ -51,7 +51,7 @@ for t in range(20):
             file.write(top_line)
             file.write('\n')
 
-        toolbox = setupToolbox(include_uavs=INCLUDE_UAVS, reward_types=REWARD_TYPES, use_multiprocessing=True)
+        toolbox = setupToolbox(include_uavs=INCLUDE_UAVS, reward_types=REWARD_TYPES, use_multiprocessing=True, subpopulation_size=SUBPOPULATION_SIZE)
 
         def main():
             # Create population, with subpopulation for each agentpack
@@ -64,7 +64,7 @@ for t in range(20):
             # exit()
 
             # Define variables for our overall EA
-            NGEN = 1000
+            NGEN = 100
 
             # Form teams
             teams = toolbox.formTeams(pop)
@@ -120,12 +120,16 @@ for t in range(20):
 
                 # Form random teams of individuals
                 random_teams = toolbox.formTeams(offspring)
+                # print("random_teams: ", len(random_teams))
 
                 # Now form teams using the hall of fame for each individual
                 hof_teams = toolbox.formHOFTeams(offspring, hall_of_fame_team)
+                # print("hof_teams: ", len(hof_teams))
 
                 # Aggregate all the teams
                 teams = random_teams + hof_teams
+                # print("teams: ", len(teams))
+                # exit()
 
                 # Evaluate each team
                 jobs = toolbox.map(toolbox.evaluateWithTeamFitness, teams)
@@ -135,20 +139,26 @@ for t in range(20):
                 # (This is just based on the fitnesses from the random teams)
                 training_fitnesses = []
                 # total_individuals = SUBPOPULATION_SIZE*len(offspring)
+                num_inds_with_fitness = 0
                 for team, fitnesses in zip(teams[:SUBPOPULATION_SIZE], team_fitnesses[:SUBPOPULATION_SIZE]):
                     # Save the team fitness from training
                     training_fitnesses.append(fitnesses[-1][0])
                     for individual, fit in zip(team, fitnesses):
                         individual.fitness.values = fit
+                        num_inds_with_fitness += 1
+                # print("assigned fitness: ", num_inds_with_fitness)
+
+                # exit()
 
                 # Now we are going to add the hall of fame values
                 individual_index = 0
                 for subpop in offspring:
                     for individual in subpop:
-                        # print("total_individuals: ", total_individuals)
+                        # print("SUBPOPULATION_SIZE: ", SUBPOPULATION_SIZE)
                         # print("individual.fitness.values: ", individual.fitness.values)
                         # print("len(teams): ", len(teams))
-                        # print("total_individuals+individual_index: ", total_individuals+individual_index)
+                        # print("SUBPOPULATION_SIZE+individual_index: ", SUBPOPULATION_SIZE+individual_index)
+                        # print('individual_index: ', individual_index)
                         individual.fitness.values = \
                             (individual.fitness.values[0]*ALPHA + (1-ALPHA)*team_fitnesses[SUBPOPULATION_SIZE+individual_index][-1][0],)
                         individual_index+=1

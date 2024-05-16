@@ -122,7 +122,7 @@ def evaluate(individual, num_steps, network: NeuralNetwork):
     Dense = rovers.Lidar[rovers.Density]
     Discrete = thyme.spaces.Discrete
     Global = rovers.rewards.Global
-    rover_obs_radius = 3.0
+    rover_obs_radius = 100.0
     agents = [rovers.Rover[Dense, Discrete, Global](rover_obs_radius, Dense(90), Global())]
     # agents = [rovers.Rover[Dense, Discrete](1.0, Dense(90))]
 
