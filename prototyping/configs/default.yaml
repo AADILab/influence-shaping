@@ -1,0 +1,94 @@
+env:
+  agents:
+    rovers:
+      - {
+        observation_radius: 3.0,
+        reward_type: Global,
+        resolution: 90,
+        position: [24.0, 24.0]
+      }
+      - {
+        observation_radius: 3.0,
+        reward_type: Global,
+        resolution: 90,
+        position: [26.0, 24.0]
+      }
+    uavs:
+      - {
+        observation_radius: 100.0,
+        reward_type: Global,
+        resolution: 30,
+        position: [24.0, 26.0]
+      }
+      - {
+        observation_radius: 100.0,
+        reward_type: Global,
+        resolution: 30,
+        position: [26.0, 26.0]
+      }
+  pois:
+    rover_pois:
+      - {
+        value: 5.0,
+        observation_radius: 1.0,
+        coupling: 1,
+        position: [5.0, 10.0]
+      }
+      - {
+        value: 1.0,
+        observation_radius: 1.0,
+        coupling: 1,
+        position: [5.0, 25.0]
+      }
+      - {
+        value: 5.0,
+        observation_radius: 1.0,
+        coupling: 1,
+        position: [5.0, 40.0]
+      }
+      - {
+        value: 5.0,
+        observation_radius: 1.0,
+        coupling: 1,
+        position: [45.0, 10.0]
+      }
+      - {
+        value: 1.0,
+        observation_radius: 1.0,
+        coupling: 1,
+        position: [45.0, 25.0]
+      }
+      - {
+        value: 1.0,
+        observation_radius: 1.0,
+        coupling: 1,
+        position: [45.0, 40.0]
+      }
+  map_size: [50.0, 50.0]
+ccea:
+  weight_initialization:
+    lower_bound: -0.5
+    upper_bound: 0.5
+  network:
+    hidden_layers: [10]
+    rover_max_velocity: 1.0
+    uav_max_velocity: 1.0
+  population:
+    subpopulation_size: 50
+  evaluation:
+    evaluation_method: HallOfFame
+    hall_of_fame:
+      alpha: 0.5
+  selection:
+    n_elites: 5
+  mutation:
+    mean: 0.0
+    std_deviation: 1.0
+    independent_probability: 0.1
+  num_steps: 30
+  num_generations: 1000
+processing:
+  use_multiprocessing: True
+  num_threads: 20
+experiment:
+  num_trials: 20
