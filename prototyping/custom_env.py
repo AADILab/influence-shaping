@@ -126,28 +126,24 @@ class SmartLidar(rovers.Lidar[rovers.Density]):
         return rovers.tensor(state)
 
 # First we're going to create a simple rover
-def createRover(obs_radius, reward_type = "Global", agent_types = []):
-    if len(agent_types) == 0:
-        raise Exception("Must define agent_types for this rover class")
+def createRover(obs_radius, reward_type, resolution, agent_types):
     Discrete = thyme.spaces.Discrete
     if reward_type == "Global":
         Reward = rovers.rewards.Global
     elif reward_type == "Difference":
         Reward = rovers.rewards.Difference
-    rover = rovers.Rover[SmartLidar, Discrete, Reward](obs_radius, SmartLidar(resolution=90, composition_policy=rovers.Density(), agent_types=agent_types), Reward())
+    rover = rovers.Rover[SmartLidar, Discrete, Reward](obs_radius, SmartLidar(resolution=resolution, composition_policy=rovers.Density(), agent_types=agent_types), Reward())
     rover.type = "rover"
     return rover
 
 # Now create a UAV
-def createUAV(obs_radius, reward_type = "Global", agent_types = []):
-    if len(agent_types) == 0:
-        raise Exception("Must define agent_types for this uav class")
+def createUAV(obs_radius, reward_type, resolution, agent_types):
     Discrete = thyme.spaces.Discrete
     if reward_type == "Global":
         Reward = rovers.rewards.Global
     elif reward_type == "Difference":
         Reward = rovers.rewards.Difference
-    uav = rovers.Rover[SmartLidar, Discrete, Reward](obs_radius, SmartLidar(resolution=30, composition_policy=rovers.Density(), agent_types=agent_types), Reward())
+    uav = rovers.Rover[SmartLidar, Discrete, Reward](obs_radius, SmartLidar(resolution=resolution, composition_policy=rovers.Density(), agent_types=agent_types), Reward())
     uav.type = "uav"
     return uav
 
@@ -182,62 +178,116 @@ def createPOI(value, obs_rad, coupling, is_rover_list):
     return poi
 
 # Let's have a function that builds out the environment
-def createEnv(
-        rover_obs_rad=1.,
-        include_uavs=True,
-        reward_types=[
-            "Global",
-            "Global",
-            "Global",
-            "Global"
-        ]
-    ):
+def createEnv(config):
     Env = rovers.Environment[rovers.CustomInit]
-    agent_positions = [
-        [24. , 24.],
-        [26. , 24.]
+
+    rover_positions = [rover["position"] for rover in config["env"]["agents"]["rovers"]]
+    uav_positions = [uav["position"] for uav in config["env"]["agents"]["uavs"]]
+    agent_positions = rover_positions + uav_positions
+
+    rover_poi_positions = [poi["position"] for poi in config["env"]["pois"]["rover_pois"]]
+    poi_positions = rover_poi_positions
+
+    agent_types = ["rover"]*len(rover_positions) + ["uav"]*len(uav_positions)
+
+    rovers_ = [
+        createRover(
+            obs_radius=rover["observation_radius"],
+            reward_type=rover["reward_type"],
+            resolution=rover["resolution"],
+            agent_types=agent_types
+        )
+        for rover in config["env"]["agents"]["rovers"]
     ]
-    if include_uavs:
-        agent_positions += [
-            [24. , 26.],
-            [26. , 26.]
-        ]
-    poi_positions = [
-        [5. , 10.],
-        [5. , 25.],
-        [5. , 40],
-        [45., 10],
-        [45., 25],
-        [45., 40]
+    uavs = [
+        createUAV(
+            obs_radius=uav["observation_radius"],
+            reward_type=uav["reward_type"],
+            resolution=uav["resolution"],
+            agent_types=agent_types
+        )
+        for uav in config["env"]["agents"]["uavs"]
     ]
-    agent_types = ["rover", "rover"]
-    if include_uavs:
-        agent_types += ["uav", "uav"]
-    rover_obs_rad = 100.
-    agents = [
-        createRover(rover_obs_rad, reward_type = reward_types[0], agent_types=agent_types),
-        createRover(rover_obs_rad, reward_type = reward_types[1], agent_types=agent_types)
+    agents = rovers_+uavs
+
+    is_rover_list = [True if str_=="rover" else False for str_ in agent_types]
+
+    rover_pois = [
+        createRoverPOI(
+            value=poi["value"],
+            obs_rad=poi["observation_radius"],
+            coupling=poi["coupling"],
+            is_rover_list=is_rover_list
+        )
+        for poi in config["env"]["pois"]["rover_pois"]
     ]
-    if include_uavs:
-        uav_obs_rad = 100.
-        agents += [
-            createUAV(uav_obs_rad, reward_type = reward_types[2], agent_types=agent_types),
-            createUAV(uav_obs_rad, reward_type = reward_types[3], agent_types=agent_types)
-        ]
-    pois = [
-        createRoverPOI(value=5. , obs_rad=1. , coupling=1, is_rover_list=[True, True, False, False]),
-        createRoverPOI(value=1. , obs_rad=1. , coupling=1, is_rover_list=[True, True, False, False]),
-        createRoverPOI(value=5. , obs_rad=1. , coupling=1, is_rover_list=[True, True, False, False]),
-        createRoverPOI(value=5. , obs_rad=1. , coupling=1, is_rover_list=[True, True, False, False]),
-        createRoverPOI(value=1. , obs_rad=1. , coupling=1, is_rover_list=[True, True, False, False]),
-        createRoverPOI(value=5. , obs_rad=1. , coupling=1, is_rover_list=[True, True, False, False])
-    ]
-    env = Env(rovers.CustomInit(agent_positions, poi_positions), agents, pois, width=cppyy.gbl.ulong(50.), height=cppyy.gbl.ulong(50.))
+
+    pois = rover_pois
+
+    env = Env(
+        rovers.CustomInit(agent_positions, poi_positions),
+        agents,
+        pois,
+        width=cppyy.gbl.ulong(config["env"]["map_size"][0]),
+        height=cppyy.gbl.ulong(config["env"]["map_size"][1])
+    )
     return env
 
 # Alright let's give this a try
 def main():
-    env = createEnv(include_uavs=False)
+    config = {
+        "env": {
+            "agents": {
+                "rovers": [
+                    {
+                        "observation_radius": 3.0,
+                        "reward_type": "Global",
+                        "resolution": 90,
+                        "position": [24.0, 24.0]
+                    },
+                    {
+                        "observation_radius": 3.0,
+                        "reward_type": "Global",
+                        "resolution": 90,
+                        "position": [26.0, 24.0]
+                    }
+                ],
+                "uavs": [
+                    {
+                        "observation_radius": 100.0,
+                        "reward_type": "Global",
+                        "resolution": 30,
+                        "position": [24.0, 26.0]
+                    },
+                    {
+                        "observation_radius": 100.0,
+                        "reward_type": "Global",
+                        "resolution": 30,
+                        "position": [26.0, 26.0]
+                    }
+                ]
+            },
+            "pois": {
+                "rover_pois": [
+                    {
+                        "value": 5.0,
+                        "observation_radius": 1.0,
+                        "coupling": 1,
+                        "position": [5.0, 10.0],
+                    },
+                    {
+                        "value": 1.0,
+                        "observation_radius": 1.0,
+                        "coupling": 1,
+                        "position": [5.0, 25.0],
+                    }
+                ]
+            },
+            "map_size": [50.0, 50.0]
+        }
+    }
+
+    env = createEnv(config)
 
     states, rewards = env.reset()
 
