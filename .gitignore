@@ -85,3 +85,4 @@ thyme.includes
 debugging/
 env_backup/
 prototyping/configs/trial_*
+results/

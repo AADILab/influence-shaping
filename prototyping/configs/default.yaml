@@ -87,7 +87,10 @@ ccea:
     hall_of_fame:
       alpha: 0.5
   selection:
-    n_elites: 5
+    selection_method: NElitesBinaryTournament,
+    n_elites_binary_tournament:
+      n_elites: 5
+      include_elites_in_tournament: True
   mutation:
     mean: 0.0
     std_deviation: 1.0
@@ -98,4 +101,4 @@ processing:
   use_multiprocessing: True
   num_threads: 20
 experiment:
-  num_trials: 20
+  num_trials: 1

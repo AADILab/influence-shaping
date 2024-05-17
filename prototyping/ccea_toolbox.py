@@ -1,6 +1,7 @@
 from deap import base
 from deap import creator
 from deap import tools
+from tqdm import tqdm
 
 import multiprocessing
 import random
@@ -15,6 +16,11 @@ from custom_env import createEnv
 from copy import deepcopy
 import numpy as np
 import random
+import os
+from pathlib import Path
+import yaml
+import pprint
+from tqdm import tqdm
 
 # Create a multi-rover evaluation
 # This rover evaluation will have UAVs and rovers. And only rovers can capture POIs
@@ -153,9 +159,19 @@ def setupToolbox(config):
 
     rover_nn = NeuralNetwork(num_inputs=4*3, num_hidden=NUM_HIDDEN, num_outputs=2)
     uav_nn = NeuralNetwork(num_inputs=12*3, num_hidden=NUM_HIDDEN, num_outputs=2)
+
+    if NUM_ROVERS > 0:
+        ROVER_RESOLUTION = config["env"]["agents"]["rovers"][0]["resolution"]
+        ROVER_SECTORS = int(360/ROVER_RESOLUTION)
+        rover_nn = NeuralNetwork(num_inputs=ROVER_SECTORS*3, num_hidden=NUM_HIDDEN, num_outputs=2)
+
+    if NUM_UAVS > 0:
+        UAV_RESOLUTION = config["env"]["agents"]["uavs"][0]["resolution"]
+        UAV_SECTORS = int(360/UAV_RESOLUTION)
+        uav_nn = NeuralNetwork(num_inputs=UAV_SECTORS*3, num_hidden=NUM_HIDDEN, num_outputs=2)
+
     ROVER_IND_SIZE = rover_nn.num_weights
     UAV_IND_SIZE = uav_nn.num_weights
-    NUM_STEPS = config["ccea"]["num_steps"]
 
     USE_MULTIPROCESSING = config["processing"]["use_multiprocessing"]
     NUM_THREADS = config["processing"]["num_threads"]
@@ -190,29 +206,34 @@ def setupToolbox(config):
     toolbox.register("crossover", tools.cxTwoPoint)
     toolbox.register("mutate", tools.mutGaussian, mu=config["ccea"]["mutation"]["mean"], sigma=config["ccea"]["mutation"]["std_deviation"], indpb=config["ccea"]["mutation"]["independent_probability"])
 
-    def selectNElitesBinaryTournament(population, N):
+    def selectNElitesBinaryTournament(population, N, include_elites_in_tournament):
         # Get the best N individuals
         offspring = tools.selBest(population, N)
 
-        # Get the remaining worse individuals
-        remaining_offspring = tools.selWorst(population, len(population)-N)
+        if include_elites_in_tournament:
+            offspring += tools.selTournament(population, len(population)-N, tournsize=2)
+            return offspring
 
-        # Add those remaining individuals through a binary tournament
-        offspring += tools.selTournament(remaining_offspring, len(remaining_offspring), tournsize=2)
+        else:
+            # Get the remaining worse individuals
+            remaining_offspring = tools.selWorst(population, len(population)-N)
 
-        return offspring
+            # Add those remaining individuals through a binary tournament
+            offspring += tools.selTournament(remaining_offspring, len(remaining_offspring), tournsize=2)
+
+            return offspring
 
     toolbox.register("selectSubPopulation", selectNElitesBinaryTournament)
     toolbox.register("evaluate", evaluate, rover_network=rover_nn, uav_network=uav_nn, config=config)
     toolbox.register("evaluateWithTeamFitness", evaluate, rover_network=rover_nn, uav_network=uav_nn, compute_team_fitness=True, config=config)
 
-    def select(population, N):
+    def select(population, N, include_elites_in_tournament):
         # Offspring is a list of subpopulation
         offspring = []
         # For each subpopulation in the population
         for subpop in population:
             # Perform a selection on that subpopulation, and add it to the offspring population
-            offspring.append(toolbox.selectSubPopulation(subpop, N))
+            offspring.append(toolbox.selectSubPopulation(subpop, N, include_elites_in_tournament))
         return offspring
 
     toolbox.register("select", select)
@@ -237,3 +258,162 @@ def setupToolbox(config):
     toolbox.register("evaluateBestTeam", evaluateBestTeam)
 
     return toolbox
+
+# This is the top level function that runs everything
+def runCCEA(config_dir):
+    config_dir = Path(os.path.expanduser(config_dir))
+
+    trials_dir = config_dir.parent
+    with open(str(config_dir), 'r') as file:
+        config = yaml.safe_load(file)
+
+    # Run for the specified number of trials
+    for num_trial in range(config["experiment"]["num_trials"]):
+        # Setup the directory for saving data
+        trial_dir = trials_dir / ("trial_"+str(num_trial))
+        if not os.path.isdir(trial_dir):
+            os.makedirs(trial_dir)
+
+        # Create csv file for saving data
+        fitness_dir = trial_dir / "fitness.csv"
+        top_line = "generation, team_fitness"
+        for i in range(len(config["env"]["agents"]["rovers"])):
+            top_line += ", rover_"+str(i)
+        for i in range(len(config["env"]["agents"]["uavs"])):
+            top_line += ", uav_"+str(i)
+        for s in range(config["ccea"]["population"]["subpopulation_size"]):
+            top_line += ", team_fitness_train_"+str(s)
+        with open(fitness_dir, 'w') as file:
+            file.write(top_line)
+            file.write('\n')
+
+        # Setup toolbox for evolution
+        toolbox = setupToolbox(config)
+
+        # Create population, with subpopulation for each agentpack
+        pop = toolbox.population()
+
+        # Form teams
+        teams = toolbox.formTeams(pop)
+
+        # Evaluate each team
+        jobs = toolbox.map(toolbox.evaluateWithTeamFitness, teams)
+        team_fitnesses = jobs.get()
+
+        # Save the Hall of Fame champion team
+        team_pairs = zip(teams, team_fitnesses)
+        hall_of_fame_team_pair = max(team_pairs, key=lambda team_pair: team_pair[1][-1][0])
+        hall_of_fame_team = hall_of_fame_team_pair[0]
+
+        training_fitnesses = []
+        # Now we go back through each team and assign fitnesses to individuals on teams
+        for team, fitnesses in zip(teams, team_fitnesses):
+            # Save the team fitness from training
+            training_fitnesses.append(fitnesses[-1][0])
+            for individual, fit in zip(team, fitnesses):
+                individual.fitness.values = fit
+
+
+        # Evaluate the champions and save the fitnesses
+        fitnesses = toolbox.evaluateBestTeam(pop)
+        fit_list = ["0"] + [str(fitnesses[-1][0])] + \
+            [str(fit[0]) for fit in fitnesses[:-1]] + \
+            [str(fit) for fit in training_fitnesses]
+        with open( str(fitness_dir) , 'a') as file:
+            fit_str = ','.join(fit_list)
+            file.write(fit_str+'\n')
+
+        # For each generation
+        for gen in tqdm(range(config["ccea"]["num_generations"])):
+            # Perform a N-elites binary tournament selection on each subpopulation
+            N_ELITES = config["ccea"]["selection"]["n_elites_binary_tournament"]["n_elites"]
+            offspring = toolbox.select(
+                pop,
+                N=N_ELITES,
+                include_elites_in_tournament=config["ccea"]["selection"]["n_elites_binary_tournament"]["include_elites_in_tournament"]
+            )
+
+            # Make deepcopies so we don't accidentally overwrite anything
+            offspring = list(map(toolbox.clone, offspring))
+
+            # Track which fitnesses are going to be invalid
+            invalid_ind = []
+
+            # Mutation
+            SUBPOPULATION_SIZE = config["ccea"]["population"]["subpopulation_size"]
+            for num_individual in range(SUBPOPULATION_SIZE-N_ELITES):
+                # if random.random() < MUTPB:
+                invalid_ind.append(num_individual+N_ELITES)
+                for subpop in offspring:
+                    toolbox.mutate(subpop[num_individual+N_ELITES])
+                    del subpop[num_individual+N_ELITES].fitness.values
+
+            # Shuffle subpopulations in the offspring
+            toolbox.shuffle(offspring)
+
+            # Form random teams of individuals
+            random_teams = toolbox.formTeams(offspring)
+            # print("random_teams: ", len(random_teams))
+
+            # Now form teams using the hall of fame for each individual
+            hof_teams = toolbox.formHOFTeams(offspring, hall_of_fame_team)
+            # print("hof_teams: ", len(hof_teams))
+
+            # Aggregate all the teams
+            teams = random_teams + hof_teams
+            # print("teams: ", len(teams))
+            # exit()
+
+            # Evaluate each team
+            jobs = toolbox.map(toolbox.evaluateWithTeamFitness, teams)
+            team_fitnesses = jobs.get()
+
+            # Now we go back through each team and assign fitnesses to individuals on teams
+            # (This is just based on the fitnesses from the random teams)
+            training_fitnesses = []
+            # total_individuals = SUBPOPULATION_SIZE*len(offspring)
+            num_inds_with_fitness = 0
+            for team, fitnesses in zip(teams[:SUBPOPULATION_SIZE], team_fitnesses[:SUBPOPULATION_SIZE]):
+                # Save the team fitness from training
+                training_fitnesses.append(fitnesses[-1][0])
+                for individual, fit in zip(team, fitnesses):
+                    individual.fitness.values = fit
+                    num_inds_with_fitness += 1
+            # print("assigned fitness: ", num_inds_with_fitness)
+
+            # exit()
+
+            # Now we are going to add the hall of fame values
+            ALPHA = config["ccea"]["evaluation"]["hall_of_fame"]["alpha"]
+            individual_index = 0
+            for subpop in offspring:
+                for individual in subpop:
+                    # print("SUBPOPULATION_SIZE: ", SUBPOPULATION_SIZE)
+                    # print("individual.fitness.values: ", individual.fitness.values)
+                    # print("len(teams): ", len(teams))
+                    # print("SUBPOPULATION_SIZE+individual_index: ", SUBPOPULATION_SIZE+individual_index)
+                    # print('individual_index: ', individual_index)
+                    individual.fitness.values = \
+                        (individual.fitness.values[0]*ALPHA + (1-ALPHA)*team_fitnesses[SUBPOPULATION_SIZE+individual_index][-1][0],)
+                    individual_index+=1
+
+            # And now we check if there is a new hall of fame team
+            team_pairs = zip(teams, team_fitnesses)
+            new_hall_of_fame_team_pair = max(team_pairs, key=lambda team_pair: team_pair[1][-1][0])
+            if new_hall_of_fame_team_pair[1][-1][0] > hall_of_fame_team_pair[1][-1][0]:
+                hall_of_fame_team_pair = new_hall_of_fame_team_pair
+                hall_of_fame_team = new_hall_of_fame_team_pair[0]
+
+            # Save the fitnesses of the HOF team
+            fitnesses = hall_of_fame_team_pair[1]
+            fit_list = [str(gen+1)] + [str(fitnesses[-1][0])] + \
+                [str(fit[0]) for fit in fitnesses[:-1]] + \
+                [str(fit) for fit in training_fitnesses]
+            with open(str(fitness_dir), 'a') as file:
+                fit_str = ','.join(fit_list)
+                file.write(fit_str+'\n')
+
+            # Now populate the population with the individuals from the offspring
+            for subpop, subpop_offspring in zip(pop, offspring):
+                subpop[:] = subpop_offspring
+    return pop
