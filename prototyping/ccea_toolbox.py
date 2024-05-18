@@ -299,8 +299,8 @@ def runCCEA(config_dir):
         # Evaluate each team
         jobs = toolbox.map(toolbox.evaluateWithTeamFitness, teams)
         team_fitnesses = jobs.get()
-        print("team_fitnesses:")
-        print(team_fitnesses)
+        # print("team_fitnesses:")
+        # print(team_fitnesses)
 
         # Save the Hall of Fame champion team
         # team_pairs = zip(teams, team_fitnesses)
@@ -317,9 +317,9 @@ def runCCEA(config_dir):
                 individual.fitness.values = fit
                 ind += 1
 
-        for subpopulation in pop:
-            for count, individual in enumerate(subpopulation):
-                print("fitness for "+str(count)+" : ", individual.fitness.values)
+        # for subpopulation in pop:
+        #     for count, individual in enumerate(subpopulation):
+        #         print("fitness for "+str(count)+" : ", individual.fitness.values)
 
         # exit()
         # Evaluate the champions and save the fitnesses
@@ -345,36 +345,36 @@ def runCCEA(config_dir):
             # and causes issues with learning, so this line fixes that by ensuring each individual is a unique object and if you
             # change the weights for one individual, it will not affect the weights of the original individual
             offspring = [ [ deepcopy(individual) for individual in subpopulation ] for subpopulation in offspring ]
-            print("Post Selection")
-            for subpopulation in offspring:
-                for count, individual in enumerate(subpopulation):
-                    print("fitness for "+str(count)+" : ", individual.fitness.values)
+            # print("Post Selection")
+            # for subpopulation in offspring:
+            #     for count, individual in enumerate(subpopulation):
+            #         print("fitness for "+str(count)+" : ", individual.fitness.values)
 
-            for subpopulation in offspring:
-                for count, individual in enumerate(subpopulation):
-                    print("Sum for indvidual "+str(count)+" : ", np.sum(individual))
+            # for subpopulation in offspring:
+            #     for count, individual in enumerate(subpopulation):
+            #         print("Sum for indvidual "+str(count)+" : ", np.sum(individual))
 
             # Mutation
             SUBPOPULATION_SIZE = config["ccea"]["population"]["subpopulation_size"]
             num_mutants = SUBPOPULATION_SIZE-N_ELITES
-            print("Number of mutants: ", num_mutants)
+            # print("Number of mutants: ", num_mutants)
             for num_individual in range(num_mutants):
-                print("Indivudal number: ", num_individual)
+                # print("Indivudal number: ", num_individual)
                 mutant_id = num_individual+N_ELITES
-                print("mutant_id: ", mutant_id)
+                # print("mutant_id: ", mutant_id)
                 for subpop in offspring:
-                    print("Pre mutation sum: ", np.sum(subpop[mutant_id]))
+                    # print("Pre mutation sum: ", np.sum(subpop[mutant_id]))
                     toolbox.mutate(subpop[mutant_id])
-                    print("Post mutate sum: ", np.sum(subpop[mutant_id]))
+                    # print("Post mutate sum: ", np.sum(subpop[mutant_id]))
                     del subpop[mutant_id].fitness.values
 
-            print("Post Mutation")
+            # print("Post Mutation")
 
-            for subpopulation in offspring:
-                for count, individual in enumerate(subpopulation):
-                    print("Sum for indvidual "+str(count)+" : ", np.sum(individual))
+            # for subpopulation in offspring:
+            #     for count, individual in enumerate(subpopulation):
+            #         print("Sum for indvidual "+str(count)+" : ", np.sum(individual))
 
-            exit()
+            # exit()
 
             # Shuffle subpopulations in the offspring
             toolbox.shuffle(offspring)
