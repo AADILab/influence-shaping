@@ -290,7 +290,7 @@ def runCCEA(config_dir):
         # Setup toolbox for evolution
         toolbox = setupToolbox(config)
 
-        # Create population, with subpopulation for each agentpack
+        # Create population, with subpopulation for each agent
         pop = toolbox.population()
 
         # Form teams
@@ -299,21 +299,29 @@ def runCCEA(config_dir):
         # Evaluate each team
         jobs = toolbox.map(toolbox.evaluateWithTeamFitness, teams)
         team_fitnesses = jobs.get()
+        print("team_fitnesses:")
+        print(team_fitnesses)
 
         # Save the Hall of Fame champion team
-        team_pairs = zip(teams, team_fitnesses)
-        hall_of_fame_team_pair = max(team_pairs, key=lambda team_pair: team_pair[1][-1][0])
-        hall_of_fame_team = hall_of_fame_team_pair[0]
+        # team_pairs = zip(teams, team_fitnesses)
+        # hall_of_fame_team_pair = max(team_pairs, key=lambda team_pair: team_pair[1][-1][0])
+        # hall_of_fame_team = hall_of_fame_team_pair[0]
 
         training_fitnesses = []
+        ind = 0
         # Now we go back through each team and assign fitnesses to individuals on teams
         for team, fitnesses in zip(teams, team_fitnesses):
             # Save the team fitness from training
             training_fitnesses.append(fitnesses[-1][0])
             for individual, fit in zip(team, fitnesses):
                 individual.fitness.values = fit
+                ind += 1
 
+        for subpopulation in pop:
+            for count, individual in enumerate(subpopulation):
+                print("fitness for "+str(count)+" : ", individual.fitness.values)
 
+        # exit()
         # Evaluate the champions and save the fitnesses
         fitnesses = toolbox.evaluateBestTeam(pop)
         fit_list = ["0"] + [str(fitnesses[-1][0])] + \
@@ -332,21 +340,41 @@ def runCCEA(config_dir):
                 N=N_ELITES,
                 include_elites_in_tournament=config["ccea"]["selection"]["n_elites_binary_tournament"]["include_elites_in_tournament"]
             )
+            # When the selection operation selects individuals, it makes copies of them, so changing the weights of a copy of
+            # an individual also changes the weights of the original individual. This couples individuals in a strange way
+            # and causes issues with learning, so this line fixes that by ensuring each individual is a unique object and if you
+            # change the weights for one individual, it will not affect the weights of the original individual
+            offspring = [ [ deepcopy(individual) for individual in subpopulation ] for subpopulation in offspring ]
+            print("Post Selection")
+            for subpopulation in offspring:
+                for count, individual in enumerate(subpopulation):
+                    print("fitness for "+str(count)+" : ", individual.fitness.values)
 
-            # Make deepcopies so we don't accidentally overwrite anything
-            offspring = list(map(toolbox.clone, offspring))
-
-            # Track which fitnesses are going to be invalid
-            invalid_ind = []
+            for subpopulation in offspring:
+                for count, individual in enumerate(subpopulation):
+                    print("Sum for indvidual "+str(count)+" : ", np.sum(individual))
 
             # Mutation
             SUBPOPULATION_SIZE = config["ccea"]["population"]["subpopulation_size"]
-            for num_individual in range(SUBPOPULATION_SIZE-N_ELITES):
-                # if random.random() < MUTPB:
-                invalid_ind.append(num_individual+N_ELITES)
+            num_mutants = SUBPOPULATION_SIZE-N_ELITES
+            print("Number of mutants: ", num_mutants)
+            for num_individual in range(num_mutants):
+                print("Indivudal number: ", num_individual)
+                mutant_id = num_individual+N_ELITES
+                print("mutant_id: ", mutant_id)
                 for subpop in offspring:
-                    toolbox.mutate(subpop[num_individual+N_ELITES])
-                    del subpop[num_individual+N_ELITES].fitness.values
+                    print("Pre mutation sum: ", np.sum(subpop[mutant_id]))
+                    toolbox.mutate(subpop[mutant_id])
+                    print("Post mutate sum: ", np.sum(subpop[mutant_id]))
+                    del subpop[mutant_id].fitness.values
+
+            print("Post Mutation")
+
+            for subpopulation in offspring:
+                for count, individual in enumerate(subpopulation):
+                    print("Sum for indvidual "+str(count)+" : ", np.sum(individual))
+
+            exit()
 
             # Shuffle subpopulations in the offspring
             toolbox.shuffle(offspring)
@@ -356,11 +384,12 @@ def runCCEA(config_dir):
             # print("random_teams: ", len(random_teams))
 
             # Now form teams using the hall of fame for each individual
-            hof_teams = toolbox.formHOFTeams(offspring, hall_of_fame_team)
+            # hof_teams = toolbox.formHOFTeams(offspring, hall_of_fame_team)
             # print("hof_teams: ", len(hof_teams))
 
             # Aggregate all the teams
-            teams = random_teams + hof_teams
+            # teams = random_teams + hof_teams
+            teams = random_teams
             # print("teams: ", len(teams))
             # exit()
 
@@ -373,7 +402,7 @@ def runCCEA(config_dir):
             training_fitnesses = []
             # total_individuals = SUBPOPULATION_SIZE*len(offspring)
             num_inds_with_fitness = 0
-            for team, fitnesses in zip(teams[:SUBPOPULATION_SIZE], team_fitnesses[:SUBPOPULATION_SIZE]):
+            for team, fitnesses in zip(teams, team_fitnesses):
                 # Save the team fitness from training
                 training_fitnesses.append(fitnesses[-1][0])
                 for individual, fit in zip(team, fitnesses):
@@ -384,28 +413,29 @@ def runCCEA(config_dir):
             # exit()
 
             # Now we are going to add the hall of fame values
-            ALPHA = config["ccea"]["evaluation"]["hall_of_fame"]["alpha"]
-            individual_index = 0
-            for subpop in offspring:
-                for individual in subpop:
-                    # print("SUBPOPULATION_SIZE: ", SUBPOPULATION_SIZE)
-                    # print("individual.fitness.values: ", individual.fitness.values)
-                    # print("len(teams): ", len(teams))
-                    # print("SUBPOPULATION_SIZE+individual_index: ", SUBPOPULATION_SIZE+individual_index)
-                    # print('individual_index: ', individual_index)
-                    individual.fitness.values = \
-                        (individual.fitness.values[0]*ALPHA + (1-ALPHA)*team_fitnesses[SUBPOPULATION_SIZE+individual_index][-1][0],)
-                    individual_index+=1
+            # ALPHA = config["ccea"]["evaluation"]["hall_of_fame"]["alpha"]
+            # individual_index = 0
+            # for subpop in offspring:
+            #     for individual in subpop:
+            #         # print("SUBPOPULATION_SIZE: ", SUBPOPULATION_SIZE)
+            #         # print("individual.fitness.values: ", individual.fitness.values)
+            #         # print("len(teams): ", len(teams))
+            #         # print("SUBPOPULATION_SIZE+individual_index: ", SUBPOPULATION_SIZE+individual_index)
+            #         # print('individual_index: ', individual_index)
+            #         individual.fitness.values = \
+            #             (individual.fitness.values[0]*ALPHA + (1-ALPHA)*team_fitnesses[SUBPOPULATION_SIZE+individual_index][-1][0],)
+            #         individual_index+=1
 
             # And now we check if there is a new hall of fame team
-            team_pairs = zip(teams, team_fitnesses)
-            new_hall_of_fame_team_pair = max(team_pairs, key=lambda team_pair: team_pair[1][-1][0])
-            if new_hall_of_fame_team_pair[1][-1][0] > hall_of_fame_team_pair[1][-1][0]:
-                hall_of_fame_team_pair = new_hall_of_fame_team_pair
-                hall_of_fame_team = new_hall_of_fame_team_pair[0]
+            # team_pairs = zip(teams, team_fitnesses)
+            # new_hall_of_fame_team_pair = max(team_pairs, key=lambda team_pair: team_pair[1][-1][0])
+            # if new_hall_of_fame_team_pair[1][-1][0] > hall_of_fame_team_pair[1][-1][0]:
+            #     hall_of_fame_team_pair = new_hall_of_fame_team_pair
+            #     hall_of_fame_team = new_hall_of_fame_team_pair[0]
 
             # Save the fitnesses of the HOF team
-            fitnesses = hall_of_fame_team_pair[1]
+            # fitnesses = hall_of_fame_team_pair[1]
+            fitnesses = toolbox.evaluateBestTeam(offspring)
             fit_list = [str(gen+1)] + [str(fitnesses[-1][0])] + \
                 [str(fit[0]) for fit in fitnesses[:-1]] + \
                 [str(fit) for fit in training_fitnesses]
