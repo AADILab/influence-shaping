@@ -1,76 +1,30 @@
 env:
   agents:
     rovers:
-      - {
-        observation_radius: 3.0,
-        reward_type: Global,
-        resolution: 90,
-        position: [24.0, 24.0]
-      }
-      - {
-        observation_radius: 3.0,
-        reward_type: Global,
-        resolution: 90,
-        position: [26.0, 24.0]
-      }
-    uavs:
-      - {
-        observation_radius: 100.0,
-        reward_type: Global,
-        resolution: 30,
-        position: [24.0, 26.0]
-      }
-      - {
-        observation_radius: 100.0,
-        reward_type: Global,
-        resolution: 30,
-        position: [26.0, 26.0]
-      }
+      - observation_radius: 1000.0
+        reward_type: Global
+        resolution: 90
+        position:
+          spawn_rule: fixed
+          fixed: [25.0, 25.0]
+    uavs: []
   pois:
-    rover_pois:
-      - {
-        value: 5.0,
-        observation_radius: 1.0,
-        coupling: 1,
-        position: [5.0, 10.0]
-      }
-      - {
-        value: 1.0,
-        observation_radius: 1.0,
-        coupling: 1,
-        position: [5.0, 25.0]
-      }
-      - {
-        value: 5.0,
-        observation_radius: 1.0,
-        coupling: 1,
-        position: [5.0, 40.0]
-      }
-      - {
-        value: 5.0,
-        observation_radius: 1.0,
-        coupling: 1,
-        position: [45.0, 10.0]
-      }
-      - {
-        value: 1.0,
-        observation_radius: 1.0,
-        coupling: 1,
-        position: [45.0, 25.0]
-      }
-      - {
-        value: 1.0,
-        observation_radius: 1.0,
-        coupling: 1,
-        position: [45.0, 40.0]
-      }
+    rover_pois: []
     hidden_pois:
-      - {
-        value: 5.0,
-        observation_radius: 1.0,
-        coupling: 1,
-        position: [50.0, 50.0]
-      }
+    - value: 1.0
+      observation_radius: 1000.0
+      coupling: 1
+      position:
+        spawn_rule: random_uniform
+        fixed: [5.0, 10.0]
+        random_uniform:
+          low_x: 0.0
+          high_x: 50.0
+          low_y: 0.0
+          high_y: 50.0
+        random_circle:
+          radius: 10.0
+          center: [25.0, 25.0]
   map_size: [50.0, 50.0]
 ccea:
   weight_initialization:
@@ -87,16 +41,16 @@ ccea:
     hall_of_fame:
       alpha: 0.5
   selection:
-    selection_method: NElitesBinaryTournament,
+    selection_method: NElitesBinaryTournament
     n_elites_binary_tournament:
       n_elites: 5
       include_elites_in_tournament: True
   mutation:
     mean: 0.0
-    std_deviation: 1.0
-    independent_probability: 0.1
+    std_deviation: 0.1
+    independent_probability: 0.5
   num_steps: 30
-  num_generations: 1000
+  num_generations: 1
 processing:
   use_multiprocessing: True
   num_threads: 20

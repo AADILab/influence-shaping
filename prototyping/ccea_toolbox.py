@@ -187,6 +187,7 @@ def setupToolbox(config):
         toolbox.register("map", pool.map_async)
     else:
         print("not multiprocessing")
+        pool = None
         toolbox.register("map", map)
     toolbox.register("attr_float", random.uniform, config["ccea"]["weight_initialization"]["lower_bound"], config["ccea"]["weight_initialization"]["upper_bound"])
     # rover or uav individual
@@ -257,7 +258,7 @@ def setupToolbox(config):
 
     toolbox.register("evaluateBestTeam", evaluateBestTeam)
 
-    return toolbox
+    return toolbox, pool
 
 # This is the top level function that runs everything
 def runCCEA(config_dir):
@@ -288,7 +289,7 @@ def runCCEA(config_dir):
             file.write('\n')
 
         # Setup toolbox for evolution
-        toolbox = setupToolbox(config)
+        toolbox, pool = setupToolbox(config)
 
         # Create population, with subpopulation for each agent
         pop = toolbox.population()
@@ -297,8 +298,11 @@ def runCCEA(config_dir):
         teams = toolbox.formTeams(pop)
 
         # Evaluate each team
-        jobs = toolbox.map(toolbox.evaluateWithTeamFitness, teams)
-        team_fitnesses = jobs.get()
+        if config["processing"]["use_multiprocessing"]:
+            jobs = toolbox.map(toolbox.evaluateWithTeamFitness, teams)
+            team_fitnesses = jobs.get()
+        else:
+            team_fitnesses = toolbox.map(toolbox.evaluateWithTeamFitness, teams)
         # print("team_fitnesses:")
         # print(team_fitnesses)
 
@@ -394,8 +398,11 @@ def runCCEA(config_dir):
             # exit()
 
             # Evaluate each team
-            jobs = toolbox.map(toolbox.evaluateWithTeamFitness, teams)
-            team_fitnesses = jobs.get()
+            if config["processing"]["use_multiprocessing"]:
+                jobs = toolbox.map(toolbox.evaluateWithTeamFitness, teams)
+                team_fitnesses = jobs.get()
+            else:
+                team_fitnesses = toolbox.map(toolbox.evaluateWithTeamFitness, teams)
 
             # Now we go back through each team and assign fitnesses to individuals on teams
             # (This is just based on the fitnesses from the random teams)
@@ -446,4 +453,8 @@ def runCCEA(config_dir):
             # Now populate the population with the individuals from the offspring
             for subpop, subpop_offspring in zip(pop, offspring):
                 subpop[:] = subpop_offspring
+
+    if config["processing"]["use_multiprocessing"]:
+        pool.close()
+
     return pop

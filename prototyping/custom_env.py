@@ -1,6 +1,7 @@
 from librovers import rovers, thyme
 import numpy as np
 import cppyy
+import random
 
 def calculateDistance(position_0, position_1):
     return np.linalg.norm([position_0.x-position_1.x, position_0.y-position_1.y])
@@ -197,20 +198,54 @@ def createPOI(value, obs_rad, coupling, is_rover_list):
     poi = rovers.POI[rovers.CountConstraint](value, obs_rad, countConstraint)
     return poi
 
+def resolvePositionSpawnRule(position_dict):
+    if position_dict["spawn_rule"] == "fixed":
+        return position_dict["fixed"]
+    elif position_dict["spawn_rule"] == "random_uniform":
+        low_x = position_dict["random_uniform"]["low_x"]
+        high_x = position_dict["random_uniform"]["high_x"]
+        x = random.uniform(low_x, high_x)
+        low_y = position_dict["random_uniform"]["low_y"]
+        high_y = position_dict["random_uniform"]["high_y"]
+        y = random.uniform(low_y, high_y)
+        return [x,y]
+    elif position_dict["spawn_rule"] == "random_circle":
+        theta = random.uniform(0, 2*np.pi)
+        r = position_dict["random_circle"]["radius"]
+        center = position_dict["random_circle"]["center"]
+        x = r*np.cos(theta)+center[0]
+        y = r*np.sin(theta)+center[1]
+        return [x,y]
+
 # Let's have a function that builds out the environment
 def createEnv(config):
     Env = rovers.Environment[rovers.CustomInit]
 
-    rover_positions = [rover["position"] for rover in config["env"]["agents"]["rovers"]]
-    uav_positions = [uav["position"] for uav in config["env"]["agents"]["uavs"]]
-    agent_positions = rover_positions + uav_positions
+    # Aggregate all of the positions of agents
+    agent_positions = []
+    for rover in config["env"]["agents"]["rovers"]:
+        position = resolvePositionSpawnRule(rover["position"])
+        agent_positions.append(position)
+    for uav in config["env"]["agents"]["uavs"]:
+        position = resolvePositionSpawnRule(uav["position"])
+        agent_positions.append(position)
 
-    rover_poi_positions = [poi["position"] for poi in config["env"]["pois"]["rover_pois"]]
-    hidden_poi_positions = [poi["position"] for poi in config["env"]["pois"]["hidden_pois"]]
-    poi_positions = rover_poi_positions + hidden_poi_positions
+    # Aggregate all of the positions of pois
+    poi_positions = []
+    for rover_poi in config["env"]["pois"]["rover_pois"]:
+        position = resolvePositionSpawnRule(rover_poi["position"])
+        poi_positions.append(position)
+    for hidden_poi in config["env"]["pois"]["hidden_pois"]:
+        position = resolvePositionSpawnRule(hidden_poi["position"])
+        poi_positions.append(position)
 
-    agent_types = ["rover"]*len(rover_positions) + ["uav"]*len(uav_positions)
-    poi_types = ["rover"]*len(rover_poi_positions)+["hidden"]*len(hidden_poi_positions)
+    NUM_ROVERS = len(config["env"]["agents"]["rovers"])
+    NUM_UAVS = len(config["env"]["agents"]["rovers"])
+    NUM_ROVER_POIS = len(config["env"]["pois"]["rover_pois"])
+    NUM_HIDDEN_POIS = len(config["env"]["pois"]["hidden_pois"])
+
+    agent_types = ["rover"]*NUM_ROVERS + ["uav"]*NUM_UAVS
+    poi_types = ["rover"]*NUM_ROVER_POIS+["hidden"]*NUM_HIDDEN_POIS
 
     rovers_ = [
         createRover(
