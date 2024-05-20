@@ -12,5 +12,5 @@ from ccea_toolbox import runCCEA
 #     config_dir = "~/influence-shaping/results/preliminary/may_17/random_pois/"+name+"/config.yaml"
 #     runCCEA(config_dir=config_dir)
 
-test_config = "~/influence-shaping/prototyping/configs/default.yaml"
-runCCEA(config_dir=test_config)
+config_dir = "~/influence-shaping/results/preliminary/may_18/save_joint_trajs/1uav_1rover_1hiddenpoi_100000gens/config.yaml"
+runCCEA(config_dir=config_dir)

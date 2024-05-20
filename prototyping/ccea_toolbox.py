@@ -291,6 +291,60 @@ def setupToolbox(config):
 
     return toolbox, pool
 
+def saveJointTrajectory(trial_dir, gen, joint_trajs, config):
+    traj_name = "traj_gen"+str(gen)+".csv"
+    traj_dir = trial_dir / traj_name
+    with open( str(traj_dir) , 'w') as file:
+        top_line = ""
+        # First the states
+        NUM_ROVERS = len(config["env"]["agents"]["rovers"])
+        NUM_UAVS = len(config["env"]["agents"]["uavs"])
+        for i in range(NUM_ROVERS):
+            top_line += "rover_"+str(i)+"_x,rover_"+str(i)+"_y,"
+        for i in range(NUM_UAVS):
+            top_line += "uav_"+str(i)+"_x,uav_"+str(i)+"_y,"
+        NUM_ROVER_POIS = len(config["env"]["pois"]["rover_pois"])
+        NUM_HIDDEN_POIS = len(config["env"]["pois"]["hidden_pois"])
+        for i in range(NUM_ROVER_POIS):
+            top_line += "rover_poi_"+str(i)+"_x,rover_poi_"+str(i)+"_y"
+        for i in range(NUM_HIDDEN_POIS):
+            top_line += "hidden_poi_"+str(i)+"_x,hidden_poi_"+str(i)+"_y"
+        # Observations
+        for i in range(NUM_ROVERS):
+            NUM_SECTORS = int(360/config["env"]["agents"]["rovers"][i]["resolution"])
+            for n in range(NUM_SECTORS):
+                top_line += "rover_"+str(i)+"_obs_"+str(n)+","
+        for i in range(NUM_UAVS):
+            NUM_SECTORS = int(360/config["env"]["agents"]["rovers"][i]["resolution"])
+            for n in range(NUM_SECTORS):
+                top_line += "uav_"+str(i)+"_obs_"+str(n)+","
+        # Actions
+        for i in range(NUM_ROVERS):
+            top_line += "rover_"+str(i)+"_dx,rover_"+str(i)+"_dy,"
+        for i in range(NUM_UAVS):
+            top_line += "uav_"+str(i)+"_dx,uav_"+str(i)+"_dy,"
+        top_line+="\n"
+        file.write(top_line)
+        for state, observations, actions in zip(joint_trajs["state"], joint_trajs["observation"], joint_trajs["action"]):
+            # Save the state
+            state_list = []
+            for sl in state:
+                state_list+=[str(s) for s in sl]
+            state_str = ','.join(state_list)
+            file.write(state_str+",")
+            # Save the observations
+            obs_list = []
+            for ol in observations:
+                obs_list += [str(o) for o in ol]
+            obs_str = ','.join(obs_list)
+            file.write(obs_str+",")
+            # Save the actions
+            action_list = []
+            for al in actions:
+                action_list += [str(a) for a in al]
+            act_str = ",".join(action_list)
+            file.write(act_str+"\n")
+
 # This is the top level function that runs everything
 def runCCEA(config_dir):
     config_dir = Path(os.path.expanduser(config_dir))
@@ -370,58 +424,7 @@ def runCCEA(config_dir):
 
         # Save the trajectories if we specified in config
         if config["data"]["save_trajectories"]["switch"]:
-            traj_name = "traj_gen0.csv"
-            traj_dir = trial_dir / traj_name
-            with open( str(traj_dir) , 'w') as file:
-                top_line = ""
-                # First the states
-                NUM_ROVERS = len(config["env"]["agents"]["rovers"])
-                NUM_UAVS = len(config["env"]["agents"]["uavs"])
-                for i in range(NUM_ROVERS):
-                    top_line += "rover_"+str(i)+"_x,rover_"+str(i)+"_y,"
-                for i in range(NUM_UAVS):
-                    top_line += "uav_"+str(i)+"_x,uav_"+str(i)+"_y,"
-                NUM_ROVER_POIS = len(config["env"]["pois"]["rover_pois"])
-                NUM_HIDDEN_POIS = len(config["env"]["pois"]["hidden_pois"])
-                for i in range(NUM_ROVER_POIS):
-                    top_line += "rover_poi_"+str(i)+"_x,rover_poi_"+str(i)+"_y"
-                for i in range(NUM_HIDDEN_POIS):
-                    top_line += "hidden_poi_"+str(i)+"_x,hidden_poi_"+str(i)+"_y"
-                # Observations
-                for i in range(NUM_ROVERS):
-                    NUM_SECTORS = int(360/config["env"]["agents"]["rovers"][i]["resolution"])
-                    for n in range(NUM_SECTORS):
-                        top_line += "rover_"+str(i)+"_obs_"+str(n)+","
-                for i in range(NUM_UAVS):
-                    NUM_SECTORS = int(360/config["env"]["agents"]["rovers"][i]["resolution"])
-                    for n in range(NUM_SECTORS):
-                        top_line += "uav_"+str(i)+"_obs_"+str(n)+","
-                # Actions
-                for i in range(NUM_ROVERS):
-                    top_line += "rover_"+str(i)+"_dx,rover_"+str(i)+"_dy,"
-                for i in range(NUM_UAVS):
-                    top_line += "uav_"+str(i)+"_dx,uav_"+str(i)+"_dy,"
-                top_line+="\n"
-                file.write(top_line)
-                for state, observations, actions in zip(joint_trajs["state"], joint_trajs["observation"], joint_trajs["action"]):
-                    # Save the state
-                    state_list = []
-                    for sl in state:
-                        state_list+=[str(s) for s in sl]
-                    state_str = ','.join(state_list)
-                    file.write(state_str+",")
-                    # Save the observations
-                    obs_list = []
-                    for ol in observations:
-                        obs_list += [str(o) for o in ol]
-                    obs_str = ','.join(obs_list)
-                    file.write(obs_str+",")
-                    # Save the actions
-                    action_list = []
-                    for al in actions:
-                        action_list += [str(a) for a in al]
-                    act_str = ",".join(action_list)
-                    file.write(act_str+"\n")
+            saveJointTrajectory(trial_dir, 0, joint_trajs, config)
 
         # For each generation
         for gen in tqdm(range(config["ccea"]["num_generations"])):
@@ -539,6 +542,10 @@ def runCCEA(config_dir):
             with open(str(fitness_dir), 'a') as file:
                 fit_str = ','.join(fit_list)
                 file.write(fit_str+'\n')
+
+            # Save joint trajectory if specified:
+            if ((gen+1) % config["data"]["save_trajectories"]["num_gens_between_save"] == 0):
+                saveJointTrajectory(trial_dir, gen+1, joint_trajs, config)
 
             # Now populate the population with the individuals from the offspring
             for subpop, subpop_offspring in zip(pop, offspring):
