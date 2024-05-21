@@ -7,7 +7,13 @@ env:
         position:
           spawn_rule: fixed
           fixed: [25.0, 25.0]
-    uavs: []
+    uavs:
+      - observation_radius: 1000.0
+        reward_type: Global
+        resolution: 90
+        position:
+          spawn_rule: fixed
+          fixed: [24.0, 24.0]
   pois:
     rover_pois: []
     hidden_pois:
@@ -39,12 +45,12 @@ ccea:
   evaluation:
     evaluation_method: HallOfFame
     multi_evaluation:
-      num_evaluations: 5
+      num_evaluations: 20
       aggregation_method: average
     hall_of_fame:
       alpha: 0.5
   selection:
-    selection_method: NElitesBinaryTournament
+    selection_method: NElitesBinaryTournament,
     n_elites_binary_tournament:
       n_elites: 5
       include_elites_in_tournament: True
@@ -55,11 +61,11 @@ ccea:
   num_steps: 30
   num_generations: 10000
 processing:
-  use_multiprocessing: False
+  use_multiprocessing: True
   num_threads: 20
 experiment:
   num_trials: 1
 data:
   save_trajectories:
     switch: True
-    num_gens_between_save: 1000
+    num_gens_between_save: 100

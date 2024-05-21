@@ -1,7 +1,7 @@
 """Give this python script a config file and it will run the CCEA using the specified config"""
 
 import argparse
-from ccea_toolbox import runCCEA
+from ccea_lib import runCCEA
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
