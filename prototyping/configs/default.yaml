@@ -38,6 +38,9 @@ ccea:
     subpopulation_size: 50
   evaluation:
     evaluation_method: HallOfFame
+    multi_evaluation:
+      num_evaluations: 5
+      aggregation_method: average
     hall_of_fame:
       alpha: 0.5
   selection:

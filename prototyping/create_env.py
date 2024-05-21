@@ -65,13 +65,15 @@ states, rewards = env.reset()
 print("Sample environment state (each row corresponds to the state of a rover): ")
 for state in states:
     # print(state)
+    print(type(state))
+    print(state[0])
     print(state.transpose())
 
-for r in env.m_rovers:
-    print(r.m_position)
+for r in env.rovers():
+    print(r.position().x, r.position().y)
 
-for p in env.m_pois:
-    print(p.m_position)
+for p in env.pois():
+    print(p.position().x, r.position().y)
 
 # Now that I have the environment set up and (somewhat) understand how to modify it,
 # let's try throwing some learning at this thing

@@ -24,7 +24,7 @@ from tqdm import tqdm
 
 # Create a multi-rover evaluation
 # This rover evaluation will have UAVs and rovers. And only rovers can capture POIs
-def evaluate(team, rover_network, uav_network, compute_team_fitness, config):
+def singleEvaluation(team, rover_network, uav_network, compute_team_fitness, config):
     """Load in the rovers and evaluate them
 
     team: list of individuals (each individual is a list of weights)
@@ -128,6 +128,24 @@ def evaluate(team, rover_network, uav_network, compute_team_fitness, config):
         fitnesses = tuple([(r,) for r in rewards])
 
     return fitnesses, joint_traj
+
+def evaluate(team, rover_network, uav_network, compute_team_fitness, config):
+    all_fitnesses = []
+    all_joint_trajs = []
+    NUM_EVALUATIONS = config["ccea"]["evaluation"]["multi_evaluation"]["num_evaluations"]
+    for _ in range(NUM_EVALUATIONS):
+        fitnesses, joint_traj = singleEvaluation(team, rover_network, uav_network, compute_team_fitness, config)
+        all_fitnesses.append(fitnesses)
+        all_joint_trajs.append(joint_traj)
+    if config["ccea"]["evaluation"]["multi_evaluation"]["aggregation_method"] == "average":
+        average_fitnesses = [0 for _ in range(len(fitnesses))]
+        for fitnesses in all_fitnesses:
+            for count, fit in enumerate(fitnesses):
+                average_fitnesses[count] += fit[0]
+        for ind in range(len(average_fitnesses)):
+            average_fitnesses[ind] = (average_fitnesses[ind] / NUM_EVALUATIONS,)
+
+    return average_fitnesses, joint_traj
 
 def formChampionTeam(population):
     champion_team = []

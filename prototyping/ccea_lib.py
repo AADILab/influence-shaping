@@ -1,0 +1,318 @@
+from deap import base
+from deap import creator
+from deap import tools
+from tqdm import tqdm
+
+import multiprocessing
+import random
+
+from evo_network import NeuralNetwork
+
+from librovers import rovers
+from custom_env import createEnv
+from copy import deepcopy
+import numpy as np
+import random
+import os
+from pathlib import Path
+import yaml
+import pprint
+from tqdm import tqdm
+
+class JointTrajectory():
+    def __init__(self, joint_state_trajectory, joint_observation_trajectory, joint_action_trajectory):
+        self.states = joint_state_trajectory
+        self.observations = joint_observation_trajectory
+        self.actions = joint_action_trajectory
+
+class EvalInfo():
+    def __init__(self, fitnesses, joint_trajectory):
+        self.fitnesses = fitnesses
+        self.joint_trajectory = joint_trajectory
+
+class CooperativeCoevolutionaryAlgorithm():
+    def __init__(self, config):
+        self.config = config
+
+        # Start by setting up variables for different agents
+        self.num_rovers = len(config["env"]["agents"]["rovers"])
+        self.num_uavs = len(config["env"]["agents"]["uavs"])
+        self.subpopulation_size = config["ccea"]["population"]["subpopulation_size"]
+        self.num_hidden = config["ccea"]["network"]["hidden_layers"]
+
+        self.n_elites = config["ccea"]["selection"]["n_elites_binary_tournament"]["n_elites"]
+        self.include_elites_in_tournament = config["ccea"]["selection"]["n_elites_binary_tournament"]["include_elites_in_tournament"]
+        self.num_mutants = self.subpopulation_size - self.n_elites
+
+        self.num_steps = config["ccea"]["num_steps"]
+
+        if self.num_rovers > 0:
+            self.rover_nn_template = self.generateTemplateNN(config["agents"]["rovers"][0]["resolution"])
+            self.rover_nn_size = self.agent_nn_templates[0].num_weights
+        if self.num_uavs > 0:
+            self.uav_nn_template = self.generateTemplateNN(config["agents"]["uavs"][0]["resolution"])
+            self.uav_nn_size = self.agent_nn_templates[0].num_weights
+
+        self.use_multiprocessing = config["processing"]["use_multiprocessing"]
+        self.num_threads = config["processing"]["num_threads"]
+
+        # Create the type of fitness we're optimizing
+        creator.create("FitnessMax", base.Fitness, weights=(1.0,))
+        creator.create("Individual", list, fitness=creator.FitnessMax)
+
+        # Now set up the toolbox
+        self.toolbox = base.Toolbox()
+        if self.use_multiprocessing:
+            self.pool = multiprocessing.Pool(processes=self.num_threads)
+            self.toolbox.register("map", self.pool.map_async)
+        else:
+            self.toolbox.register("map", map)
+
+    def generateTemplateNN(self, resolution):
+        num_sectors = int(360/resolution)
+        agent_nn = NeuralNetwork(num_inputs=3*num_sectors, num_hidden=self.num_hidden, num_outputs=2)
+        return agent_nn
+
+    def generateWeight(self):
+        return random.uniform(self.config["ccea"]["weight_initialization"]["lower_bound"], self.config["ccea"]["weight_initialization"]["upper_bound"])
+
+    def generateIndividual(self, individual_size):
+        return tools.initRepeat(creator.Individual, self.generateWeight, n=individual_size)
+
+    def generateRoverIndividual(self):
+        return self.generateIndividual(individual_size=self.rover_nn_size)
+
+    def generateUAVIndividual(self):
+        return self.generateIndividual(individual_size=self.uav_nn_size)
+
+    def generateRoverSubpopulation(self):
+        return tools.initRepeat(list, self.generateRoverIndividual, n=self.config["ccea"]["population"]["subpopulation_size"])
+
+    def generateUAVSubpopulation(self):
+        return tools.initRepeat(list, self.generateUAVIndividual, n=self.config["ccea"]["population"]["subpopulation_size"])
+
+    def population(self):
+        return tools.initRepeat(list, self.generateRoverSubpopulation, n=self.num_rovers) + \
+            tools.initRepeat(list, self.generateUAVSubpopulation, n=self.num_uavs)
+
+    def formEvaluationTeam(self, population):
+        eval_team = []
+        for subpop in population:
+            # Use max with a key function to get the individual with the highest fitness[0] value
+            best_ind = max(subpop, key=lambda ind: ind.fitness.values[0])
+            eval_team.append(best_ind)
+        return eval_team
+
+    def evaluateEvaluationTeam(self, population):
+        # Create evaluation team
+        eval_team = self.formEvaluationTeam(population)
+        # Evaluate that team
+        return self.evaluateTeam(eval_team)
+
+    def formTeams(self, population, inds=None):
+        # Start a list of teams
+        teams = []
+
+        if inds is None:
+            team_inds = range(self.subpopulation_size)
+        else:
+            team_inds = inds
+
+        # For each individual in a subpopulation
+        for i in team_inds:
+            # Make a team
+            team = []
+            # For each subpopulation in the population
+            for subpop in population:
+                # Put the i'th indiviudal on the team
+                team.append(subpop[i])
+            # Save that team
+            teams.append(team)
+
+        return teams
+
+    def evaluateTeams(self, teams):
+        if self.use_multiprocessing:
+            jobs = self.toolbox.map(self.evaluateTeam, teams)
+            fitness_traj_tuples = jobs.get()
+        else:
+            fitness_traj_tuples = self.toolbox.map(self.evaluateTeam, teams)
+        return fitness_traj_tuples
+
+    def evaluateTeam(self, team, compute_team_fitness=True):
+        # Set up networks
+        rover_nns = [deepcopy(self.rover_nn_template) for _ in range(self.num_rovers)]
+        uav_nns = [deepcopy(self.uav_nn_template) for _ in range(self.num_uavs)]
+
+        # Load in the weights
+        for rover_nn, individual in zip(rover_nns, team[:self.num_rovers]):
+            rover_nn.setWeights(individual)
+        for uav_nn, individual in zip(uav_nns, team[self.num_rovers:]):
+            uav_nn.setWeights(individual)
+        agent_nns = rover_nns + uav_nns
+
+        # Set up the enviornment
+        env = createEnv(self.config)
+
+        observations, _ = env.reset()
+
+        agent_positions = [[agent.position().x, agent.position().y] for agent in env.rovers()]
+        poi_positions = [[poi.position().x, poi.position().y] for poi in env.pois()]
+
+        observations_arrs = []
+        for observation in observations:
+            observation_arr = []
+            for i in range(len(observation)):
+                observation_arr.append(observation(i))
+            observation_arr = np.array(observation_arr, dtype=np.float64)
+            observations_arrs.append(observation_arr)
+
+        joint_state_trajectory = [agent_positions+poi_positions]
+        joint_observation_trajectory = [observations_arrs]
+        joint_action_trajectory = []
+
+        for _ in range(self.num_steps):
+            # Compute the actions of all rovers
+            observation_arrs = []
+            actions_arrs = []
+            actions = []
+            for ind, (observation, agent_nn) in enumerate(zip(observations, agent_nns)):
+                observation_arr = []
+                for i in range(len(observation)):
+                    observation_arr.append(observation)
+                observation_arr = np.array(observation_arr, dtype=np.float64)
+                action_arr = agent_nn.forward(observation_arr)
+                # Multiply by agent velocity
+                if ind <= self.num_rovers:
+                    action_arr*=self.config["ccea"]["network"]["rover_max_velocity"]
+                else:
+                    action_arr*=self.config["ccea"]["network"]["uav_max_velocity"]
+                # Save this info for debugging purposes
+                observation_arrs.append(observation_arr)
+                actions_arrs.append(action_arr)
+            for action_arr in actions_arrs:
+                action = rovers.tensor(action_arr)
+                actions.append(action)
+            observations, rewards = env.step(actions)
+
+            # Get all the states and all the actions of all agents
+            agent_positions = [[agent.position().x, agent.position().y] for agent in env.rovers()]
+            poi_positions = [[poi.position().x, poi.position().y] for poi in env.pois()]
+
+            joint_observation_trajectory.append(observation_arrs)
+            joint_action_trajectory.append(actions_arrs)
+            joint_state_trajectory.append(agent_positions+poi_positions)
+
+        if compute_team_fitness:
+            # Create an agent pack to pass to reward function
+            agent_pack = rovers.AgentPack(
+                agent_index = 0,
+                agents = env.rovers(),
+                entities = env.pois()
+            )
+            team_fitness = rovers.rewards.Global().compute(agent_pack)
+            fitnesses = tuple([(r,) for r in rewards]+[(team_fitness,)])
+        else:
+            # Each index corresponds to an agent's rewards
+            # We only evaulate the team fitness based on the last step
+            # so we only keep the last set of rewards generated by the team
+            fitnesses = tuple([(r,) for r in rewards])
+
+        return EvalInfo(
+            fitnesses=fitnesses,
+            joint_trajectory=JointTrajectory(
+                joint_state_trajectory,
+                joint_observation_trajectory,
+                joint_action_trajectory
+            )
+        )
+
+    def mutateIndividual(self, individual):
+        return tools.mutGaussian(individual, mu=self.config["ccea"]["mutation"]["mean"], sigma=self.config["ccea"]["mutation"]["std_deviation"], indpb=self.config["ccea"]["mutation"]["independent_probability"])
+
+    def mutate(self, population):
+        # Don't mutate the elites from n-elites
+        for num_individual in range(self.num_mutants):
+            mutant_id = num_individual + self.n_elites
+            for subpop in population:
+                self.mutateIndividual(subpop[mutant_id])
+                del subpop[mutant_id].fitness.values
+
+    def selectSubPopulation(self, subpopulation):
+        # Get the best N individuals
+        offspring = tools.selBest(subpopulation, self.n_elites)
+        if self.include_elites_in_tournament:
+            offspring += tools.selTournament(subpopulation, len(subpopulation)-self.n_elites, tournsize=2)
+        else:
+            # Get the remaining worse individuals
+            remaining_offspring = tools.selWorst(subpopulation, len(subpopulation)-self.n_elites)
+            # Add those remaining individuals through a binary tournament
+            offspring += tools.selTournament(remaining_offspring, len(remaining_offspring), tournsize=2)
+        # Return a deepcopy so that modifying an individual that was selected does not modify every single individual
+        # that came from the same selected individual
+        return [ deepcopy(individual) for individual in subpopulation ]
+
+    def select(self, population):
+        # Offspring is a list of subpopulation
+        offspring = []
+        # For each subpopulation in the population
+        for subpop in population:
+            # Perform a selection on that subpopulation and add it to the offspring population
+            offspring.append(self.selectSubPopulation(subpop))
+        return offspring
+
+    def shuffle(self, population):
+        for subpop in population:
+            random.shuffle(subpop)
+
+    def assignFitnesses(self, teams, eval_infos):
+        for team, eval_info in zip(teams, eval_infos):
+            fitnesses = eval_info.fitnesses
+            for individual, fit in zip(team, fitnesses):
+                individual.fitness.values = fit
+
+    def setPopulation(self, population, offspring):
+        for subpop, subpop_offspring in zip(population, offspring):
+            subpop[:] = subpop_offspring
+
+    def run(self):
+        for num_trial in range(self.config["experiment"]["num_trials"]):
+            # Initialize the population
+            pop = self.population()
+
+            # Create the teams
+            teams = self.formTeams(pop)
+
+            # Evaluate the teams
+            eval_infos = self.evaluateTeams(teams)
+
+            # Assign fitnesses to individuals
+            self.assignFitnesses(teams, eval_infos)
+
+            for gen in tqdm(range(self.config["ccea"]["num_generations"])):
+                # Perform selection
+                offspring = self.select(pop)
+
+                # Perform mutation
+                self.mutate(offspring)
+
+                # Shuffle subpopulations in offspring
+                # to make teams random
+                self.shuffle(offspring)
+
+                # Form teams for evaluation
+                teams = self.formTeams(offspring)
+
+                # Evaluate each team
+                eval_infos = self.evaluateTeams(teams)
+
+                # Now assign fitnesses to each individual
+                self.assignFitnesses(teams, eval_infos)
+
+                # Now populate the population with individuals from the offspring
+                self.setPopulation(pop, offspring)
+
+        if self.use_multiprocessing:
+            self.pool.close()
+
+        return pop
