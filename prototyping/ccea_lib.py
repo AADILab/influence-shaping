@@ -44,6 +44,9 @@ class CooperativeCoevolutionaryAlgorithm():
         self.subpopulation_size = self.config["ccea"]["population"]["subpopulation_size"]
         self.num_hidden = self.config["ccea"]["network"]["hidden_layers"]
 
+        self.num_rover_pois = len(self.config["env"]["pois"]["rover_pois"])
+        self.num_hidden_pois = len(self.config["env"]["pois"]["hidden_pois"])
+
         self.n_elites = self.config["ccea"]["selection"]["n_elites_binary_tournament"]["n_elites"]
         self.include_elites_in_tournament = self.config["ccea"]["selection"]["n_elites_binary_tournament"]["include_elites_in_tournament"]
         self.num_mutants = self.subpopulation_size - self.n_elites
@@ -53,14 +56,19 @@ class CooperativeCoevolutionaryAlgorithm():
         self.num_steps = self.config["ccea"]["num_steps"]
 
         if self.num_rovers > 0:
-            self.rover_nn_template = self.generateTemplateNN(self.config["env"]["agents"]["rovers"][0]["resolution"])
+            self.num_rover_sectors = int(360/self.config["env"]["agents"]["rovers"][0]["resolution"])
+            self.rover_nn_template = self.generateTemplateNN(self.num_rover_sectors)
             self.rover_nn_size = self.rover_nn_template.num_weights
         if self.num_uavs > 0:
-            self.uav_nn_template = self.generateTemplateNN(self.config["env"]["agents"]["uavs"][0]["resolution"])
+            self.num_uav_sectors = int(360/self.config["env"]["agents"]["uavs"][0]["resolution"])
+            self.uav_nn_template = self.generateTemplateNN(self.num_uav_sectors)
             self.uav_nn_size = self.uav_nn_template.num_weights
-
         self.use_multiprocessing = self.config["processing"]["use_multiprocessing"]
         self.num_threads = self.config["processing"]["num_threads"]
+
+        # Data saving variables
+        self.save_trajectories = self.config["data"]["save_trajectories"]["switch"]
+        self.num_gens_between_save_traj = self.config["data"]["save_trajectories"]["num_gens_between_save"]
 
         # Create the type of fitness we're optimizing
         creator.create("FitnessMax", base.Fitness, weights=(1.0,))
@@ -88,8 +96,7 @@ class CooperativeCoevolutionaryAlgorithm():
         self.__dict__.update(state)
 
 
-    def generateTemplateNN(self, resolution):
-        num_sectors = int(360/resolution)
+    def generateTemplateNN(self, num_sectors):
         agent_nn = NeuralNetwork(num_inputs=3*num_sectors, num_hidden=self.num_hidden, num_outputs=2)
         return agent_nn
 
@@ -384,6 +391,70 @@ class CooperativeCoevolutionaryAlgorithm():
         with open(eval_fitness_dir, 'a') as file:
                 file.write(fit_str)
 
+    def writeEvalTrajs(self, trial_dir, eval_infos):
+        gen_folder_name = "gen_"+str(self.gen)
+        gen_dir = trial_dir / gen_folder_name
+        if not os.path.isdir(gen_dir):
+            os.makedirs(gen_dir)
+        for eval_id, eval_info in enumerate(eval_infos):
+            eval_filename = "eval_team_"+str(eval_id)+"_joint_traj.csv"
+            eval_dir = gen_dir / eval_filename
+            with open(eval_dir, 'w') as file:
+                # Build up the header (labels at the top of the csv)
+                header = ""
+                # First the states (agents and POIs)
+                for i in range(self.num_rovers):
+                    header += "rover_"+str(i)+"_x,rover_"+str(i)+"_y,"
+                for i in range(self.num_uavs):
+                    header += "uav_"+str(i)+"_x,uav_"+str(i)+"_y"
+                for i in range(self.num_rover_pois):
+                    header += "rover_poi_"+str(i)+"_x,rover_poi_"+str(i)+"_y"
+                # Observations
+                for i in range(self.num_rovers):
+                    for j in range(self.num_rover_sectors):
+                        header += "rover_"+str(i)+"_obs_"+str(j)+","
+                for i in range(self.num_uavs):
+                    for j in range(self.num_uav_sectors):
+                        header += "uav_"+str(i)+"_obs_"+str(j)+","
+                # Actions
+                for i in range(self.num_rovers):
+                    header += "rover_"+str(i)+"_dx,rover_"+str(i)+"_dy,"
+                for i in range(self.num_uavs):
+                    header += "uav_"+str(i)+"_dx,uav_"+str(i)+"_dy,"
+                header+="\n"
+                # Write out the header at the top of the csv
+                file.write(header)
+                # Now fill in the csv with the data
+                # One line at a time
+                joint_traj = eval_info.joint_trajectory
+                # We're going to pad the actions with None because
+                # the agents cannot take actions at the last timestep, but
+                # there is a final joint state/observations
+                action_padding = []
+                for action in joint_traj.actions[0]:
+                    action_padding.append([None for _ in action])
+                joint_traj.actions.append(action_padding)
+                for joint_state, joint_observation, joint_action in zip(joint_traj.states, joint_traj.observations, joint_traj.actions):
+                    # Aggregate state info
+                    state_list = []
+                    for state in joint_state:
+                        state_list+=[str(state_var) for state_var in state]
+                    state_str = ','.join(state_list)
+                    # Aggregate observation info
+                    observation_list = []
+                    for observation in joint_observation:
+                        observation_list+=[str(obs_val) for obs_val in observation]
+                    observation_str = ','.join(observation_list)
+                    # Aggregate action info
+                    action_list = []
+                    for action in joint_action:
+                        action_list+=[str(act_val) for act_val in action]
+                    action_str = ','.join(action_list)
+                    # Put it all together
+                    csv_line = state_str+','+observation_str+','+action_str+'\n'
+                    # Write it out
+                    file.write(csv_line)
+
     def run(self):
         for num_trial in range(self.config["experiment"]["num_trials"]):
             # Init gen counter
@@ -412,8 +483,12 @@ class CooperativeCoevolutionaryAlgorithm():
             # Evaluate a team with the best indivdiual from each subpopulation
             eval_infos = self.evaluateEvaluationTeam(pop)
 
-            # Save it
+            # Save fitnesses of the evaluation team
             self.writeEvalFitnessCSV(trial_dir, eval_infos)
+
+            # Save trajectories of evaluation team
+            if self.save_trajectories:
+                self.writeEvalTrajs(trial_dir, eval_infos)
 
             for gen in tqdm(range(self.config["ccea"]["num_generations"])):
                 # Update gen counter
@@ -441,8 +516,12 @@ class CooperativeCoevolutionaryAlgorithm():
                 # Evaluate a team with the best indivdiual from each subpopulation
                 eval_infos = self.evaluateEvaluationTeam(offspring)
 
-                # Save it
+                # Save fitnesses
                 self.writeEvalFitnessCSV(trial_dir, eval_infos)
+
+                # Save trajectories
+                if self.save_trajectories and self.gen % self.num_gens_between_save_traj == 0:
+                    self.writeEvalTrajs(trial_dir, eval_infos)
 
                 # Now populate the population with individuals from the offspring
                 self.setPopulation(pop, offspring)

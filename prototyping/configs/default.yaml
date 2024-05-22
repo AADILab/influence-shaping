@@ -59,7 +59,7 @@ ccea:
     std_deviation: 0.1
     independent_probability: 0.5
   num_steps: 30
-  num_generations: 500
+  num_generations: 1
 processing:
   use_multiprocessing: False
   num_threads: 20
