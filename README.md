@@ -29,10 +29,10 @@ conda install conda-forge::cppyy=2.2.0
 Install the remaining requirements.
 ```
 cd influence-shaping
-pip install -r requirements.txt
+pip install -e .
 ```
 
 Now you should be able to run the example.
 ```
-python prototyping/run_cli.py prototyping/configs/default.yaml
+python src/influence/run_cli.py src/influence/configs/default.yaml
 ```

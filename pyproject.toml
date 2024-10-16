@@ -1,0 +1,9 @@
+[project]
+name = "influence"
+version = "0.1"
+dependencies = [
+    "deap==1.4.1",
+    "numpy==2.1.2",
+    "PyYAML==6.0.2",
+    "tqdm==4.66.5"
+]
