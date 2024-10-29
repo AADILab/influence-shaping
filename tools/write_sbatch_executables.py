@@ -1,6 +1,6 @@
 """Write sbatch executable files for configs nested in the specified top directory
 Example Usage:
-python tools/write_sbatch_executables.py results/10_29_2024/alpha sbatch/10_29_2024/alpha
+python tools/write_sbatch_executables.py ~/influence-shaping/results/10_29_2024/alpha ~/influence-shaping/sbatch/10_29_2024/alpha
 """
 
 import argparse
