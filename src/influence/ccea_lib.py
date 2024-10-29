@@ -6,10 +6,10 @@ from tqdm import tqdm
 import multiprocessing
 import random
 
-from evo_network import NeuralNetwork
+from influence.evo_network import NeuralNetwork
 
-from librovers import rovers
-from custom_env import createEnv
+from influence.librovers import rovers
+from influence.custom_env import createEnv
 from copy import deepcopy
 import numpy as np
 import random

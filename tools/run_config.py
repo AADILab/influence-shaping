@@ -1,11 +1,11 @@
 """Give this python script a config file and it will run the CCEA using the specified config"""
 
 import argparse
-from ccea_lib import runCCEA
+from influence.ccea_lib import runCCEA
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        prog="run_ccea.py",
+        prog="run_config.py",
         description="This runs a CCEA according to the given configuration file",
         epilog=""
     )

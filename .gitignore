@@ -86,3 +86,5 @@ debugging/
 env_backup/
 prototyping/configs/trial_*
 results/
+sbatch/
+tree_gen/

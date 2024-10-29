@@ -1,4 +1,4 @@
-from librovers import rovers, thyme
+from influence.librovers import rovers, thyme
 import numpy as np
 import cppyy
 import random
