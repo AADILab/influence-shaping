@@ -5,6 +5,7 @@ from tqdm import tqdm
 
 import multiprocessing
 import random
+import pickle
 
 from influence.evo_network import NeuralNetwork
 
@@ -69,6 +70,18 @@ class CooperativeCoevolutionaryAlgorithm():
         # Data saving variables
         self.save_trajectories = self.config["data"]["save_trajectories"]["switch"]
         self.num_gens_between_save_traj = self.config["data"]["save_trajectories"]["num_gens_between_save"]
+        if 'checkpoints' in self.config['data'] and 'save' in self.config['data']['checkpoints']:
+            self.save_checkpoint = self.config["data"]["checkpoints"]["save"]
+        else:
+            self.save_checkpoint = False
+        if 'checkpoints' in self.config['data'] and 'frequency' in self.config['data']['checkpoints']:
+            self.num_gens_between_checkpoint = self.config["data"]["checkpoints"]["frequency"]
+        else:
+            self.num_gens_between_checkpoint = 0
+        if 'checkpoints' in self.config['data'] and 'delete_previous' in self.config['data']['checkpoints']:
+            self.delete_previous_checkpoint = self.config["data"]["checkpoints"]["delete_previous"]
+        else:
+            self.delete_previous_checkpoint = True
 
         # Create the type of fitness we're optimizing
         creator.create("FitnessMax", base.Fitness, weights=(1.0,))
@@ -459,43 +472,74 @@ class CooperativeCoevolutionaryAlgorithm():
                     # Write it out
                     file.write(csv_line)
 
-    def runTrial(self, num_trial):
-        # Init gen counter
-        self.gen = 0
+    def saveCheckpoint(self, trial_dir, pop):
+        checkpoint_dir = trial_dir/('checkpoint_'+str(self.gen)+'.pkl')
+        with open(checkpoint_dir, 'wb') as f:
+            pickle.dump(pop, f)
+        if self.delete_previous_checkpoint:
+            checkpoint_dirs = [dir for dir in os.listdir(trial_dir) if "checkpoint_" in dir]
+            if len(checkpoint_dirs) > 1:
+                lower_gen = min( [int(dir.split("_")[-1].split('.')[0]) for dir in checkpoint_dirs] )
+                prev_checkpoint_dir = trial_dir/('checkpoint_'+str(lower_gen)+'.pkl')
+                os.remove(prev_checkpoint_dir)
+
+    def getCheckpointDirs(self, trial_dir):
+        return [trial_dir/dir for dir in os.listdir(trial_dir) if "checkpoint_" in dir]
+
+    def loadCheckpoint(self, checkpoint_dirs):
+        checkpoint_dirs.sort(key=lambda x: int(str(x).split('_')[-1].split('.')[0]))
+        with open(checkpoint_dirs[-1], 'rb') as f:
+            pop = pickle.load(f)
+        gen = int(str(checkpoint_dirs[-1]).split('_')[-1].split('.')[0])
+        return pop, gen
+
+    def runTrial(self, num_trial, load_checkpoint):
+        # Get trial directory
+        trial_dir = self.trials_dir / ("trial_"+str(num_trial))
 
         # Create directory for saving data
-        trial_dir = self.trials_dir / ("trial_"+str(num_trial))
         if not os.path.isdir(trial_dir):
             os.makedirs(trial_dir)
 
-        # Create csv file for saving evaluation fitnesses
-        self.createEvalFitnessCSV(trial_dir)
+        # Check if we're loading from a checkpoint
+        if load_checkpoint and len(checkpoint_dirs := self.getCheckpointDirs(trial_dir)) > 0:
+            pop, self.gen = self.loadCheckpoint(checkpoint_dirs)
+        else:
+            # Init gen counter
+            self.gen = 0
 
-        # Initialize the population
-        pop = self.population()
+            # Create csv file for saving evaluation fitnesses
+            self.createEvalFitnessCSV(trial_dir)
 
-        # Create the teams
-        teams = self.formTeams(pop)
+            # Initialize the population
+            pop = self.population()
 
-        # Evaluate the teams
-        eval_infos = self.evaluateTeams(teams)
+            # Create the teams
+            teams = self.formTeams(pop)
 
-        # Assign fitnesses to individuals
-        self.assignFitnesses(teams, eval_infos)
+            # Evaluate the teams
+            eval_infos = self.evaluateTeams(teams)
 
-        # Evaluate a team with the best indivdiual from each subpopulation
-        eval_infos = self.evaluateEvaluationTeam(pop)
+            # Assign fitnesses to individuals
+            self.assignFitnesses(teams, eval_infos)
 
-        # Save fitnesses of the evaluation team
-        self.writeEvalFitnessCSV(trial_dir, eval_infos)
+            # Evaluate a team with the best indivdiual from each subpopulation
+            eval_infos = self.evaluateEvaluationTeam(pop)
 
-        # Save trajectories of evaluation team
-        if self.save_trajectories:
-            self.writeEvalTrajs(trial_dir, eval_infos)
+            # Save fitnesses of the evaluation team
+            self.writeEvalFitnessCSV(trial_dir, eval_infos)
 
-        for gen in tqdm(range(self.config["ccea"]["num_generations"])):
+            # Save trajectories of evaluation team
+            if self.save_trajectories:
+                self.writeEvalTrajs(trial_dir, eval_infos)
+
+        # Don't run anything if we loaded in the checkpoint and it turns out we are already done
+        if self.gen >= self.config["ccea"]["num_generations"]:
+            return None
+
+        for _ in tqdm(range(self.config["ccea"]["num_generations"]-self.gen)):
             # Update gen counter
-            self.gen = gen+1
+            self.gen = self.gen+1
 
             # Perform selection
             offspring = self.select(pop)
@@ -529,18 +573,23 @@ class CooperativeCoevolutionaryAlgorithm():
             # Now populate the population with individuals from the offspring
             self.setPopulation(pop, offspring)
 
-    def run(self, num_trial):
+            # Save checkpoint for generation if now is the time
+            if self.gen == self.config["ccea"]["num_generations"] or \
+                (self.save_checkpoint and self.gen % self.num_gens_between_checkpoint == 0):
+                self.saveCheckpoint(trial_dir, pop)
+
+    def run(self, num_trial, load_checkpoint):
         if num_trial is None:
             # Run all trials if no number is specified
             for num_trial in range(self.config["experiment"]["num_trials"]):
-                self.runTrial(num_trial)
+                self.runTrial(num_trial, load_checkpoint)
         else:
             # Run only the trial specified
-            self.runTrial(num_trial)
+            self.runTrial(num_trial, load_checkpoint)
 
         if self.use_multiprocessing:
             self.pool.close()
 
-def runCCEA(config_dir, num_trial=None):
+def runCCEA(config_dir, num_trial=None, load_checkpoint=False):
     ccea = CooperativeCoevolutionaryAlgorithm(config_dir)
-    return ccea.run(num_trial)
+    return ccea.run(num_trial, load_checkpoint)

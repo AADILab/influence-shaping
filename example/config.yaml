@@ -1,0 +1,78 @@
+ccea:
+  evaluation:
+    evaluation_method: HallOfFame
+    hall_of_fame:
+      alpha: 0.5
+    multi_evaluation:
+      aggregation_method: average
+      num_evaluations: 1
+  mutation:
+    independent_probability: 0.5
+    mean: 0.0
+    std_deviation: 0.1
+  network:
+    hidden_layers:
+    - 10
+    rover_max_velocity: 1.0
+    uav_max_velocity: 2.0
+  num_generations: 100
+  num_steps: 30
+  population:
+    subpopulation_size: 50
+  selection:
+    n_elites_binary_tournament:
+      include_elites_in_tournament: true
+      n_elites: 5
+    selection_method: NElitesBinaryTournament,
+  weight_initialization:
+    lower_bound: -0.5
+    upper_bound: 0.5
+data:
+  save_trajectories:
+    num_gens_between_save: 100
+    switch: true
+  checkpoints:
+    save: false
+    frequency: 100
+    delete_previous: true
+env:
+  agents:
+    rovers:
+    - observation_radius: 1000.0
+      position:
+        fixed:
+        - 25.0
+        - 24.0
+        spawn_rule: fixed
+      resolution: 90
+      reward_type: Global
+    uavs:
+    - observation_radius: 1000.0
+      position:
+        fixed:
+        - 26.0
+        - 24.0
+        spawn_rule: fixed
+      resolution: 90
+      reward_type: Global
+  map_size:
+  - 50.0
+  - 50.0
+  pois:
+    hidden_pois:
+    - coupling: 1
+      observation_radius: 10000.0
+      position:
+        random_uniform:
+          high_x: 50.0
+          high_y: 50.0
+          low_x: 0.0
+          low_y: 0.0
+        spawn_rule: random_uniform
+      value: 1.0
+    rover_pois: []
+experiment:
+  num_trials: 20
+processing:
+  num_threads: 15
+  use_multiprocessing: true
