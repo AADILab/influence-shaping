@@ -81,10 +81,12 @@ thyme.cxxflags
 thyme.files
 thyme.includes
 
-# Random folders
+# Random folders and files
 debugging/
 env_backup/
 prototyping/configs/trial_*
 results/
 sbatch/
 tree_gen/
+outfigs
+temp.sh
