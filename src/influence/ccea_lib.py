@@ -392,10 +392,12 @@ class CooperativeCoevolutionaryAlgorithm():
                 file.write(fit_str)
 
     def writeEvalTrajs(self, trial_dir, eval_infos):
+        # Set up directory
         gen_folder_name = "gen_"+str(self.gen)
         gen_dir = trial_dir / gen_folder_name
         if not os.path.isdir(gen_dir):
             os.makedirs(gen_dir)
+        # Iterate through each file we are writing
         for eval_id, eval_info in enumerate(eval_infos):
             eval_filename = "eval_team_"+str(eval_id)+"_joint_traj.csv"
             eval_dir = gen_dir / eval_filename
@@ -406,15 +408,17 @@ class CooperativeCoevolutionaryAlgorithm():
                 for i in range(self.num_rovers):
                     header += "rover_"+str(i)+"_x,rover_"+str(i)+"_y,"
                 for i in range(self.num_uavs):
-                    header += "uav_"+str(i)+"_x,uav_"+str(i)+"_y"
+                    header += "uav_"+str(i)+"_x,uav_"+str(i)+"_y,"
                 for i in range(self.num_rover_pois):
-                    header += "rover_poi_"+str(i)+"_x,rover_poi_"+str(i)+"_y"
+                    header += "rover_poi_"+str(i)+"_x,rover_poi_"+str(i)+"_y,"
+                for i in range(self.num_hidden_pois):
+                    header += "hidden_poi_"+str(i)+"_x,hidden_poi_"+str(i)+"_y,"
                 # Observations
                 for i in range(self.num_rovers):
-                    for j in range(self.num_rover_sectors):
+                    for j in range(self.num_rover_sectors*3):
                         header += "rover_"+str(i)+"_obs_"+str(j)+","
                 for i in range(self.num_uavs):
-                    for j in range(self.num_uav_sectors):
+                    for j in range(self.num_uav_sectors*3):
                         header += "uav_"+str(i)+"_obs_"+str(j)+","
                 # Actions
                 for i in range(self.num_rovers):
