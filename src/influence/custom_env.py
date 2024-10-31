@@ -28,6 +28,7 @@ class SmartLidar(rovers.Lidar[rovers.Density]):
         self.m_composition = composition_policy
 
     def scan(self, agent_pack):
+        # print("SmartLidar.scan()")
         num_sectors = int(360. / self.m_resolution)
         poi_values = [[] for _ in range(num_sectors)]
         rover_values = [[] for _ in range(num_sectors)]
@@ -58,20 +59,25 @@ class SmartLidar(rovers.Lidar[rovers.Density]):
                 sector = 0
             # print("sector: ", sector, type(sector))
             poi_values[sector].append(sensed_poi.value() / max([0.001, distance**2]))
+        # print("Finished POI sensing")
 
         # print("Observe Agents")
         # Observe agents
+        # print('agent_pack.agents.size() | ', agent_pack.agents.size())
+        # print('len(self.agent_types) | ', len(self.agent_types))
         for i in range(agent_pack.agents.size()):
             # print("Sensing agent")
+            # print('i | ', i)
             # Do not observe yourself
             if i == agent_pack.agent_index:
                 # print("Nope, that one is me")
                 continue
             # Get angle and distance to sensed agent
             sensed_agent = agent_pack.agents[i]
+            # print('sensed_agent | ', sensed_agent)
             angle = calculateAngle(agent.position(), sensed_agent.position())
-            distance = calculateDistance(agent.position(), sensed_agent.position())
             # print("angle: ", angle)
+            distance = calculateDistance(agent.position(), sensed_agent.position())
             # print("distance: ", distance)
             # Skip the agent if the sensed agent is out of range
             if distance > agent.obs_radius():
@@ -82,11 +88,14 @@ class SmartLidar(rovers.Lidar[rovers.Density]):
                 sector = int( angle / self.m_resolution )
             else:
                 sector = 0
+            # print("Got bin for this agent")
             # Bin the agent according to type
             if self.agent_types[i] == "rover":
                 rover_values[sector].append(1.0 / max([0.001, distance**2]))
             elif self.agent_types[i] == "uav":
                 uav_values[sector].append(1.0 / max([0.001, distance**2]))
+            # print("Finished binning agent")
+        # print("Finished agent sensing")
 
         # print("rover_values: ", rover_values)
         # print("uav_values: ", uav_values)
@@ -240,7 +249,7 @@ def createEnv(config):
         poi_positions.append(position)
 
     NUM_ROVERS = len(config["env"]["agents"]["rovers"])
-    NUM_UAVS = len(config["env"]["agents"]["rovers"])
+    NUM_UAVS = len(config["env"]["agents"]["uavs"])
     NUM_ROVER_POIS = len(config["env"]["pois"]["rover_pois"])
     NUM_HIDDEN_POIS = len(config["env"]["pois"]["hidden_pois"])
 
