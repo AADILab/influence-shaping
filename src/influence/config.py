@@ -121,7 +121,7 @@ def generate_commands(config_dirs, seperate_trials):
     """Generate python commands to run configs in config_dirs"""
     commands = []
     for config_dir in config_dirs:
-        command_start = 'python ~/influence-shaping/tools/run_config.py '
+        command_start = 'python ~/influence-shaping/tools/run/config.py '
         if seperate_trials:
             # Seperate trials means we generate a different command for running each trial
             config = load_config(config_dir)

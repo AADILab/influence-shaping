@@ -50,7 +50,7 @@ def write_sbatch_executables(top_dir: Path, batch_dir_root: Path, seperate_trial
     batch_file_start = [
         "#!/bin/bash",
         "#SBATCH -A kt-lab",
-        "#SBATCH --partition=share,dgxh,dgx2,ampere,preempt",
+        "#SBATCH --partition=share,dgx2,ampere,preempt,mime1",
         "#SBATCH -c 4",
         "#SBATCH --mem=16G",
         "#SBATCH --time=7-00:00:00",
