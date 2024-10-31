@@ -86,6 +86,7 @@ debugging/
 env_backup/
 prototyping/configs/trial_*
 results/
+results
 sbatch/
 tree_gen/
 outfigs
