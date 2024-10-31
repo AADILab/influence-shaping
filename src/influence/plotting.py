@@ -22,7 +22,7 @@ def get_num_entities(labels: List[str]):
         return int(label.split("_")[2])
 
     for label in labels:
-        if "rover" in label:
+        if "rover" in label and "poi" not in label:
             id_ = get_agent_id(label)
             if id_ + 1 > num_rovers:
                 num_rovers += 1
@@ -235,3 +235,58 @@ def plot_experiment(experiment_dir: Path, output: Optional[Path], silent: bool, 
     
     if not silent:
         plt.show()
+
+def get_example_trial_dirs(parent_dir: Path):
+    dirs = [parent_dir/dir for dir in os.list(parent_dir) if 'trial_' in dir]
+    dfs = [pd.read_csv(dir/'fitness.csv') for dir in dirs]
+    fits = [df['team_fitness_aggregated'] for df in dfs]
+    final_fits = [fit[-1] for fit in fits]
+    class FitPair():
+        def __init__(self, fit, ind):
+            self.fit = fit
+            self.ind = ind
+    fit_inds = [FitPair(fit, ind) for ind, fit in enumerate(final_fits)]
+    # Sort according to the fitness value
+    fit_inds.sort(lambda x: x.fit)
+
+    # Now get the index of low, medium, and high performers
+    high_ind = fit_inds[-1].ind
+    med_ind = fit_inds[len(fit_inds)/2].ind
+    low_ind = fit_inds[0].ind
+
+    # Turn that into trials
+    low_trial_dir = parent_dir / ('trial_'+str(low_ind))
+    med_trial_dir = parent_dir / ('trial_'+str(med_ind))
+    high_trial_dir = parent_dir / ('trial_'+str(high_ind))
+
+    return low_trial_dir, med_trial_dir, high_trial_dir
+
+def generate_experiment_tree_plots(root_dir: Path, out_dir: Path):
+    """Generate all the plots in this experiment tree"""
+    
+    experiment_dirs = set()
+    trial_parent_dirs = set()
+    for root, _, files in os.walk(root_dir):
+        if 'config.yaml' in files:
+            experiment_dirs.add(Path(root).parent)
+            trial_parent_dirs.add(Path(root))
+
+    for dir_ in experiment_dirs:
+        plot_experiment(
+            experiment_dir=dir_, 
+            output=out_dir/'sweeps'/(dir_.name+'.png'),
+            silent=True,
+            title=dir_.name
+        )
+    
+    for dir_ in trial_parent_dirs:
+        low_trial_dir, med_trial_dir, high_trial_dir = get_example_trial_dirs(dir_)
+        # Get latest gen
+        last_gen = max([int(dir_.split('_')[-1]) for dir_ in os.listdir(low_trial_dir) if "gen_" in dir_])
+        plot_joint_trajectory(
+            joint_traj_dir=low_trial_dir/('gen_'+str(last_gen))/'eval_team_0_joint_traj.csv',
+            output=out_dir/'trajectories'/dir_.name
+        )
+
+def plot_experiment_tree(root_dir: Path, out_dir: Path):
+    generate_experiment_tree_plots(root_dir, out_dir)
