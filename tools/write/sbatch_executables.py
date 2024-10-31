@@ -4,6 +4,7 @@ python tools/write_sbatch_executables.py ~/influence-shaping/results/10_29_2024/
 """
 
 import argparse
+from pathlib import Path
 from influence.sbatch import write_sbatch_executables
 
 if __name__ == "__main__":
@@ -12,8 +13,9 @@ if __name__ == "__main__":
         description="Write sbatch executable files for configs nested in the specified top directory",
         epilog=""
     )
-    parser.add_argument("config_directory", help="Top directory of configs that need to be batched")
-    parser.add_argument("sbatch_directory", help="Directory to write sbatch files to")
+    parser.add_argument("config_directory", help="top directory of configs that need to be batched")
+    parser.add_argument("sbatch_directory", help="directory to write sbatch files to")
+    parser.add_argument("--seperate_trials", help="flag to treat each trial as a seperate job", action='store_true')
     args = parser.parse_args()
 
-    write_sbatch_executables(args.config_directory, args.sbatch_directory)
+    write_sbatch_executables(Path(args.config_directory), Path(args.sbatch_directory), args.seperate_trials)

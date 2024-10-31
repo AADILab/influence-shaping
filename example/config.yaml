@@ -70,9 +70,19 @@ env:
           low_y: 0.0
         spawn_rule: random_uniform
       value: 1.0
-    rover_pois: []
+    rover_pois:
+    - coupling: 1
+      observation_radius: 10000.0
+      position:
+        random_uniform:
+          high_x: 50.0
+          high_y: 50.0
+          low_x: 0.0
+          low_y: 0.0
+        spawn_rule: random_uniform
+      value: 1.0
 experiment:
-  num_trials: 20
+  num_trials: 1
 processing:
   num_threads: 15
   use_multiprocessing: true

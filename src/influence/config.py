@@ -113,11 +113,11 @@ def get_config_dirs(top_dir):
     for dirpath, _, filenames in os.walk(os.path.expanduser(top_dir)):
         for filename in filenames:
             if filename == 'config.yaml':
-                config_dir = contractuser(dirpath)+'/config.yaml'
+                config_dir = Path(contractuser(str(dirpath))+'/config.yaml')
                 config_dirs.append(config_dir)
     return config_dirs
 
-def generate_commands(config_dirs, seperate_trials=True):
+def generate_commands(config_dirs, seperate_trials):
     """Generate python commands to run configs in config_dirs"""
     commands = []
     for config_dir in config_dirs:
@@ -127,10 +127,10 @@ def generate_commands(config_dirs, seperate_trials=True):
             config = load_config(config_dir)
             num_trials = config['experiment']['num_trials']
             for t in range(num_trials):
-                command = command_start + '\'' + config_dir + '\'' + ' -t ' + str(t)
+                command = command_start + '\'' + str(config_dir) + '\'' + ' -t ' + str(t)
                 commands.append(command)
         else:
             # Running trials together means each config gets one command (rather than one command per trial)
-            command = command_start + config_dir
+            command = command_start + str(config_dir)
             commands.append(command)
     return commands
