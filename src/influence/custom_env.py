@@ -185,7 +185,7 @@ class RoverConstraint(rovers.IConstraint):
             dists.sort()
             dists = [max(1.0, dist) for dist in dists]
             constraint_value = float(self.coupling)
-            for dist in dists:
+            for dist in dists[:self.coupling]:
                 constraint_value = constraint_value*1.0/dist
             # print("constraint_value: ", constraint_value)
             return constraint_value
