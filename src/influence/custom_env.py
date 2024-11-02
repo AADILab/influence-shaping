@@ -163,19 +163,19 @@ def createUAV(obs_radius, reward_type, resolution, agent_types, poi_types):
     return uav
 
 # Now create a POI constraint where this POI can only be observed by rovers with "rover" type
-class RoverConstraint(rovers.IConstraint):
+class AbstractRoverConstraint(rovers.IConstraint):
     def __init__(self, coupling, is_rover_list):
         super().__init__()
         self.coupling = coupling
         self.is_rover_list = is_rover_list
-
-    def is_satisfied(self, entity_pack):
+    
+    def _step_is_satisfied(self, entity_pack, t):
         count = 0
         dists = []
         constraint_satisfied = False
         for is_rover, agent in zip(self.is_rover_list, entity_pack.agents):
             if is_rover:
-                dist = calculateDistance(agent.position(), entity_pack.entity.position())
+                dist = calculateDistance(agent.path()[t], entity_pack.entity.position())
                 dists.append(dist)
                 if dist <= agent.obs_radius() and dist <= entity_pack.entity.obs_radius():
                     count += 1
@@ -191,14 +191,32 @@ class RoverConstraint(rovers.IConstraint):
             return constraint_value
         return 0.0
 
-def createRoverPOI(value, obs_rad, coupling, is_rover_list):
-    roverConstraint = RoverConstraint(coupling, is_rover_list)
-    poi = rovers.POI[RoverConstraint](value, obs_rad, roverConstraint)
+class RoverConstraint(AbstractRoverConstraint):
+    """Constraint based on final positions"""
+    def is_satisfied(self, entity_pack):
+        t_final = entity_pack.agents[0].path().size()-1
+        return self._step_is_satisfied(entity_pack, t=t_final)
+
+class RoverSequenceConstraint(AbstractRoverConstraint):
+    """Constraint based on closest positions in paths"""
+    def is_satisfied(self, entity_pack):
+        steps = []
+        for t in range(entity_pack.agents[0].path().size()):
+            steps.append(self._step_is_satisfied(entity_pack, t))
+        return max(steps)
+
+def createRoverPOI(value, obs_rad, coupling, is_rover_list, constraint):
+    if constraint == 'sequential':
+        roverConstraint = RoverSequenceConstraint(coupling, is_rover_list)
+        poi = rovers.POI[RoverSequenceConstraint](value, obs_rad, roverConstraint)
+    elif constraint == 'final':
+        roverConstraint = RoverConstraint(coupling, is_rover_list)
+        poi = rovers.POI[RoverConstraint](value, obs_rad, roverConstraint)
     return poi
 
 # This is just to help me track which POIs are nominally hidden from rovers
-def createHiddenPOI(value, obs_rad, coupling, is_rover_list):
-    return createRoverPOI(value, obs_rad, coupling, is_rover_list)
+def createHiddenPOI(*args, **kwargs):
+    return createRoverPOI(*args, **kwargs)
 
 # Running into errors setting up the environment
 # Let's try it with regular POIs
@@ -280,12 +298,21 @@ def createEnv(config):
 
     is_rover_list = [True if str_=="rover" else False for str_ in agent_types]
 
+    # Fill defaults for new features
+    for poi_config in config['env']['pois']['rover_pois']:
+        if 'constraint' not in poi_config:
+            poi_config['constraint'] = 'final'
+    for poi_config in config['env']['pois']['hidden_pois']:
+        if 'constraint' not in poi_config:
+            poi_config['constraint'] = 'final'
+
     rover_pois = [
         createRoverPOI(
             value=poi["value"],
             obs_rad=poi["observation_radius"],
             coupling=poi["coupling"],
-            is_rover_list=is_rover_list
+            is_rover_list=is_rover_list,
+            constraint=poi['constraint']
         )
         for poi in config["env"]["pois"]["rover_pois"]
     ]
@@ -294,7 +321,8 @@ def createEnv(config):
             value=poi["value"],
             obs_rad=poi["observation_radius"],
             coupling=poi["coupling"],
-            is_rover_list=is_rover_list
+            is_rover_list=is_rover_list,
+            constraint=poi['constraint']
         )
         for poi in config["env"]["pois"]["hidden_pois"]
     ]

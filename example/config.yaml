@@ -81,6 +81,7 @@ env:
           low_y: 0.0
         spawn_rule: random_uniform
       value: 1.0
+      constraint: sequential # sequential or final
 experiment:
   num_trials: 1
 processing:
