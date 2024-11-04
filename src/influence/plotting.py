@@ -255,19 +255,20 @@ def generate_experiment_tree_plots(root_dir: Path, out_dir: Path):
     for dir_ in experiment_dirs:
         plot_comparison(
             experiment_dir=dir_, 
-            output=out_dir/'sweeps'/(dir_.name+'.png'),
-            silent=True,
-            title=dir_.name
+            plot_args=PlotArgs(
+                output=out_dir/'comparisons'/(dir_.name+'.png'),
+                silent=True,
+                title=dir_.name)
         )
     
-    for dir_ in trial_parent_dirs:
-        low_trial_dir, med_trial_dir, high_trial_dir = get_example_trial_dirs(dir_)
-        # Get latest gen
-        last_gen = max([int(dir_.split('_')[-1]) for dir_ in os.listdir(low_trial_dir) if "gen_" in dir_])
-        plot_joint_trajectory(
-            joint_traj_dir=low_trial_dir/('gen_'+str(last_gen))/'eval_team_0_joint_traj.csv',
-            output=out_dir/'trajectories'/dir_.name
-        )
+    # for dir_ in trial_parent_dirs:
+    #     low_trial_dir, med_trial_dir, high_trial_dir = get_example_trial_dirs(dir_)
+    #     # Get latest gen
+    #     last_gen = max([int(dir_.split('_')[-1]) for dir_ in os.listdir(low_trial_dir) if "gen_" in dir_])
+    #     plot_joint_trajectory(
+    #         joint_traj_dir=low_trial_dir/('gen_'+str(last_gen))/'eval_team_0_joint_traj.csv',
+    #         output=out_dir/'trajectories'/dir_.name
+    #     )
 
 def plot_comparison_tree(root_dir: Path, out_dir: Path):
     generate_experiment_tree_plots(root_dir, out_dir)
