@@ -17,7 +17,7 @@ def generate_sh_command_dirs(batch_dir_root, commands):
             file_dir = batch_dir / file_name
             file_dirs.append(file_dir)
         else:
-            experiment_name = c.split(' ')[-1].replace('/','.').replace('~.influence-shaping.results.', '').replace('.config.yaml','')
+            experiment_name = c.split(' ')[-2].replace('/','.').replace('~.influence-shaping.results.', '').replace('.config.yaml','')
             file_name = experiment_name +'.sh'
             file_dir = batch_dir / file_name
             file_dirs.append(file_dir)

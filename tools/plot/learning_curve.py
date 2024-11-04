@@ -1,33 +1,19 @@
 '''Give this python script a fitness.csv file and it will plot the learning curve'''
 
-import argparse
 from pathlib import Path
 from influence.plotting import plot_learning_curve
+from influence.parsing import PlotParser
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(
+    parser = PlotParser(
         prog='learning_curve.py',
         description='plot the learning curve from the specified fitness.csv file',
         epilog=''
     )
+    parser.add_plot_args()
     parser.add_argument(
         'fitness_dir', 
         help='directory of csv file containing fitnesses',
-        type=str
-    )
-    parser.add_argument(
-        '-s', '--silent',
-        help='run silently, without showing the plot',
-        action='store_true',
-    )
-    parser.add_argument(
-        '-o', '--output', 
-        help='directory to output image of plot to',
-        type=str
-    )
-    parser.add_argument(
-        '--title',
-        help='title of generated plot',
         type=str
     )
     parser.add_argument(
@@ -37,7 +23,4 @@ if __name__ == '__main__':
     )
     args = parser.parse_args()
 
-    if args.output is not None:
-        args.output = Path(args.output)
-
-    plot_learning_curve(Path(args.fitness_dir), args.output, args.silent, args.title, args.individual_agents)
+    plot_learning_curve(Path(args.fitness_dir), args.individual_agents, parser.dump_plot_args(args))

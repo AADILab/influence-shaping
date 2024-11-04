@@ -8,6 +8,7 @@ from matplotlib.axes import Axes
 import numpy as np
 
 from influence.config import load_config
+from influence.parsing import PlotArgs
 
 def get_num_entities(labels: List[str]):
     num_rovers = 0
@@ -59,7 +60,7 @@ def plot_poi(ax, poi_config, x, y, color):
     ax.add_patch(center_circle)
     ax.add_patch(outer_circle)
 
-def generate_joint_trajectory_plot(joint_traj_dir: Path):
+def generate_joint_trajectory_plot(joint_traj_dir: Path, plot_args: PlotArgs):
     """Generate plot of the joint trajectory specified in joint_traj_dir"""
 
     fig, ax = plt.subplots(1,1)
@@ -92,20 +93,15 @@ def generate_joint_trajectory_plot(joint_traj_dir: Path):
     ax.set_ylim([0, y_bound])
     ax.set_aspect('equal')
 
+    plot_args.apply(ax)
+
     return fig
 
-def plot_joint_trajectory(joint_traj_dir: Path, output: Optional[Path], silent: bool):
-    fig = generate_joint_trajectory_plot(joint_traj_dir)
+def plot_joint_trajectory(joint_traj_dir: Path, plot_args: PlotArgs):
+    fig = generate_joint_trajectory_plot(joint_traj_dir, plot_args)
+    plot_args.finish_figure(fig)
 
-    if output is not None:
-        if not os.path.exists(output.parent):
-            os.makedirs(output.parent)
-        fig.savefig(output)
-    
-    if not silent:
-        plt.show()
-
-def generate_learning_curve_plot(fitness_dir, title, individual_agents):
+def generate_learning_curve_plot(fitness_dir, individual_agents, plot_args):
     """Generate plot of the learning curve specified in fitness_dir"""
 
     fig, ax = plt.subplots(1,1)
@@ -130,27 +126,19 @@ def generate_learning_curve_plot(fitness_dir, title, individual_agents):
             ax.plot(gens, fits, label=uav_label)
         ax.legend()
 
-    if title:
-        ax.set_title(title)
-
     ax.set_xlabel('Generations')
     ax.set_ylabel('Performance')
 
     ax.set_xlim([0, gens.iloc[-1]])
     ax.set_ylim([0, 1.1])
 
+    plot_args.apply(ax)
+
     return fig
 
-def plot_learning_curve(fitness_dir: Path, output: Optional[Path], silent: bool, title: str, individual_agents: str):
-    fig = generate_learning_curve_plot(fitness_dir, title, individual_agents)
-
-    if output is not None:
-        if not os.path.exists(output.parent):
-            os.makedirs(output.parent)
-        fig.savefig(output)
-    
-    if not silent:
-        plt.show()
+def plot_learning_curve(fitness_dir: Path, individual_agents: str, plot_args: PlotArgs):
+    fig = generate_learning_curve_plot(fitness_dir, individual_agents, plot_args)
+    plot_args.finish_figure(fig)
 
 def add_stat_learning_curve(ax: Axes, trials_dir: Path, label: str):
     # Get the directories of trials
@@ -177,7 +165,7 @@ def add_stat_learning_curve(ax: Axes, trials_dir: Path, label: str):
 
     return gens
 
-def generate_stat_learning_curve_plot(trials_dir: Path):
+def generate_stat_learning_curve_plot(trials_dir: Path, plot_args: PlotArgs):
     """Generate plot of statistics of learning given the parent directoy of trials"""
 
     fig, ax = plt.subplots(1,1)
@@ -190,14 +178,15 @@ def generate_stat_learning_curve_plot(trials_dir: Path):
     ax.set_xlim([0, gens[-1]])
     ax.set_ylim([0, 1.1])
 
+    plot_args.apply(ax)
+
     return fig
 
-def plot_stat_learning_curve(trials_dir):
-    fig = generate_stat_learning_curve_plot(trials_dir)
+def plot_stat_learning_curve(trials_dir, plot_args):
+    fig = generate_stat_learning_curve_plot(trials_dir, plot_args)
+    plot_args.finish_figure(fig)
 
-    plt.show()
-
-def generate_experiment_plot(experiment_dir: Path, title: Optional[str]):
+def generate_comparison_plot(experiment_dir: Path, plot_args: PlotArgs):
     """Generate plot of experiment using experiment directory
     experiment_dir is parent of parent of trial directories
     """
@@ -220,21 +209,13 @@ def generate_experiment_plot(experiment_dir: Path, title: Optional[str]):
     ax.set_xlim([0, gens[-1]])
     ax.set_ylim([0, 1.1])
 
-    if title:
-        ax.set_title(title)
+    plot_args.apply(ax)
 
     return fig
 
-def plot_experiment(experiment_dir: Path, output: Optional[Path], silent: bool, title: str):
-    fig = generate_experiment_plot(experiment_dir, title)
-
-    if output is not None:
-        if not os.path.exists(output.parent):
-            os.makedirs(output.parent)
-        fig.savefig(output)
-    
-    if not silent:
-        plt.show()
+def plot_comparison(experiment_dir: Path, plot_args: PlotArgs):
+    fig = generate_comparison_plot(experiment_dir, plot_args)
+    plot_args.finish_figure(fig)
 
 def get_example_trial_dirs(parent_dir: Path):
     dirs = [parent_dir/dir for dir in os.list(parent_dir) if 'trial_' in dir]
@@ -272,7 +253,7 @@ def generate_experiment_tree_plots(root_dir: Path, out_dir: Path):
             trial_parent_dirs.add(Path(root))
 
     for dir_ in experiment_dirs:
-        plot_experiment(
+        plot_comparison(
             experiment_dir=dir_, 
             output=out_dir/'sweeps'/(dir_.name+'.png'),
             silent=True,
@@ -288,5 +269,5 @@ def generate_experiment_tree_plots(root_dir: Path, out_dir: Path):
             output=out_dir/'trajectories'/dir_.name
         )
 
-def plot_experiment_tree(root_dir: Path, out_dir: Path):
+def plot_comparison_tree(root_dir: Path, out_dir: Path):
     generate_experiment_tree_plots(root_dir, out_dir)

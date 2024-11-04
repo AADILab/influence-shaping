@@ -122,15 +122,16 @@ def generate_commands(config_dirs, seperate_trials):
     commands = []
     for config_dir in config_dirs:
         command_start = 'python ~/influence-shaping/tools/run/config.py '
+        command_end = ' --load_checkpoint'
         if seperate_trials:
             # Seperate trials means we generate a different command for running each trial
             config = load_config(config_dir)
             num_trials = config['experiment']['num_trials']
             for t in range(num_trials):
-                command = command_start + '\'' + str(config_dir) + '\'' + ' -t ' + str(t)
+                command = command_start + '\'' + str(config_dir) + '\'' + ' -t ' + str(t) + command_end
                 commands.append(command)
         else:
             # Running trials together means each config gets one command (rather than one command per trial)
-            command = command_start + str(config_dir)
+            command = command_start + str(config_dir) + command_end
             commands.append(command)
     return commands
