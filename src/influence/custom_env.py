@@ -194,8 +194,16 @@ class AbstractRoverConstraint(rovers.IConstraint):
 class RoverConstraint(AbstractRoverConstraint):
     """Constraint based on final positions"""
     def is_satisfied(self, entity_pack):
-        t_final = entity_pack.agents[0].path().size()-1
-        return self._step_is_satisfied(entity_pack, t=t_final)
+        # print("RoverConstraint.is_satisfied()")
+        # print(f"RoverConstraint.is_satisfied() | entity_pack.agents.size() | {entity_pack.agents.size()}")
+        # No agents means constraint is not satisfied
+        if entity_pack.agents.size() == 0:
+            return 0.0
+        else:
+            t_final = entity_pack.agents[0].path().size()-1
+            # print(f"RoverConstraint.is_satisfied() | t_final | {t_final}")
+            # print(f"RoverConstraint.is_satisfied() | ")
+            return self._step_is_satisfied(entity_pack, t=t_final)
 
 class RoverSequenceConstraint(AbstractRoverConstraint):
     """Constraint based on closest positions in paths"""

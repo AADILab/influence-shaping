@@ -5,7 +5,7 @@ ccea:
       alpha: 0.5
     multi_evaluation:
       aggregation_method: average
-      num_evaluations: 1
+      num_evaluations: 10
   mutation:
     independent_probability: 0.5
     mean: 0.0
@@ -29,7 +29,7 @@ ccea:
     upper_bound: 0.5
 data:
   save_trajectories:
-    num_gens_between_save: 100
+    num_gens_between_save: 1
     switch: true
   checkpoints:
     save: false
