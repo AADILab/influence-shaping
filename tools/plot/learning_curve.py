@@ -2,10 +2,10 @@
 
 from pathlib import Path
 from influence.plotting import plot_learning_curve
-from influence.parsing import PlotParser
+from influence.parsing import LinePlotParser
 
 if __name__ == '__main__':
-    parser = PlotParser(
+    parser = LinePlotParser(
         prog='learning_curve.py',
         description='plot the learning curve from the specified fitness.csv file',
         epilog=''
@@ -21,17 +21,6 @@ if __name__ == '__main__':
         help="include individual agents' shaped rewards",
         action='store_true'
     )
-    parser.add_argument(
-        '--window_size',
-        help='window size for moving average filter on final plot',
-        type=int
-    )
-    parser.add_argument(
-        '--downsample',
-        help='downsample and only plot one point every _ points',
-        type=int,
-        default=1
-    )
     args = parser.parse_args()
 
-    plot_learning_curve(Path(args.fitness_dir), args.individual_agents, args.window_size, args.downsample, parser.dump_plot_args(args))
+    plot_learning_curve(Path(args.fitness_dir), args.individual_agents, parser.dump_line_plot_args(args), parser.dump_plot_args(args))

@@ -2,10 +2,10 @@
 
 from pathlib import Path
 from influence.plotting import plot_stat_learning_curve
-from influence.parsing import PlotParser
+from influence.parsing import LinePlotParser
 
 if __name__ == '__main__':
-    parser = PlotParser(
+    parser = LinePlotParser(
         prog='stat_learning_curve.py',
         description='plot the statistics from the trials in the specified directory',
         epilog=''
@@ -18,4 +18,4 @@ if __name__ == '__main__':
     )
     args = parser.parse_args()
 
-    plot_stat_learning_curve(Path(args.trials_dir), parser.dump_plot_args(args))
+    plot_stat_learning_curve(Path(args.trials_dir), parser.dump_line_plot_args(args), parser.dump_plot_args(args))

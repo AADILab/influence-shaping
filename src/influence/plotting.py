@@ -8,7 +8,7 @@ from matplotlib.axes import Axes
 import numpy as np
 
 from influence.config import load_config
-from influence.parsing import PlotArgs
+from influence.parsing import PlotArgs, LinePlotArgs
 
 def get_num_entities(labels: List[str]):
     num_rovers = 0
@@ -101,19 +101,7 @@ def plot_joint_trajectory(joint_traj_dir: Path, plot_args: PlotArgs):
     fig = generate_joint_trajectory_plot(joint_traj_dir, plot_args)
     plot_args.finish_figure(fig)
 
-def moving_average_filter(arr, window_size: int):
-    pad_len = window_size - 1
-    new_arr = np.concatenate([
-        np.ones(pad_len)*arr[0],
-        arr
-    ])
-    return np.convolve(
-        new_arr,
-        np.ones(window_size)/window_size,
-        mode='valid'
-    )
-
-def generate_learning_curve_plot(fitness_dir, individual_agents, window_size, downsample, plot_args):
+def generate_learning_curve_plot(fitness_dir, individual_agents, line_plot_args: LinePlotArgs, plot_args: PlotArgs):
     """Generate plot of the learning curve specified in fitness_dir"""
 
     fig, ax = plt.subplots(1,1)
@@ -121,30 +109,20 @@ def generate_learning_curve_plot(fitness_dir, individual_agents, window_size, do
     # Get the fitnesses
     df = pd.read_csv(fitness_dir)
 
-    gens = df['generation']
-    if window_size:
-        fits = moving_average_filter(df['team_fitness_aggregated'], window_size)
-    else:
-        fits = df['team_fitness_aggregated']
-
-    ax.plot(gens[::downsample], fits[::downsample], label='team')
+    # Get points for plotting team fitness
+    gens, fits = line_plot_args.get_pts(xs=df['generation'], ys=df['team_fitness_aggregated'])
+    ax.plot(gens, fits, label='team')
 
     if individual_agents:
         num_rovers, num_uavs, _, _ = get_num_entities(labels=df.columns.to_list())
         for i in range(num_rovers):
             rover_label = 'rover_'+str(i)+'_'
-            if window_size:
-                fits = moving_average_filter(df[rover_label], window_size)
-            else:
-                fits = df[rover_label]
-            ax.plot(gens[::downsample], fits[::downsample], label=rover_label)
+            fits = line_plot_args.get_ys(ys=df[rover_label])
+            ax.plot(gens, fits, label=rover_label)
         for i in range(num_uavs):
             uav_label = 'uav_'+str(i)+'_'
-            if window_size:
-                fits = moving_average_filter(df[uav_label], window_size)
-            else:
-                fits = df[uav_label]
-            ax.plot(gens[::downsample], fits[::downsample], label=uav_label)
+            fits = line_plot_args.get_ys(ys=df[uav_label])
+            ax.plot(gens, fits, label=uav_label)
         ax.legend()
 
     ax.set_xlabel('Generations')
@@ -157,11 +135,11 @@ def generate_learning_curve_plot(fitness_dir, individual_agents, window_size, do
 
     return fig
 
-def plot_learning_curve(fitness_dir: Path, individual_agents: str, window_size: int, downsample: int, plot_args: PlotArgs):
-    fig = generate_learning_curve_plot(fitness_dir, individual_agents, window_size, downsample, plot_args)
+def plot_learning_curve(fitness_dir: Path, individual_agents: str, line_plot_args: LinePlotArgs, plot_args: PlotArgs):
+    fig = generate_learning_curve_plot(fitness_dir, individual_agents, line_plot_args, plot_args)
     plot_args.finish_figure(fig)
 
-def add_stat_learning_curve(ax: Axes, trials_dir: Path, label: str):
+def add_stat_learning_curve(ax: Axes, trials_dir: Path, label: str, line_plot_args: LinePlotArgs):
     # Get the directories of trials
     dirs = [trials_dir/dir for dir in os.listdir(trials_dir) if 'trial_' in dir]
 
@@ -177,8 +155,12 @@ def add_stat_learning_curve(ax: Axes, trials_dir: Path, label: str):
     err = np.std([df['team_fitness_aggregated'][:ind] for df in dfs], axis=0) / np.sqrt(len(dfs))
     upp_err = avg+err
     low_err = avg-err
-
     gens = list(range(len(avg)))
+
+    # Clean up data
+    gens, avg = line_plot_args.get_pts(gens, avg)
+    low_err = line_plot_args.get_ys(low_err)
+    upp_err = line_plot_args.get_ys(upp_err)
 
     # Plot statistics
     ax.plot(gens, avg, label=label)
@@ -186,12 +168,12 @@ def add_stat_learning_curve(ax: Axes, trials_dir: Path, label: str):
 
     return gens
 
-def generate_stat_learning_curve_plot(trials_dir: Path, plot_args: PlotArgs):
+def generate_stat_learning_curve_plot(trials_dir: Path, line_plot_args: LinePlotArgs, plot_args: PlotArgs):
     """Generate plot of statistics of learning given the parent directoy of trials"""
 
     fig, ax = plt.subplots(1,1)
 
-    gens = add_stat_learning_curve(ax, trials_dir, label=trials_dir.name)
+    gens = add_stat_learning_curve(ax, trials_dir, label=trials_dir.name, line_plot_args=line_plot_args)
 
     ax.set_xlabel('Generations')
     ax.set_ylabel('Performance')
@@ -203,8 +185,8 @@ def generate_stat_learning_curve_plot(trials_dir: Path, plot_args: PlotArgs):
 
     return fig
 
-def plot_stat_learning_curve(trials_dir, plot_args):
-    fig = generate_stat_learning_curve_plot(trials_dir, plot_args)
+def plot_stat_learning_curve(trials_dir, line_plot_args, plot_args):
+    fig = generate_stat_learning_curve_plot(trials_dir, line_plot_args, plot_args)
     plot_args.finish_figure(fig)
 
 def generate_comparison_plot(experiment_dir: Path, plot_args: PlotArgs):

@@ -2,9 +2,22 @@ import argparse
 from pathlib import Path
 import os
 from typing import List, Optional
+import numpy as np
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
+
+def moving_average_filter(arr, window_size: int):
+    pad_len = window_size - 1
+    new_arr = np.concatenate([
+        np.ones(pad_len)*arr[0],
+        arr
+    ])
+    return np.convolve(
+        new_arr,
+        np.ones(window_size)/window_size,
+        mode='valid'
+    )
 
 class PlotArgs():
     def __init__(self, title: Optional[str]=None, output: Optional[str]=None, 
@@ -42,6 +55,20 @@ class PlotArgs():
         
         if not self.silent:
             plt.show()
+
+class LinePlotArgs():
+    def __init__(self, window_size: Optional[int], downsample: int):
+        self.window_size = window_size
+        self.downsample = downsample
+
+    def get_ys(self, ys):
+        if self.window_size:
+            return moving_average_filter(ys, self.window_size)
+        else:
+            return ys
+
+    def get_pts(self, xs, ys):
+        return xs[::self.downsample], self.get_ys(ys)[::self.downsample]
 
 class PlotParser(argparse.ArgumentParser):
     def __init__(self, *args, **kwargs):
@@ -89,3 +116,25 @@ class PlotParser(argparse.ArgumentParser):
 
     def dump_plot_args(self, args):
         return PlotArgs(args.title, args.output, args.xlim, args.ylim, args.xlabel, args.ylabel, args.silent)
+
+class LinePlotParser(PlotParser):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+    
+    def add_plot_args(self):
+        super().add_plot_args()
+        self.add_argument(
+            '--window_size',
+            help='window size for moving average filter on final plot',
+            type=int
+        )
+        self.add_argument(
+            '--downsample',
+            help='downsample and only plot one point every _ points',
+            type=int,
+            default=1
+        )
+        return None
+    
+    def dump_line_plot_args(self, args):
+        return LinePlotArgs(args.window_size, args.downsample)
