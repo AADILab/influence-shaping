@@ -101,7 +101,19 @@ def plot_joint_trajectory(joint_traj_dir: Path, plot_args: PlotArgs):
     fig = generate_joint_trajectory_plot(joint_traj_dir, plot_args)
     plot_args.finish_figure(fig)
 
-def generate_learning_curve_plot(fitness_dir, individual_agents, plot_args):
+def moving_average_filter(arr, window_size: int):
+    pad_len = window_size - 1
+    new_arr = np.concatenate([
+        np.ones(pad_len)*arr[0],
+        arr
+    ])
+    return np.convolve(
+        new_arr,
+        np.ones(window_size)/window_size,
+        mode='valid'
+    )
+
+def generate_learning_curve_plot(fitness_dir, individual_agents, window_size, downsample, plot_args):
     """Generate plot of the learning curve specified in fitness_dir"""
 
     fig, ax = plt.subplots(1,1)
@@ -110,20 +122,29 @@ def generate_learning_curve_plot(fitness_dir, individual_agents, plot_args):
     df = pd.read_csv(fitness_dir)
 
     gens = df['generation']
-    fits = df['team_fitness_aggregated']
+    if window_size:
+        fits = moving_average_filter(df['team_fitness_aggregated'], window_size)
+    else:
+        fits = df['team_fitness_aggregated']
 
-    ax.plot(gens, fits, label='team')
+    ax.plot(gens[::downsample], fits[::downsample], label='team')
 
     if individual_agents:
         num_rovers, num_uavs, _, _ = get_num_entities(labels=df.columns.to_list())
         for i in range(num_rovers):
             rover_label = 'rover_'+str(i)+'_'
-            fits = df[rover_label]
-            ax.plot(gens, fits, label=rover_label)
+            if window_size:
+                fits = moving_average_filter(df[rover_label], window_size)
+            else:
+                fits = df[rover_label]
+            ax.plot(gens[::downsample], fits[::downsample], label=rover_label)
         for i in range(num_uavs):
             uav_label = 'uav_'+str(i)+'_'
-            fits = df[uav_label]
-            ax.plot(gens, fits, label=uav_label)
+            if window_size:
+                fits = moving_average_filter(df[uav_label], window_size)
+            else:
+                fits = df[uav_label]
+            ax.plot(gens[::downsample], fits[::downsample], label=uav_label)
         ax.legend()
 
     ax.set_xlabel('Generations')
@@ -136,8 +157,8 @@ def generate_learning_curve_plot(fitness_dir, individual_agents, plot_args):
 
     return fig
 
-def plot_learning_curve(fitness_dir: Path, individual_agents: str, plot_args: PlotArgs):
-    fig = generate_learning_curve_plot(fitness_dir, individual_agents, plot_args)
+def plot_learning_curve(fitness_dir: Path, individual_agents: str, window_size: int, downsample: int, plot_args: PlotArgs):
+    fig = generate_learning_curve_plot(fitness_dir, individual_agents, window_size, downsample, plot_args)
     plot_args.finish_figure(fig)
 
 def add_stat_learning_curve(ax: Axes, trials_dir: Path, label: str):
