@@ -1,6 +1,7 @@
 import unittest
 import numpy as np
 from copy import deepcopy
+from typing import Any
 from influence.librovers import rovers
 from influence.custom_env import createEnv
 
@@ -87,12 +88,67 @@ class TestEnv(InfluenceTestCase):
         }
 
     def assert_correct_rewards(self, config, expected_rewards):
-        print("TestEnv.assert_correct_rewards()")
+        # print("TestEnv.assert_correct_rewards()")
         env = createEnv(config)
         _, rewards = env.reset()
-        print(f"rewards, expected_rewards | {rewards}, {expected_rewards}")
+        # print(f"rewards, expected_rewards | {rewards}, {expected_rewards}")
         self.assert_close_lists(rewards, expected_rewards)
 
-    def assert_close_lists(self, list0, list1):
+    def check_close_lists(self, list0, list1):
         for element0, element1 in zip(list0, list1):
-            self.assert_np_close(element0, element1)
+            if not np.isclose(element0, element1):
+                return False
+        return True
+
+    def assert_close_lists(self, list0, list1, msg: Any = None):
+        # self.assertTrue(len(list0) == len(list1))
+        if msg is None:
+            msg = f'Elements in lists are not equal {list0} != {list1}'
+        self.assertTrue(self.check_close_lists(list0, list1), msg)
+
+    def rewards_from_env(self, env):
+        return [self.compute_agent_reward(env, agent_id=i) for i in range(len(env.rovers()))]
+    
+    def get_agent_paths_from_env(self, env):
+        raw_rover_paths = [rover.path() for rover in env.rovers()]
+        paths = [[] for _ in range(env.rovers()[0].path().size())]
+        # Each row is a timestep with the position of each rover at that timestep
+        for raw_rover_path in raw_rover_paths:
+            for t in range(raw_rover_path.size()):
+                paths[t].append(self.position_as_list(raw_rover_path[t]))
+        return paths
+
+    def get_agent_positions_from_env(self, env):
+        return [self.get_position_from_entity(agent) for agent in env.rovers()]
+    
+    def get_poi_positions_from_env(self, env):
+        return [self.get_position_from_entity(poi) for poi in env.pois()]
+
+    def get_position_from_entity(self, entity):
+        return self.position_as_list(entity.position())
+
+    def position_as_list(self, position_obj):
+        return [position_obj.x, position_obj.y]
+
+    def assert_path_rewards(self, env, agent_paths, expected_rewards_at_each_step, start_msg: Any = None):
+        # Reset up the env
+        _, rewards = env.reset()
+        # Make sure rewards at initial step are correct
+        self.assert_close_lists(rewards, expected_rewards_at_each_step[0],
+            msg=str(start_msg) + f'Rewards computed incorrectly at t=0\nExpected rewards: {expected_rewards_at_each_step[0]}\nEnv rewards: {rewards}')
+        # Now loop through the paths and check rewards at each step
+        for prev_t, (positions, expected_rewards) in enumerate(zip(agent_paths, expected_rewards_at_each_step[1:])):
+            t = prev_t + 1
+            # Set all the agent positions at this step
+            for agent_id, (x,y) in enumerate(positions):
+                env.rovers()[agent_id].set_position(x, y)
+            # Check all agent rewards
+            rewards = self.rewards_from_env(env)
+            self.assert_close_lists(rewards, expected_rewards, 
+                msg=str(start_msg)+f'Rewards computed incorrectly at t={t}\n' + \
+                    f'Expected rewards: {expected_rewards}\n' + \
+                    f'Env rewards: {rewards}\n' + \
+                    f'Agent positions in env: {self.get_agent_positions_from_env(env)}\n' + \
+                    f'Agent paths in env: {self.get_agent_paths_from_env(env)}\n' + \
+                    f'POI positions in env: {self.get_poi_positions_from_env(env)}\n'
+            )

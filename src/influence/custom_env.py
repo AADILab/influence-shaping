@@ -208,10 +208,13 @@ class RoverConstraint(AbstractRoverConstraint):
 class RoverSequenceConstraint(AbstractRoverConstraint):
     """Constraint based on closest positions in paths"""
     def is_satisfied(self, entity_pack):
-        steps = []
-        for t in range(entity_pack.agents[0].path().size()):
-            steps.append(self._step_is_satisfied(entity_pack, t))
-        return max(steps)
+        if entity_pack.agents.size() == 0:
+            return 0.0
+        else:
+            steps = []
+            for t in range(entity_pack.agents[0].path().size()):
+                steps.append(self._step_is_satisfied(entity_pack, t))
+            return max(steps)
 
 def createRoverPOI(value, obs_rad, coupling, is_rover_list, constraint):
     if constraint == 'sequential':
