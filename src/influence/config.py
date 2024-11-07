@@ -135,3 +135,16 @@ def generate_commands(config_dirs, seperate_trials):
             command = command_start + str(config_dir) + command_end
             commands.append(command)
     return commands
+
+def overwrite_configs(configs_directory, overwrite_directory):
+    pass
+    # TODO: write this function
+    # config_dirs = get_config_dirs(ctop_dir = configs_directory)
+    # configs = [load_config(dir_) for dir_ in config_dirs]
+    # overwrite_config = expand_keys(load_config(overwrite_directory))
+    
+    # new_configs = []
+    # for config, dir_ in zip(configs, config_dirs):
+    #     new_config = merge_dicts()
+
+    # pass

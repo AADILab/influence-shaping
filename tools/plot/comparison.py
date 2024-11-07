@@ -4,10 +4,10 @@ and it will plot the statistics of each parameter combination against each other
 
 from pathlib import Path
 from influence.plotting import plot_comparison
-from influence.parsing import PlotParser
+from influence.parsing import LinePlotParser
 
 if __name__ == '__main__':
-    parser = PlotParser(
+    parser = LinePlotParser(
         prog='comparison.py',
         description='plot the experiment from the specified directory',
         epilog=''
@@ -25,4 +25,4 @@ if __name__ == '__main__':
     )
     args = parser.parse_args()
 
-    plot_comparison(Path(args.comparison_dir), parser.dump_plot_args(args))
+    plot_comparison(Path(args.comparison_dir), parser.dump_line_plot_args(args), parser.dump_plot_args(args))

@@ -189,7 +189,7 @@ def plot_stat_learning_curve(trials_dir, line_plot_args, plot_args):
     fig = generate_stat_learning_curve_plot(trials_dir, line_plot_args, plot_args)
     plot_args.finish_figure(fig)
 
-def generate_comparison_plot(experiment_dir: Path, plot_args: PlotArgs):
+def generate_comparison_plot(experiment_dir: Path, line_plot_args: LinePlotArgs, plot_args: PlotArgs):
     """Generate plot of experiment using experiment directory
     experiment_dir is parent of parent of trial directories
     """
@@ -200,7 +200,7 @@ def generate_comparison_plot(experiment_dir: Path, plot_args: PlotArgs):
 
     xlim = 0
     for trials_dir in dirs:
-        gens = add_stat_learning_curve(ax, trials_dir, label=trials_dir.name)
+        gens = add_stat_learning_curve(ax, trials_dir, label=trials_dir.name, line_plot_args=line_plot_args)
         if gens[-1] > xlim:
             xlim = gens[-1]
     
@@ -216,8 +216,8 @@ def generate_comparison_plot(experiment_dir: Path, plot_args: PlotArgs):
 
     return fig
 
-def plot_comparison(experiment_dir: Path, plot_args: PlotArgs):
-    fig = generate_comparison_plot(experiment_dir, plot_args)
+def plot_comparison(experiment_dir: Path, line_plot_args: LinePlotArgs, plot_args: PlotArgs):
+    fig = generate_comparison_plot(experiment_dir, line_plot_args, plot_args)
     plot_args.finish_figure(fig)
 
 def get_example_trial_dirs(parent_dir: Path):
@@ -258,6 +258,10 @@ def generate_experiment_tree_plots(root_dir: Path, out_dir: Path):
     for dir_ in experiment_dirs:
         plot_comparison(
             experiment_dir=dir_, 
+            line_plot_args=LinePlotArgs(
+                window_size=None,
+                downsample=1
+            ),
             plot_args=PlotArgs(
                 output=out_dir/'comparisons'/(dir_.name+'.png'),
                 silent=True,

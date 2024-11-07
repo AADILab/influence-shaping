@@ -90,4 +90,4 @@ sbatch/
 tree_gen/
 outfigs
 temp.sh
-example/trial_*
+example/result/trial_*

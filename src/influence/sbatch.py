@@ -51,7 +51,7 @@ def write_sbatch_executables(top_dir: Path, batch_dir_root: Path, seperate_trial
         "#!/bin/bash",
         "#SBATCH -A kt-lab",
         "#SBATCH --partition=share,dgx2,ampere,preempt,mime1",
-        "#SBATCH -c 4",
+        "#SBATCH -c 15",
         "#SBATCH --mem=16G",
         "#SBATCH --time=7-00:00:00",
         "#SBATCH --requeue",
