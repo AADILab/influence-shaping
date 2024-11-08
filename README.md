@@ -36,3 +36,11 @@ Now you should be able to run the example.
 ```
 python src/influence/run_cli.py src/influence/configs/default.yaml
 ```
+
+## To run tests
+
+In the `test` folder, there are unit tests written in python that test different parts of the library function as expected. Run them with the following command.
+
+```
+python -m unittest discover -s test
+```

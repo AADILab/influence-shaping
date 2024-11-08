@@ -147,8 +147,8 @@ def createRover(obs_radius, reward_type, resolution, agent_types, poi_types):
         Reward = rovers.rewards.Global
     elif reward_type == "Difference":
         Reward = rovers.rewards.Difference
-    rover = rovers.Rover[SmartLidar, Discrete, Reward](obs_radius, SmartLidar(resolution=resolution, composition_policy=rovers.Density(), agent_types=agent_types, poi_types=poi_types), Reward())
-    rover.type = "rover"
+    type_ = 'rover'
+    rover = rovers.Rover[SmartLidar, Discrete, Reward](type_, obs_radius, SmartLidar(resolution=resolution, composition_policy=rovers.Density(), agent_types=agent_types, poi_types=poi_types), Reward())
     return rover
 
 # Now create a UAV
@@ -158,8 +158,8 @@ def createUAV(obs_radius, reward_type, resolution, agent_types, poi_types):
         Reward = rovers.rewards.Global
     elif reward_type == "Difference":
         Reward = rovers.rewards.Difference
-    uav = rovers.Rover[SmartLidar, Discrete, Reward](obs_radius, SmartLidar(resolution=resolution, composition_policy=rovers.Density(), agent_types=agent_types, poi_types=poi_types), Reward())
-    uav.type = "uav"
+    type_ = 'uav'
+    uav = rovers.Rover[SmartLidar, Discrete, Reward](type_, obs_radius, SmartLidar(resolution=resolution, composition_policy=rovers.Density(), agent_types=agent_types, poi_types=poi_types), Reward())
     return uav
 
 # Now create a POI constraint where this POI can only be observed by rovers with "rover" type
@@ -173,8 +173,8 @@ class AbstractRoverConstraint(rovers.IConstraint):
         count = 0
         dists = []
         constraint_satisfied = False
-        for is_rover, agent in zip(self.is_rover_list, entity_pack.agents):
-            if is_rover:
+        for agent in entity_pack.agents:
+            if agent.type() == 'rover':
                 dist = calculateDistance(agent.path()[t], entity_pack.entity.position())
                 dists.append(dist)
                 if dist <= agent.obs_radius() and dist <= entity_pack.entity.obs_radius():

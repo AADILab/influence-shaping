@@ -224,7 +224,6 @@ def generate_comparison_plot(experiment_dir: Path, line_plot_args: LinePlotArgs,
     ax.legend()
 
     ax.set_xlim([0, gens[-1]])
-    ax.set_ylim([0, 1.1])
 
     plot_args.apply(ax)
 

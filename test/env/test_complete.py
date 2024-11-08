@@ -5,7 +5,7 @@ NOTE: TESTS ARE NOT EXTENSIVE!!! Bugs can sneak past them.
 No guarantees of bug-free code just because the unit tests are happy
 
 To run individual tests:
-python tests/env/complete.py TestComplete.test_complete
+python test/env/test_complete.py TestComplete.test_complete
 or
 python -m unittest tests.env.complete.TestComplete.test_complete
 

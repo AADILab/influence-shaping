@@ -68,9 +68,6 @@ venv.bak/
 .org-id-locations
 tmux.conf-default
 
-# vscode
-.vscode
-
 # Qt creator
 thyme.cflags
 thyme.config
@@ -91,3 +88,5 @@ tree_gen/
 outfigs
 temp.sh
 example/result/trial_*
+scratch
+scratch/
