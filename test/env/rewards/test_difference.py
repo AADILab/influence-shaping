@@ -29,6 +29,14 @@ class TestDifference(TestEnv):
         poi_config['position']['fixed'] = [10.0, 10.0]
         config['env']['pois']['rover_pois'] = [deepcopy(poi_config)]
         return config
+
+    def get_two_rovers_two_uavs_two_pois_config(self):
+        config = self.get_one_rover_one_uav_one_poi_config()
+        # Add a second poi, rover, and uav to the same location
+        config['env']['agents']['rovers'].append(deepcopy(config['env']['agents']['rovers'][0]))
+        config['env']['agents']['uavs'].append(deepcopy(config['env']['agents']['uavs'][0]))
+        config['env']['pois']['rover_pois'].append(deepcopy(config['env']['pois']['rover_pois'][0]))
+        return config
     
     def get_one_rover_one_uav_one_poi_config(self):
         config = self.get_one_rover_one_poi_config()
@@ -117,6 +125,53 @@ class TestDifference(TestEnv):
         config['env']['agents']['uavs'][0]['reward_type'] = 'Difference'
         # Check D for rover and uav
         self.assert_correct_rewards(config, expected_rewards=[1.0, 0.0])
+
+    def test_two_rovers_two_uavs_two_pois_a(self):
+        # Both rovers and both uavs on top of both pois
+        config = self.get_two_rovers_two_uavs_two_pois_config()
+        # Check G for all agents
+        self.assert_correct_rewards(config, expected_rewards=[2.0, 2.0, 2.0, 2.0])
+        # Check D for all agents. (0.0 for each rover because the other rover is in the same place. 0.0 for uavs because they cannot observe pois)
+        for rover_config in config['env']['agents']['rovers']:
+            rover_config['reward_type'] = 'Difference'
+        for uav_config in config['env']['agents']['uavs']:
+            uav_config['reward_type'] = 'Difference'
+        self.assert_correct_rewards(config, expected_rewards=[0.0, 0.0, 0.0, 0.0])
+    
+    def test_two_rovers_two_uavs_two_pois_b(self):
+        # Both rovers at one poi. Both uavs at another poi
+        config = self.get_two_rovers_two_uavs_two_pois_config()
+        # Move the second POI
+        config['env']['pois']['rover_pois'][1]['position']['fixed'] = [40.0, 10.0]
+        # Move the uavs to the second POI
+        for uav_config in config['env']['agents']['uavs']:
+            uav_config['position']['fixed'] = [40.0, 10.0]
+        # Check G for all agents. Should be 1.0
+        G = 1.0
+        self.assert_correct_rewards(config, expected_rewards=[G, G, G, G])
+        # Now check D. D should be 0.0 for rovers because if you remove either one, the other one is there at the same spot
+        # D should also be 0.0 for uavs because G never changes when uavs are removed
+        for rover_config in config['env']['agents']['rovers']:
+            rover_config['reward_type'] = 'Difference'
+        for uav_config in config['env']['agents']['uavs']:
+            uav_config['reward_type'] = 'Difference'
+        self.assert_correct_rewards(config, expected_rewards=[0.0, 0.0, 0.0, 0.0])
+    
+    def test_two_rovers_two_uavs_two_pois_c(self):
+        # One rover/uav pair at each poi
+        config = self.get_two_rovers_two_uavs_two_pois_config()
+        # Move the second rover, uav, and poi to different location
+        config['env']['pois']['rover_pois'][1]['position']['fixed'] = [40.0, 10.0]
+        config['env']['agents']['rovers'][1]['position']['fixed'] = [40.0, 10.0]
+        config['env']['agents']['uavs'][1]['position']['fixed'] = [40.0, 10.0]
+        # Check G for all agents. Should 2.0 because both pois are observed
+        self.assert_correct_rewards(config, expected_rewards=[2.0, 2.0, 2.0, 2.0])
+        # Now check D. Should be (1.0 - impact of other rover) for each rover and 0.0 for each uav
+        for rover_config in config['env']['agents']['rovers']:
+            rover_config['reward_type'] = 'Difference'
+        for uav_config in config['env']['agents']['uavs']:
+            uav_config['reward_type'] = 'Difference'
+        self.assert_correct_rewards(config, expected_rewards=[1.0, 1.0, 0.0, 0.0])
 
 if __name__ == '__main__':
     unittest.main()
