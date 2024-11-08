@@ -55,12 +55,30 @@ def plot_poi(ax, poi_config, x, y, color):
         radius = poi_config['observation_radius'],
         color=color,
         fill=True,
-        alpha=0.1
+        alpha=0.05
         )
     ax.add_patch(center_circle)
     ax.add_patch(outer_circle)
 
-def generate_joint_trajectory_plot(joint_traj_dir: Path, plot_args: PlotArgs):
+def add_rover_trajectories(ax: Axes, df: pd.DataFrame, num_rovers: int, individual_colors: bool):
+    if individual_colors:
+        rover_colors = plt.cm.Set1.colors[:1]+plt.cm.Set1.colors[3:]
+    else:
+        rover_colors = ['tab:purple']*num_rovers
+    for i in range(num_rovers):
+        ax.plot(df['rover_'+str(i)+'_x'], df['rover_'+str(i)+'_y'], ':', lw=2, color=rover_colors[i])
+        ax.plot(df['rover_'+str(i)+'_x'].iloc[-1], df['rover_'+str(i)+'_y'].iloc[-1], 's', ms=8, color=rover_colors[i])
+
+def add_uav_trajectories(ax: Axes, df: pd.DataFrame, num_uavs: int, individual_colors: bool):
+    if individual_colors:
+        uav_colors = plt.cm.Dark2.colors[1:]
+    else:
+        uav_colors = ['tab:orange']*num_uavs
+    for i in range(num_uavs):
+        ax.plot(df['uav_'+str(i)+'_x'], df['uav_'+str(i)+'_y'], ':', lw=2, color=uav_colors[i])
+        ax.plot(df['uav_'+str(i)+'_x'].iloc[-1], df['uav_'+str(i)+'_y'].iloc[-1], 'x', ms=8, color=uav_colors[i])
+
+def generate_joint_trajectory_plot(joint_traj_dir: Path, individual_colors: bool, plot_args: PlotArgs):
     """Generate plot of the joint trajectory specified in joint_traj_dir"""
 
     fig, ax = plt.subplots(1,1)
@@ -76,12 +94,8 @@ def generate_joint_trajectory_plot(joint_traj_dir: Path, plot_args: PlotArgs):
     num_rovers, num_uavs, num_rover_pois, num_hidden_pois \
         = get_num_entities(labels=df.columns.to_list())
 
-    for i in range(num_rovers):
-        ax.plot(df['rover_'+str(i)+'_x'], df['rover_'+str(i)+'_y'], ':', color='tab:purple')
-        ax.plot(df['rover_'+str(i)+'_x'].iloc[-1], df['rover_'+str(i)+'_y'].iloc[-1], 's', color='tab:purple')
-    for i in range(num_uavs):
-        ax.plot(df['uav_'+str(i)+'_x'], df['uav_'+str(i)+'_y'], ':', color='tab:orange')
-        ax.plot(df['uav_'+str(i)+'_x'].iloc[-1], df['uav_'+str(i)+'_y'].iloc[-1], 'x', color='tab:orange')
+    add_rover_trajectories(ax, df, num_rovers, individual_colors)
+    add_uav_trajectories(ax, df, num_uavs, individual_colors)
     for i, poi_config in enumerate(config['env']['pois']['rover_pois']):
         plot_poi(ax, poi_config, x=df['rover_poi_'+str(i)+'_x'][0], y=df['rover_poi_'+str(i)+'_y'][0], color='tab:green')
     for i, poi_config in enumerate(config['env']['pois']['hidden_pois']):
@@ -97,8 +111,8 @@ def generate_joint_trajectory_plot(joint_traj_dir: Path, plot_args: PlotArgs):
 
     return fig
 
-def plot_joint_trajectory(joint_traj_dir: Path, plot_args: PlotArgs):
-    fig = generate_joint_trajectory_plot(joint_traj_dir, plot_args)
+def plot_joint_trajectory(joint_traj_dir: Path, individual_colors: bool, plot_args: PlotArgs):
+    fig = generate_joint_trajectory_plot(joint_traj_dir, individual_colors, plot_args)
     plot_args.finish_figure(fig)
 
 def generate_learning_curve_plot(fitness_dir, individual_agents, line_plot_args: LinePlotArgs, plot_args: PlotArgs):

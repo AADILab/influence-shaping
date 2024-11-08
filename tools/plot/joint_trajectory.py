@@ -16,6 +16,11 @@ if __name__ == '__main__':
         help='directory of csv file containing joint trajectory',
         type=str
     )
+    parser.add_argument(
+        '--individual_colors',
+        help='plot each agent as a different color',
+        action='store_true'
+    )
     args = parser.parse_args()
 
-    plot_joint_trajectory(Path(args.joint_traj_dir), parser.dump_plot_args(args))
+    plot_joint_trajectory(Path(args.joint_traj_dir), args.individual_colors, parser.dump_plot_args(args))
