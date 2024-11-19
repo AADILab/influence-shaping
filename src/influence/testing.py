@@ -107,7 +107,9 @@ class TestEnv(InfluenceTestCase):
         self.assertTrue(self.check_close_lists(list0, list1), msg)
 
     def rewards_from_env(self, env):
-        return [self.compute_agent_reward(env, agent_id=i) for i in range(len(env.rovers()))]
+        # return [self.compute_agent_reward(env, agent_id=i) for i in range(len(env.rovers()))]
+        # Need to ensure that rewards are now handled by the rewards computer 
+        return env.status()[1]
     
     def get_agent_paths_from_env(self, env):
         raw_rover_paths = [rover.path() for rover in env.rovers()]
@@ -130,7 +132,7 @@ class TestEnv(InfluenceTestCase):
     def position_as_list(self, position_obj):
         return [position_obj.x, position_obj.y]
 
-    def assert_path_rewards(self, env, agent_paths, expected_rewards_at_each_step, start_msg: Any = None):
+    def assert_path_rewards(self, env, agent_paths, expected_rewards_at_each_step, start_msg: Any = ''):
         # Reset up the env
         _, rewards = env.reset()
         # Make sure rewards at initial step are correct

@@ -143,23 +143,17 @@ class SmartLidar(rovers.Lidar[rovers.Density]):
 # First we're going to create a simple rover
 def createRover(obs_radius, reward_type, resolution, agent_types, poi_types):
     Discrete = thyme.spaces.Discrete
-    if reward_type == "Global":
-        Reward = rovers.rewards.Global
-    elif reward_type == "Difference":
-        Reward = rovers.rewards.Difference
+    Reward = rovers.rewards.Global
     type_ = 'rover'
-    rover = rovers.Rover[SmartLidar, Discrete, Reward](type_, obs_radius, SmartLidar(resolution=resolution, composition_policy=rovers.Density(), agent_types=agent_types, poi_types=poi_types), Reward())
+    rover = rovers.Rover[SmartLidar, Discrete, Reward](reward_type, type_, obs_radius, SmartLidar(resolution=resolution, composition_policy=rovers.Density(), agent_types=agent_types, poi_types=poi_types), Reward())
     return rover
 
 # Now create a UAV
 def createUAV(obs_radius, reward_type, resolution, agent_types, poi_types):
     Discrete = thyme.spaces.Discrete
-    if reward_type == "Global":
-        Reward = rovers.rewards.Global
-    elif reward_type == "Difference":
-        Reward = rovers.rewards.Difference
+    Reward = rovers.rewards.Global
     type_ = 'uav'
-    uav = rovers.Rover[SmartLidar, Discrete, Reward](type_, obs_radius, SmartLidar(resolution=resolution, composition_policy=rovers.Density(), agent_types=agent_types, poi_types=poi_types), Reward())
+    uav = rovers.Rover[SmartLidar, Discrete, Reward](reward_type, type_, obs_radius, SmartLidar(resolution=resolution, composition_policy=rovers.Density(), agent_types=agent_types, poi_types=poi_types), Reward())
     return uav
 
 # Now create a POI constraint where this POI can only be observed by rovers with "rover" type

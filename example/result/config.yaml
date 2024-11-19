@@ -45,7 +45,7 @@ env:
         - 24.0
         spawn_rule: fixed
       resolution: 90
-      reward_type: Global
+      reward_type: Difference
     uavs:
     - observation_radius: 1000.0
       position:
@@ -54,7 +54,13 @@ env:
         - 24.0
         spawn_rule: fixed
       resolution: 90
-      reward_type: Global
+      reward_type: IndirectDifference
+      influence:
+        heuristic_type: distance # distance (no others implemented yet)
+        distance:
+          threshold: 5.0
+          types: [rover] # types of agents we consider for influence. Could be [rover] , [uav] , or [rover, uav]
+        timescale: granular # granular, trajectory
   map_size:
   - 50.0
   - 50.0

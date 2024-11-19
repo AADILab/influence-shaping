@@ -1,0 +1,137 @@
+>>>PYTHON-EXEC-OUTPUT
+Received test ids from temp file.
+test_one_rover_one_uav_one_poi_path_a_IndirectDifference (env.rewards.test_indirect_difference.TestIndirectDifference) ... RewardComputer::RewardComputer()
+Environment::reset()
+Environment::status()
+Reward::compute()
+Reward::compute() Computed G
+RewardComputer::prep_all_or_nothing_influence()
+RewardComputer::prep_all_or_nothing_influence() t_final | 1
+t 0
+i 0
+k 0
+k 1
+i 1
+k 0
+Increasing counter at counters[0][1]
+k 1
+RewardComputer::prep_all_or_nothing_influence() Finished creating counters
+counters.size() 2
+counters[0]
+counters[0][0] = 0
+counters[0][1] = 1
+counters[1]
+counters[1][0] = 0
+counters[1][1] = 0
+RewardComputer::prep_all_or_nothing_influence() Insert yourself into your influence set (start)
+RewardComputer::prep_all_or_nothing_influence() Ran influence_sets[i].push_back(i) with i = 0
+RewardComputer::prep_all_or_nothing_influence() Ran influence_sets[i].push_back(i) with i = 1
+RewardComputer::prep_all_or_nothing_influence() Adding other agents to influence sets
+RewardComputer::prep_all_or_nothing_influence() on agent k = 0
+Beginning iteration through counters[0].size()
+RewardComputer::prep_all_or_nothing_influence() k = 0 , i = 0
+RewardComputer::prep_all_or_nothing_influence() k = 0 , i = 1
+RewardComputer::prep_all_or_nothing_influence() Ran influence_sets[highest_ind].push_back(k) on k = 0
+RewardComputer::prep_all_or_nothing_influence() on agent k = 1
+Beginning iteration through counters[1].size()
+RewardComputer::prep_all_or_nothing_influence() k = 1 , i = 0
+RewardComputer::prep_all_or_nothing_influence() k = 1 , i = 1
+RewardComputer::prep_all_or_nothing_influence() Ran influence_sets[highest_ind].push_back(k) on k = 1
+RewardComputer::prep_all_or_nothing_influence() Finished building influence_sets
+Reward::compute() Computed influence_sets
+Reward::compute() Computing rewards for each agent
+Reward::compute() Computing reward for agent 0
+Reward::compute() Computing Indirect Difference
+Reward::compute_without_inds()
+Reward::compute() Computing reward for agent 1
+Reward::compute() Computing Indirect Difference
+Reward::compute_without_inds()
+
+Environment::status() | m_rovers.size() | 2
+Environment::status() | i | 0
+pack
+Environment::status() | i | 1
+pack
+Environment::status() | Finished iterating through rovers
+Environment::status()
+Reward::compute()
+Reward::compute() Computed G
+RewardComputer::prep_all_or_nothing_influence()
+RewardComputer::prep_all_or_nothing_influence() t_final | 2
+t 0
+i 0
+k 0
+k 1
+i 1
+k 0
+k 1
+t 1
+i 0
+k 0
+k 1
+i 1
+k 0
+k 1
+RewardComputer::prep_all_or_nothing_influence() Finished creating counters
+counters.size() 2
+counters[0]
+counters[0][0] = 0
+counters[0][1] = 0
+counters[1]
+counters[1][0] = 0
+counters[1][1] = 0
+RewardComputer::prep_all_or_nothing_influence() Insert yourself into your influence set (start)
+RewardComputer::prep_all_or_nothing_influence() Ran influence_sets[i].push_back(i) with i = 0
+RewardComputer::prep_all_or_nothing_influence() Ran influence_sets[i].push_back(i) with i = 1
+RewardComputer::prep_all_or_nothing_influence() Adding other agents to influence sets
+RewardComputer::prep_all_or_nothing_influence() on agent k = 0
+Beginning iteration through counters[0].size()
+RewardComputer::prep_all_or_nothing_influence() k = 0 , i = 0
+RewardComputer::prep_all_or_nothing_influence() k = 0 , i = 1
+RewardComputer::prep_all_or_nothing_influence() Ran influence_sets[highest_ind].push_back(k) on k = 0
+RewardComputer::prep_all_or_nothing_influence() on agent k = 1
+Beginning iteration through counters[1].size()
+RewardComputer::prep_all_or_nothing_influence() k = 1 , i = 0
+RewardComputer::prep_all_or_nothing_influence() k = 1 , i = 1
+RewardComputer::prep_all_or_nothing_influence() Ran influence_sets[highest_ind].push_back(k) on k = 1
+RewardComputer::prep_all_or_nothing_influence() Finished building influence_sets
+Reward::compute() Computed influence_sets
+Reward::compute() Computing rewards for each agent
+Reward::compute() Computing reward for agent 0
+Reward::compute() Computing Indirect Difference
+Reward::compute_without_inds()
+Reward::compute() Computing reward for agent 1
+Reward::compute() Computing Indirect Difference
+Reward::compute_without_inds()
+Environment::status() | m_rovers.size() | 2
+Environment::status() | i | 0
+pack
+Environment::status() | i | 1
+pack
+Environment::status() | Finished iterating through rovers
+FAIL
+
+======================================================================
+FAIL: test_one_rover_one_uav_one_poi_path_a_IndirectDifference (env.rewards.test_indirect_difference.TestIndirectDifference)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/gonzaeve/influence-shaping/test/env/rewards/test_indirect_difference.py", line 223, in test_one_rover_one_uav_one_poi_path_a_IndirectDifference
+    self.assert_path_rewards(env, agent_paths, expected_rewards_at_each_step)
+  File "/home/gonzaeve/influence-shaping/src/influence/testing.py", line 149, in assert_path_rewards
+    self.assert_close_lists(rewards, expected_rewards,
+  File "/home/gonzaeve/influence-shaping/src/influence/testing.py", line 107, in assert_close_lists
+    self.assertTrue(self.check_close_lists(list0, list1), msg)
+AssertionError: False is not true : Rewards computed incorrectly at t=1
+Expected rewards: [1.0, 1.0]
+Env rewards: { 1.0000000, 0.0000000 }
+Agent positions in env: [[25.0, 25.0], [50.0, 50.0]]
+Agent paths in env: [[[50.0, 50.0], [50.0, 50.0]], [[25.0, 25.0], [50.0, 50.0]]]
+POI positions in env: [[25.0, 25.0]]
+
+
+----------------------------------------------------------------------
+Ran 1 test in 11.644s
+
+FAILED (failures=1)
+<<<PYTHON-EXEC-OUTPUT
+Finished running tests!
