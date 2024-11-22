@@ -8,7 +8,7 @@ from matplotlib.axes import Axes
 import numpy as np
 
 from influence.config import load_config
-from influence.parsing import PlotArgs, LinePlotArgs
+from influence.parsing import PlotArgs, LinePlotArgs, BatchLinePlotArgs
 
 def get_num_entities(labels: List[str]):
     num_rovers = 0
@@ -258,7 +258,7 @@ def get_example_trial_dirs(parent_dir: Path):
 
     return low_trial_dir, med_trial_dir, high_trial_dir
 
-def generate_experiment_tree_plots(root_dir: Path, out_dir: Path):
+def generate_experiment_tree_plots(root_dir: Path, out_dir: Path, batch_line_plot_args: BatchLinePlotArgs):
     """Generate all the plots in this experiment tree"""
     
     experiment_dirs = set()
@@ -271,14 +271,19 @@ def generate_experiment_tree_plots(root_dir: Path, out_dir: Path):
     for dir_ in experiment_dirs:
         plot_comparison(
             experiment_dir=dir_, 
-            line_plot_args=LinePlotArgs(
-                window_size=None,
-                downsample=1
-            ),
-            plot_args=PlotArgs(
-                output=out_dir/'comparisons'/(dir_.name+'.png'),
-                silent=True,
-                title=dir_.name)
+            # line_plot_args=LinePlotArgs(
+            #     window_size=None,
+            #     downsample=1
+            # ),
+            line_plot_args=batch_line_plot_args.build_line_plot_args(),
+            # plot_args=PlotArgs(
+            #     output=out_dir/dir_.name/'comparison.png',
+            #     # output=out_dir/'comparisons'/(dir_.name+'.png'),
+            #     silent=True,
+            #     title=dir_.name)
+            plot_args=batch_line_plot_args.build_plot_args(
+                title=dir_.name, output=out_dir/dir_.name/'comparison.png'
+            )
         )
     
     # for dir_ in trial_parent_dirs:
@@ -290,5 +295,5 @@ def generate_experiment_tree_plots(root_dir: Path, out_dir: Path):
     #         output=out_dir/'trajectories'/dir_.name
     #     )
 
-def plot_comparison_tree(root_dir: Path, out_dir: Path):
-    generate_experiment_tree_plots(root_dir, out_dir)
+def plot_comparison_tree(root_dir: Path, out_dir: Path, batch_line_plot_args: BatchLinePlotArgs):
+    generate_experiment_tree_plots(root_dir, out_dir, batch_line_plot_args)

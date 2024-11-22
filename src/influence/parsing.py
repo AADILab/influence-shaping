@@ -20,10 +20,15 @@ def moving_average_filter(arr, window_size: int):
     )
 
 class PlotArgs():
-    def __init__(self, title: Optional[str]=None, output: Optional[str]=None, 
-            xlim: Optional[List[float]]=None, ylim: Optional[List[float]]=None, 
-            xlabel: Optional[str]=None, ylabel: Optional[str]=None,
-            silent: bool=False):
+    def __init__(self, 
+            title: Optional[str]=None, 
+            output: Optional[str]=None, 
+            xlim: Optional[List[float]]=None, 
+            ylim: Optional[List[float]]=None, 
+            xlabel: Optional[str]=None, 
+            ylabel: Optional[str]=None,
+            silent: bool=False
+        ):
         self.title = title
         if output is not None:
             self.output = Path(output)
@@ -69,6 +74,41 @@ class LinePlotArgs():
 
     def get_pts(self, xs, ys):
         return xs[::self.downsample], self.get_ys(ys)[::self.downsample]
+
+class BatchLinePlotArgs():
+    def __init__(self, 
+            xlim: Optional[List[float]], 
+            ylim: Optional[List[float]],
+            xlabel: Optional[str],
+            ylabel: Optional[str],
+            silent: bool,
+            window_size: Optional[int],
+            downsample: int
+        ):
+        self.xlim = xlim
+        self.ylim = ylim
+        self.xlabel = xlabel
+        self.ylabel = ylabel
+        self.silent = silent
+        self.window_size = window_size
+        self.downsample = downsample
+    
+    def build_plot_args(self, title: Optional[str], output: Optional[str]):
+        return PlotArgs(
+            title=title,
+            output=output,
+            xlim=self.xlim,
+            ylim=self.ylim,
+            xlabel=self.xlabel,
+            ylabel=self.ylabel,
+            silent=self.silent
+        )
+    
+    def build_line_plot_args(self):
+        return LinePlotArgs(
+            window_size=self.window_size,
+            downsample=self.downsample
+        )
 
 class PlotParser(argparse.ArgumentParser):
     def __init__(self, *args, **kwargs):
@@ -138,3 +178,51 @@ class LinePlotParser(PlotParser):
     
     def dump_line_plot_args(self, args):
         return LinePlotArgs(args.window_size, args.downsample)
+
+class BatchLinePlotParser(argparse.ArgumentParser):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def add_plot_args(self):
+        self.add_argument(
+            '--xlim',
+            nargs=2,
+            help='min and max xlimits for plots',
+            type=float
+        )
+        self.add_argument(
+            '--ylim',
+            nargs=2,
+            help='min and max ylimits for plots',
+            type=float
+        )
+        self.add_argument(
+            '--xlabel',
+            help='label for x axes',
+            type=str
+        )
+        self.add_argument(
+            '--ylabel',
+            help='label for the y axes',
+            type=str
+        )
+        self.add_argument(
+            '-s', '--silent',
+            help='run silently without showing any plots',
+            action='store_true'
+        )
+        self.add_argument(
+            '--window_size',
+            help='window size for moving average filter on plots',
+            type=int
+        )
+        self.add_argument(
+            '--downsample',
+            help='downsample and only plot one point every _ points',
+            type=int,
+            default=1
+        )
+        return None
+
+    def dump_batch_line_plot_args(self, args):
+        return BatchLinePlotArgs(args.xlim, args.ylim, args.xlabel, args.ylabel, args.silent, args.window_size, args.downsample)
