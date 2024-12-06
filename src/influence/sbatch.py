@@ -1,6 +1,7 @@
 import os
 import stat
 from pathlib import Path
+import pprint
 from influence.config import get_config_dirs, generate_commands, contractuser
 
 def generate_sh_command_dirs(batch_dir_root, commands):
@@ -11,7 +12,8 @@ def generate_sh_command_dirs(batch_dir_root, commands):
 
     for c in commands:
         if '-t' in c:
-            experiment_name = c.split(' ')[-1].replace('/','.').replace('~.influence-shaping.results.', '').replace('.config.yaml','')
+            split_c = c.split(' ')
+            experiment_name = split_c[2].replace('/','.').replace('~.influence-shaping.results.', '').replace('.config.yaml','').replace("'",'') + '.t'+ str(split_c[4])
             # TODO: need to extract trial differently if it's in there
             file_name = experiment_name +'.sh'
             file_dir = batch_dir / file_name
@@ -64,8 +66,12 @@ def write_sbatch_executables(top_dir: Path, batch_dir_root: Path, seperate_trial
     file_str_start = '\n'.join(batch_file_start)
 
     config_dirs = get_config_dirs(top_dir)
+    pprint.pprint(config_dirs)
     commands = generate_commands(config_dirs, seperate_trials)
+    pprint.pprint(commands)
     file_dirs = generate_sh_command_dirs(batch_dir_root, commands)
+    pprint.pprint(file_dirs)
     sbatch_commands = generate_sbatch_commands(file_dirs)
+    pprint.pprint(sbatch_commands)
     write_command_sh_files(batch_dir_root, file_dirs, commands, file_str_start)
     write_sbatch_sh_file(batch_dir_root, sbatch_commands)

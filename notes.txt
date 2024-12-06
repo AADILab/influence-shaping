@@ -1,0 +1,50 @@
+Ok I need to organize what I'm doing next. Need to implement the more detailed versions of D-Indirect with
+different tunable paramters
+
+- Manual leader-follower assignment. Each uav gets credit for a specific rover no matter how the agents interact in the episode.
+- Diferent credit assignment scopes for influence (instead of all or nothing type assignment, we can use the G,D,L assignments)
+- Different granularities for how we determine who gets credit for what. Right now just make it so that it's
+    based on who you are influencing at this particular timestep, rather than who you influenced throughout the episode.
+
+So it looks like I need a few parameters to be able to tweak
+
+IndirectDifference:
+    timescale: episode OR timestep
+    credit: All or nothing OR Global OR Difference OR Local (all or nothing is a mix of Difference and Local. Only one agent can get credit for influencing a particular agent, but SOMEONE will get credit for influencing each agent)
+    type: removal OR weighted_sum (remove agents that you influence, or get a weighted sum of their difference rewards)
+    asssignment: 
+        type: automatic OR manual
+        manual: [ints of who this agent gets credit for]
+
+look at what's happening with D-Indirect in the anamoly
+(behaviors should show something weird here)
+Show that D-Indirect and D are not the same here
+trajectory-based - need more interesting behaviors
+concerned about time to time influence (not getting credit for points during the trajectory)
+
+random walk performing as well as random walk - make pois repeat the rewards (promotes sticking to the poi)
+
+right now we're making D-Indirect completely based on the observation of the rover 
+(could add actions to the uavs to communicate with rovers)
+(like adding flags or pings)
+
+start with manual assignment where uavs start within rover's observation radius and some without
+play around with 2 uavs to 1 rover (or flipped?)
+play around with direct assignments
+if we start with manual assignment in a clump and it works then it means that we can figure it out, 
+it's just a sense of figuring it out
+
+figure out what's going on with anamolous case
+
+
+--- Debugging anamolous result
+I think one of the rovers is getting credit for both rovers... weird
+
+plan moving forward
+
+trajectory-based G - I guess I proved my point enough that this works when G is computed based on the final timestep
+so time to do some trajectories
+
+Kagan explicitly wants me to play around with a few things
+- make G based on the whole trajectory (one rover can observe multiple pois throughout a rollout)
+- 

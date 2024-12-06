@@ -269,6 +269,11 @@ def generate_experiment_tree_plots(root_dir: Path, out_dir: Path, batch_line_plo
             trial_parent_dirs.add(Path(root))
 
     for dir_ in experiment_dirs:
+        dir_list = str(dir_).split("/")
+        print(dir_list[dir_list.index(root_dir.name)+1:])
+        dir_name = "/".join(dir_list[dir_list.index(root_dir.name)+1:])
+        print(dir_name)
+
         plot_comparison(
             experiment_dir=dir_, 
             # line_plot_args=LinePlotArgs(
@@ -282,7 +287,7 @@ def generate_experiment_tree_plots(root_dir: Path, out_dir: Path, batch_line_plo
             #     silent=True,
             #     title=dir_.name)
             plot_args=batch_line_plot_args.build_plot_args(
-                title=dir_.name, output=out_dir/dir_.name/'comparison.png'
+                title=dir_name, output=out_dir/dir_name/'comparison.png'
             )
         )
     

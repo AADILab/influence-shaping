@@ -88,5 +88,6 @@ tree_gen/
 outfigs
 temp.sh
 example/result/trial_*
+**/trial_*
 scratch
 scratch/

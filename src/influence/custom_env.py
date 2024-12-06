@@ -1,7 +1,11 @@
+from typing import List
 from influence.librovers import rovers, thyme
 import numpy as np
 import cppyy
 import random
+
+def listToVec(list_: List[int]):
+    return cppyy.gbl.std.vector[cppyy.gbl.int](list_)
 
 def calculateDistance(position_0, position_1):
     return np.linalg.norm([position_0.x-position_1.x, position_0.y-position_1.y])
@@ -145,6 +149,9 @@ def createRover(obs_radius, reward_type, resolution, agent_types, poi_types):
     Discrete = thyme.spaces.Discrete
     Reward = rovers.rewards.Global
     type_ = 'rover'
+    # TODO: Add another parameter here so that you can specify different parameters for indirect difference rewards?
+    # Maybe even a set of parameters? Just throw in a hashmap directly in there (of all D-Indirec related parameters)? 
+    # Rather than putting each D-Indirect parameter in individually?
     rover = rovers.Rover[SmartLidar, Discrete, Reward](reward_type, type_, obs_radius, SmartLidar(resolution=resolution, composition_policy=rovers.Density(), agent_types=agent_types, poi_types=poi_types), Reward())
     return rover
 
@@ -155,6 +162,58 @@ def createUAV(obs_radius, reward_type, resolution, agent_types, poi_types):
     type_ = 'uav'
     uav = rovers.Rover[SmartLidar, Discrete, Reward](reward_type, type_, obs_radius, SmartLidar(resolution=resolution, composition_policy=rovers.Density(), agent_types=agent_types, poi_types=poi_types), Reward())
     return uav
+
+def createAgent(agent_config, agent_types, poi_types, type_):
+    """Create an agent using the agent's config and type"""
+    # unpack config
+    reward_type = agent_config['reward_type']
+    obs_radius = agent_config['observation_radius']
+    resolution = agent_config['resolution']
+
+    # repackage indirect difference parameters
+    IndirectDifferenceParameters = rovers.IndirectDifferenceParameters
+    AutomaticParameters = rovers.AutomaticParameters
+    if 'IndirectDifference' in agent_config:
+        indirect_difference_config = agent_config['IndirectDifference']
+        auto_params_config = indirect_difference_config['automatic']
+        indirect_difference_parameters = IndirectDifferenceParameters(
+            type_ = indirect_difference_config['type'],
+            assignment = indirect_difference_config['assignment'],
+            manual = listToVec(indirect_difference_config['manual']),
+            automatic_parameters = AutomaticParameters(
+                timescale = auto_params_config['timescale'],
+                credit = auto_params_config['credit']
+            )
+        )
+        
+    else:
+        # Use default if none are specified
+        indirect_difference_parameters = IndirectDifferenceParameters(
+            type_ = 'removal',
+            assignment = 'automatic',
+            manual = cppyy.gbl.std.vector[cppyy.gbl.int](),
+            automatic_parameters = AutomaticParameters(
+                timescale = 'timestep',
+                credit = 'Local'
+            )
+        )
+
+    Discrete = thyme.spaces.Discrete
+    Reward = rovers.rewards.Global
+
+    return rovers.Rover[SmartLidar, Discrete, Reward](
+        indirect_difference_parameters,
+        reward_type,
+        type_,
+        obs_radius,
+        SmartLidar(
+            resolution=resolution, 
+            composition_policy=rovers.Density(), 
+            agent_types=agent_types, 
+            poi_types=poi_types
+        ),
+        Reward()
+    )
 
 # Now create a POI constraint where this POI can only be observed by rovers with "rover" type
 class AbstractRoverConstraint(rovers.IConstraint):
@@ -279,25 +338,43 @@ def createEnv(config):
     agent_types = ["rover"]*NUM_ROVERS + ["uav"]*NUM_UAVS
     poi_types = ["rover"]*NUM_ROVER_POIS+["hidden"]*NUM_HIDDEN_POIS
 
+    # rovers_ = [
+    #     createRover(
+    #         obs_radius=rover["observation_radius"],
+    #         reward_type=rover["reward_type"],
+    #         resolution=rover["resolution"],
+    #         agent_types=agent_types,
+    #         poi_types=poi_types
+    #     )
+    #     for rover in config["env"]["agents"]["rovers"]
+    # ]
     rovers_ = [
-        createRover(
-            obs_radius=rover["observation_radius"],
-            reward_type=rover["reward_type"],
-            resolution=rover["resolution"],
+        createAgent(
+            agent_config=rover_config, 
             agent_types=agent_types,
-            poi_types=poi_types
+            poi_types=poi_types,
+            type_='rover'
         )
-        for rover in config["env"]["agents"]["rovers"]
+        for rover_config in config['env']['agents']['rovers']
     ]
+    # uavs = [
+    #     createUAV(
+    #         obs_radius=uav["observation_radius"],
+    #         reward_type=uav["reward_type"],
+    #         resolution=uav["resolution"],
+    #         agent_types=agent_types,
+    #         poi_types=poi_types
+    #     )
+    #     for uav in config["env"]["agents"]["uavs"]
+    # ]
     uavs = [
-        createUAV(
-            obs_radius=uav["observation_radius"],
-            reward_type=uav["reward_type"],
-            resolution=uav["resolution"],
+        createAgent(
+            agent_config=uav_config,
             agent_types=agent_types,
-            poi_types=poi_types
+            poi_types=poi_types,
+            type_ = 'uav'
         )
-        for uav in config["env"]["agents"]["uavs"]
+        for uav_config in config['env']['agents']['uavs']
     ]
     agents = rovers_+uavs
 
