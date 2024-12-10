@@ -398,7 +398,7 @@ class CooperativeCoevolutionaryAlgorithm():
             for row in all_fit:
                 team_fit = str(row[-1])
                 agent_fits = [str(fit) for fit in row[:-1]]
-                fit_str += ','.join([team_fit]+agent_fits)
+                fit_str += ','.join([team_fit]+agent_fits) + ','
             fit_str+='\n'
         # Now save it all to the csv
         with open(eval_fitness_dir, 'a') as file:
