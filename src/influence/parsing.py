@@ -75,23 +75,19 @@ class LinePlotArgs():
     def get_pts(self, xs, ys):
         return xs[::self.downsample], self.get_ys(ys)[::self.downsample]
 
-class BatchLinePlotArgs():
-    def __init__(self, 
+class BatchPlotArgs():
+    def __init__(self,
             xlim: Optional[List[float]], 
             ylim: Optional[List[float]],
             xlabel: Optional[str],
             ylabel: Optional[str],
-            silent: bool,
-            window_size: Optional[int],
-            downsample: int
+            silent: bool
         ):
         self.xlim = xlim
         self.ylim = ylim
         self.xlabel = xlabel
         self.ylabel = ylabel
         self.silent = silent
-        self.window_size = window_size
-        self.downsample = downsample
     
     def build_plot_args(self, title: Optional[str], output: Optional[str]):
         return PlotArgs(
@@ -103,6 +99,14 @@ class BatchLinePlotArgs():
             ylabel=self.ylabel,
             silent=self.silent
         )
+
+class BatchLinePlotArgs():
+    def __init__(self,
+            window_size: Optional[int],
+            downsample: int
+        ):
+        self.window_size = window_size
+        self.downsample = downsample
     
     def build_line_plot_args(self):
         return LinePlotArgs(
@@ -179,10 +183,10 @@ class LinePlotParser(PlotParser):
     def dump_line_plot_args(self, args):
         return LinePlotArgs(args.window_size, args.downsample)
 
-class BatchLinePlotParser(argparse.ArgumentParser):
+class BatchPlotParser(argparse.ArgumentParser):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
+    
     def add_plot_args(self):
         self.add_argument(
             '--xlim',
@@ -211,6 +215,17 @@ class BatchLinePlotParser(argparse.ArgumentParser):
             help='run silently without showing any plots',
             action='store_true'
         )
+        return None
+    
+    def dump_batch_plot_args(self, args):
+        return BatchPlotArgs(args.xlim, args.ylim, args.xlabel, args.ylabel, args.silent)
+
+class BatchLinePlotParser(BatchPlotParser):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def add_plot_args(self):
+        super().add_plot_args()
         self.add_argument(
             '--window_size',
             help='window size for moving average filter on plots',
@@ -225,4 +240,4 @@ class BatchLinePlotParser(argparse.ArgumentParser):
         return None
 
     def dump_batch_line_plot_args(self, args):
-        return BatchLinePlotArgs(args.xlim, args.ylim, args.xlabel, args.ylabel, args.silent, args.window_size, args.downsample)
+        return BatchLinePlotArgs(args.window_size, args.downsample)

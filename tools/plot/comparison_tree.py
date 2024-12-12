@@ -26,4 +26,4 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    plot_comparison_tree(Path(args.root_dir), Path(args.out_dir), parser.dump_batch_line_plot_args(args))
+    plot_comparison_tree(Path(args.root_dir), Path(args.out_dir), parser.dump_batch_plot_args(args), parser.dump_batch_line_plot_args(args))

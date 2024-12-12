@@ -8,7 +8,7 @@ from matplotlib.axes import Axes
 import numpy as np
 
 from influence.config import load_config
-from influence.parsing import PlotArgs, LinePlotArgs, BatchLinePlotArgs
+from influence.parsing import PlotArgs, LinePlotArgs, BatchPlotArgs, BatchLinePlotArgs
 
 def get_num_entities(labels: List[str]):
     num_rovers = 0
@@ -42,7 +42,7 @@ def get_num_entities(labels: List[str]):
 
     return num_rovers, num_uavs, num_rover_pois, num_hidden_pois
 
-def plot_poi(ax, poi_config, x, y, color):
+def plot_poi(ax, poi_config, x, y, color, radius_shading):
     center_circle = plt.Circle(
         xy = (x, y),
         radius = min(1.0, poi_config['observation_radius']),
@@ -50,35 +50,48 @@ def plot_poi(ax, poi_config, x, y, color):
         fill=True,
         alpha=0.9
         )
-    outer_circle = plt.Circle(
-        xy = (x, y),
-        radius = poi_config['observation_radius'],
-        color=color,
-        fill=True,
-        alpha=0.05
-        )
     ax.add_patch(center_circle)
-    ax.add_patch(outer_circle)
+    if radius_shading:
+        outer_circle = plt.Circle(
+            xy = (x, y),
+            radius = poi_config['observation_radius'],
+            color=color,
+            fill=True,
+            alpha=0.05
+            )
+        ax.add_patch(outer_circle)
 
-def add_rover_trajectories(ax: Axes, df: pd.DataFrame, num_rovers: int, individual_colors: bool):
+def get_rover_colors(individual_colors: bool):
     if individual_colors:
         rover_colors = plt.cm.Set1.colors[:1]+plt.cm.Set1.colors[3:]
     else:
-        rover_colors = ['tab:purple']*num_rovers
-    for i in range(num_rovers):
-        ax.plot(df['rover_'+str(i)+'_x'], df['rover_'+str(i)+'_y'], ':', lw=2, color=rover_colors[i])
-        ax.plot(df['rover_'+str(i)+'_x'].iloc[-1], df['rover_'+str(i)+'_y'].iloc[-1], 's', ms=8, color=rover_colors[i])
+        rover_colors = ['tab:purple']
+    return rover_colors
 
-def add_uav_trajectories(ax: Axes, df: pd.DataFrame, num_uavs: int, individual_colors: bool):
+def get_uav_colors(individual_colors: bool):
     if individual_colors:
         uav_colors = plt.cm.Dark2.colors[1:]
     else:
-        uav_colors = ['tab:orange']*num_uavs
-    for i in range(num_uavs):
-        ax.plot(df['uav_'+str(i)+'_x'], df['uav_'+str(i)+'_y'], ':', lw=2, color=uav_colors[i])
-        ax.plot(df['uav_'+str(i)+'_x'].iloc[-1], df['uav_'+str(i)+'_y'].iloc[-1], 'x', ms=8, color=uav_colors[i])
+        uav_colors = ['tab:orange']
+    return uav_colors
 
-def generate_joint_trajectory_plot(joint_traj_dir: Path, individual_colors: bool, plot_args: PlotArgs):
+def add_rover_trajectories(ax: Axes, df: pd.DataFrame, num_rovers: int, individual_colors: bool):
+    # if individual_colors:
+    #     rover_colors = plt.cm.Set1.colors[:1]+plt.cm.Set1.colors[3:]
+    # else:
+    #     rover_colors = ['tab:purple']*num_rovers
+    rover_colors = get_rover_colors(individual_colors)
+    for i in range(num_rovers):
+        ax.plot(df['rover_'+str(i)+'_x'], df['rover_'+str(i)+'_y'], ':', lw=2, color=rover_colors[i%len(rover_colors)])
+        ax.plot(df['rover_'+str(i)+'_x'].iloc[-1], df['rover_'+str(i)+'_y'].iloc[-1], 's', ms=8, color=rover_colors[i%len(rover_colors)])
+
+def add_uav_trajectories(ax: Axes, df: pd.DataFrame, num_uavs: int, individual_colors: bool):
+    uav_colors = get_uav_colors(individual_colors)
+    for i in range(num_uavs):
+        ax.plot(df['uav_'+str(i)+'_x'], df['uav_'+str(i)+'_y'], ':', lw=2, color=uav_colors[i%len(uav_colors)])
+        ax.plot(df['uav_'+str(i)+'_x'].iloc[-1], df['uav_'+str(i)+'_y'].iloc[-1], 'x', ms=8, color=uav_colors[i%len(uav_colors)])
+
+def generate_joint_trajectory_plot(joint_traj_dir: Path, individual_colors: bool, no_shading: bool, plot_args: PlotArgs):
     """Generate plot of the joint trajectory specified in joint_traj_dir"""
 
     fig, ax = plt.subplots(1,1)
@@ -91,15 +104,15 @@ def generate_joint_trajectory_plot(joint_traj_dir: Path, individual_colors: bool
     config = load_config(config_dir)
 
     # Get the number of each entity
-    num_rovers, num_uavs, num_rover_pois, num_hidden_pois \
+    num_rovers, num_uavs, _, _ \
         = get_num_entities(labels=df.columns.to_list())
 
     add_rover_trajectories(ax, df, num_rovers, individual_colors)
     add_uav_trajectories(ax, df, num_uavs, individual_colors)
     for i, poi_config in enumerate(config['env']['pois']['rover_pois']):
-        plot_poi(ax, poi_config, x=df['rover_poi_'+str(i)+'_x'][0], y=df['rover_poi_'+str(i)+'_y'][0], color='tab:green')
+        plot_poi(ax, poi_config, x=df['rover_poi_'+str(i)+'_x'][0], y=df['rover_poi_'+str(i)+'_y'][0], color='tab:green', radius_shading=not no_shading)
     for i, poi_config in enumerate(config['env']['pois']['hidden_pois']):
-        plot_poi(ax, poi_config, x=df['hidden_poi_'+str(i)+'_x'][0], y=df['hidden_poi_'+str(i)+'_y'][0], color='tab:cyan')
+        plot_poi(ax, poi_config, x=df['hidden_poi_'+str(i)+'_x'][0], y=df['hidden_poi_'+str(i)+'_y'][0], color='tab:cyan', radius_shading=not no_shading)
 
     x_bound, y_bound = config['env']['map_size']
 
@@ -111,9 +124,18 @@ def generate_joint_trajectory_plot(joint_traj_dir: Path, individual_colors: bool
 
     return fig
 
-def plot_joint_trajectory(joint_traj_dir: Path, individual_colors: bool, plot_args: PlotArgs):
-    fig = generate_joint_trajectory_plot(joint_traj_dir, individual_colors, plot_args)
+def plot_joint_trajectory(joint_traj_dir: Path, individual_colors: bool, no_shading: bool, plot_args: PlotArgs):
+    fig = generate_joint_trajectory_plot(joint_traj_dir, individual_colors, no_shading, plot_args)
     plot_args.finish_figure(fig)
+
+def add_learning_curve(ax: Axes, df: pd.DataFrame, line_plot_args: LinePlotArgs, label: str = 'team'):
+    """Add the team's learning curve from the specified fitness directory to the Axes object"""
+
+    # Get the points for plotting team fitness
+    gens, fits = line_plot_args.get_pts(xs=df['generation'], ys=df['team_fitness_aggregated'])
+    ax.plot(gens, fits, label=label)
+
+    return gens
 
 def generate_learning_curve_plot(fitness_dir, individual_agents, line_plot_args: LinePlotArgs, plot_args: PlotArgs):
     """Generate plot of the learning curve specified in fitness_dir"""
@@ -124,8 +146,7 @@ def generate_learning_curve_plot(fitness_dir, individual_agents, line_plot_args:
     df = pd.read_csv(fitness_dir)
 
     # Get points for plotting team fitness
-    gens, fits = line_plot_args.get_pts(xs=df['generation'], ys=df['team_fitness_aggregated'])
-    ax.plot(gens, fits, label='team')
+    gens = add_learning_curve(ax, df, line_plot_args)
 
     if individual_agents:
         num_rovers, num_uavs, _, _ = get_num_entities(labels=df.columns.to_list())
@@ -182,12 +203,32 @@ def add_stat_learning_curve(ax: Axes, trials_dir: Path, label: str, line_plot_ar
 
     return gens
 
-def generate_stat_learning_curve_plot(trials_dir: Path, line_plot_args: LinePlotArgs, plot_args: PlotArgs):
+def generate_stat_learning_curve_plot(trials_dir: Path, individual_trials: bool, line_plot_args: LinePlotArgs, plot_args: PlotArgs):
     """Generate plot of statistics of learning given the parent directoy of trials"""
 
     fig, ax = plt.subplots(1,1)
 
-    gens = add_stat_learning_curve(ax, trials_dir, label=trials_dir.name, line_plot_args=line_plot_args)
+    # Plot each trial individual if specified
+    if individual_trials:
+        # Get the directories of trials
+        dirs = [trials_dir/dir for dir in os.listdir(trials_dir) if 'trial_' in dir]
+
+        # Sort dirs
+        dirs.sort(key=lambda x: int(str(x).split('_')[-1]))
+
+        # Get the fitnesses in each trial
+        dfs = [pd.read_csv(dir/'fitness.csv') for dir in dirs]
+
+        # Plot each trial's fitness throughout training
+        for df, dir in zip(dfs, dirs):
+            gens = add_learning_curve(ax, df, line_plot_args, label=dir.name)
+
+        # Put gens in the expected format
+        gens = np.array(gens)
+
+        ax.legend()
+    else:
+        gens = add_stat_learning_curve(ax, trials_dir, individual_trials, label=trials_dir.name, line_plot_args=line_plot_args)
 
     ax.set_xlabel('Generations')
     ax.set_ylabel('Performance')
@@ -199,8 +240,8 @@ def generate_stat_learning_curve_plot(trials_dir: Path, line_plot_args: LinePlot
 
     return fig
 
-def plot_stat_learning_curve(trials_dir, line_plot_args, plot_args):
-    fig = generate_stat_learning_curve_plot(trials_dir, line_plot_args, plot_args)
+def plot_stat_learning_curve(trials_dir, individual_trials, line_plot_args, plot_args):
+    fig = generate_stat_learning_curve_plot(trials_dir, individual_trials, line_plot_args, plot_args)
     plot_args.finish_figure(fig)
 
 def generate_comparison_plot(experiment_dir: Path, line_plot_args: LinePlotArgs, plot_args: PlotArgs):
@@ -258,7 +299,7 @@ def get_example_trial_dirs(parent_dir: Path):
 
     return low_trial_dir, med_trial_dir, high_trial_dir
 
-def generate_experiment_tree_plots(root_dir: Path, out_dir: Path, batch_line_plot_args: BatchLinePlotArgs):
+def generate_experiment_tree_plots(root_dir: Path, out_dir: Path, batch_plot_args: BatchPlotArgs, batch_line_plot_args: BatchLinePlotArgs):
     """Generate all the plots in this experiment tree"""
     
     experiment_dirs = set()
@@ -270,35 +311,117 @@ def generate_experiment_tree_plots(root_dir: Path, out_dir: Path, batch_line_plo
 
     for dir_ in experiment_dirs:
         dir_list = str(dir_).split("/")
-        print(dir_list[dir_list.index(root_dir.name)+1:])
         dir_name = "/".join(dir_list[dir_list.index(root_dir.name)+1:])
-        print(dir_name)
 
         plot_comparison(
-            experiment_dir=dir_, 
-            # line_plot_args=LinePlotArgs(
-            #     window_size=None,
-            #     downsample=1
-            # ),
+            experiment_dir=dir_,
             line_plot_args=batch_line_plot_args.build_line_plot_args(),
-            # plot_args=PlotArgs(
-            #     output=out_dir/dir_.name/'comparison.png',
-            #     # output=out_dir/'comparisons'/(dir_.name+'.png'),
-            #     silent=True,
-            #     title=dir_.name)
-            plot_args=batch_line_plot_args.build_plot_args(
+            plot_args=batch_plot_args.build_plot_args(
                 title=dir_name, output=out_dir/dir_name/'comparison.png'
             )
         )
-    
-    # for dir_ in trial_parent_dirs:
-    #     low_trial_dir, med_trial_dir, high_trial_dir = get_example_trial_dirs(dir_)
-    #     # Get latest gen
-    #     last_gen = max([int(dir_.split('_')[-1]) for dir_ in os.listdir(low_trial_dir) if "gen_" in dir_])
-    #     plot_joint_trajectory(
-    #         joint_traj_dir=low_trial_dir/('gen_'+str(last_gen))/'eval_team_0_joint_traj.csv',
-    #         output=out_dir/'trajectories'/dir_.name
-    #     )
 
-def plot_comparison_tree(root_dir: Path, out_dir: Path, batch_line_plot_args: BatchLinePlotArgs):
-    generate_experiment_tree_plots(root_dir, out_dir, batch_line_plot_args)
+def sort_jt_dirs(root_dir: Path, jt_dirs: List[str]):
+    # Starting place for sorting dirs for joint trajectories
+    
+    root_len = len(str(root_dir).split('/'))
+    sort_jt_dirs_helper(jt_dirs, level=root_len)
+
+def sort_jt_dirs_helper(jt_dirs: List[str], level: int):
+    # Sort the specified level, then pass it on
+    # Everything happens in place - this is recursive, but it's a linear operation
+    
+    # Base cases: if we are the trials level, then use a special lambda function for that
+    # If we are at the gens, level, use the same lambda function for that
+    if 'trial_' in jt_dirs[0].split('/')[level]:
+        jt_dirs.sort(key = lambda x: int(x.split('/')[level].split('_')[-1]))
+        sort_jt_dirs_helper(jt_dirs, level=level+1)
+
+    elif 'gen_' in jt_dirs[0].split('/')[level]:
+        jt_dirs.sort(key = lambda x: int(x.split('/')[level].split('_')[-1]))
+    
+    # General case. Sort and keep going
+    else:
+        jt_dirs.sort(key = lambda x: x.split('/')[level])
+        sort_jt_dirs_helper(jt_dirs, level=level+1)
+
+def generate_joint_trajectory_tree_plots(root_dir: Path, out_dir: Path, individual_colors: bool, no_shading: bool, downsample: int, batch_plot_args: BatchPlotArgs):
+    """Generate all the joint trajectories in this experiment tree"""
+
+    # Get all the directories of joint trajectories
+    jt_dirs = set()
+    for root, _, files in os.walk(root_dir):
+        for file in files:
+            if 'joint_traj.csv' in file:
+                jt_dirs.add(Path(root)/file)
+    
+    # Sort them
+    jt_dirs = [str(jt_dir) for jt_dir in jt_dirs]
+    sort_jt_dirs(root_dir, jt_dirs)
+    jt_dirs = [Path(jt_dir) for jt_dir in jt_dirs]
+    
+
+    # Plot each one
+    for jt_dir in jt_dirs:
+        dir_list = str(jt_dir).split("/")
+        dir_name = "/".join(dir_list[dir_list.index(root_dir.name)+1:-1])
+        file_name = jt_dir.name.replace('.csv', '.png')
+
+        plot_joint_trajectory(
+            joint_traj_dir=jt_dir,
+            individual_colors=individual_colors,
+            no_shading=no_shading,
+            plot_args=batch_plot_args.build_plot_args(
+                title=jt_dir.name, 
+                output=out_dir/dir_name/file_name
+            )
+        )
+
+def plot_comparison_tree(root_dir: Path, out_dir: Path, batch_plot_args: BatchPlotArgs, batch_line_plot_args: BatchLinePlotArgs):
+    generate_experiment_tree_plots(root_dir, out_dir, batch_plot_args, batch_line_plot_args)
+
+def plot_joint_trajectory_tree(root_dir: Path, out_dir: Path, individual_colors: bool, no_shading: bool, downsample: int, batch_plot_args: BatchPlotArgs):
+    generate_joint_trajectory_tree_plots(root_dir, out_dir, individual_colors, no_shading, downsample, batch_plot_args)
+
+def generate_config_plot(config_dir: Path, individual_colors: bool, no_shading: bool, plot_args: PlotArgs):
+    # Load the config
+    config = load_config(config_dir)
+
+    # Set up figure
+    fig, ax = plt.subplots(1,1)
+
+    # plot rovers
+    rover_colors = get_rover_colors(individual_colors)
+    for i, rover_config in enumerate(config['env']['agents']['rovers']):
+        rover_position = rover_config['position']['fixed']
+        ax.plot(rover_position[0], rover_position[1], 's', ms=8, color=rover_colors[i%len(rover_colors)])
+
+    # plot uavs
+    uav_colors = get_uav_colors(individual_colors)
+    for i, uav_config in enumerate(config['env']['agents']['uavs']):
+        uav_position = uav_config['position']['fixed']
+        ax.plot(uav_position[0], uav_position[1], 'x', ms=8, color=uav_colors[i%len(uav_colors)])
+
+    # plot rover pois (rovers can sense these pois)
+    for i, poi_config in enumerate(config['env']['pois']['rover_pois']):
+        poi_position = poi_config['position']['fixed']
+        plot_poi(ax, poi_config, x=poi_position[0], y=poi_position[1], color='tab:green', radius_shading=not no_shading)
+    
+    # plot hidden pois
+    for i, poi_config in enumerate(config['env']['pois']['hidden_pois']):
+        poi_position = poi_config['position']['fixed']
+        plot_poi(ax, poi_config, x=poi_position[0], y=poi_position[1], color='tab:cyan', radius_shading=not no_shading)
+
+    x_bound, y_bound = config['env']['map_size']
+
+    ax.set_xlim([0, x_bound])
+    ax.set_ylim([0, y_bound])
+    ax.set_aspect('equal')
+
+    plot_args.apply(ax)
+
+    return fig
+
+def plot_config(config_dir: Path, individual_colors: bool, no_shading: bool, plot_args: PlotArgs):
+    fig = generate_config_plot(config_dir, individual_colors, no_shading, plot_args)
+    plot_args.finish_figure(fig)

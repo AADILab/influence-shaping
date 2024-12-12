@@ -2,6 +2,7 @@ import yaml
 import os
 from copy import deepcopy
 from pathlib import Path
+from typing import Optional, Any
 
 def load_config(config_dir):
     with open(os.path.expanduser(config_dir), 'r') as file:
@@ -14,15 +15,69 @@ def write_config(config, config_dir):
     with open(config_dir, 'w') as file:
         yaml.dump(config, file, default_flow_style=False)
 
+def config_command_in_dict(dict_: dict):
+    for key in dict_:
+        if key[0] == '~':
+            return True
+    return False
+
+def get_value(dict_: dict, keys: list[str]):
+    if len(keys) == 1:
+        return dict_[keys[0]]
+    else:
+        return get_value(dict_, keys=keys[1:])
+    
+def get_replace_unique_keys_items(dict_: dict):
+    # NOTE: This only works when each nested dictionary has only one key
+    if isinstance(dict_, dict):
+        for key in dict_:
+            keys, items = get_replace_unique_keys_items(dict_[key])
+            return [key]+keys, items
+    else:
+        return [], dict_
+
+def set_value(dict_: dict, keys: list[str], value: Any):
+    if len(keys) == 1:
+        dict_[keys[0]] = value
+    else:
+        if keys[0] not in dict_:
+            dict_[keys[0]] = {}
+        set_value(dict_[keys[0]], keys[1:], value)
+
+def expand_replace_unique(dict_: dict):
+    print("expand_replace_unique()")
+    keys, items = get_replace_unique_keys_items(dict_)
+    print(keys, items)
+    item_dicts = []
+    for item in items:
+        item_dict = {}
+        set_value(item_dict, keys[1:], item)
+        item_dicts.append(item_dict)
+    # del dict_['~replace_unique']
+    return item_dicts
+
 def merge_dicts(dict1, dict2):
     """Merge dict2 into dict1 recursively (ie: any nested dictionaries). For any conflicts, dict2 overwrites dict1"""
     keys = [k for k in dict2]
     for key in dict2:
-        if key in dict1 and isinstance(dict1[key], dict) and isinstance(dict2[key], dict):
-            # If both values are dictionaries, merge them recursively
+        # If dict 2 contains a command, then execute it
+        # if isinstance(dict2[key], dict) and '~fill_duplicate' in dict2[key]:
+        if isinstance(dict2[key], dict) and config_command_in_dict(dict2[key]):
+            if '~replace_duplicate' in dict2[key] and isinstance(dict1[key], list):
+                for i in range(len(dict1[key])):
+                    merge_dicts(dict1[key][i], deepcopy(dict2[key]['~replace_duplicate']))
+                del dict2[key]['~replace_duplicate']
+            if '~replace_unique' in dict2[key] and isinstance(dict1[key], list):
+                dict2[key] = expand_replace_unique(dict2[key])
+                for i in range(len(dict2[key])):
+                    merge_dicts(dict1[key][i], deepcopy(dict2[key][i]))
+                # dict1[key] = dict2[key]
+                # merge_dicts(dict1, dict2)
+        # If both values are dictionaries, merge them recursively
+        elif key in dict1 and isinstance(dict1[key], dict) and isinstance(dict2[key], dict):
             merge_dicts(dict1[key], dict2[key])
+        # Otherwise, update/overwrite dict1 using the value from dict2
         else:
-            # Otherwise, update/overwrite with the value from dict2
             dict1[key] = dict2[key]
 
 def expand_keys(dict_):
@@ -70,6 +125,9 @@ def consolidate_parameters(parameter_dicts, addtl_list=[]):
 
 # Now turn this into a list of directories with the corresponding config we are going to save there
 def create_directory_dict(consolidated_dict, path_len, path_list=[], directory_dict = {}):
+    """Create a dictionary where the key is the path to the config, 
+    and the value is the dictionary of unique parameters that will be saved in that config
+    """
     for key in consolidated_dict:
         new_path_list = path_list + [key]
         if len(path_list) >= path_len:
@@ -80,6 +138,8 @@ def create_directory_dict(consolidated_dict, path_len, path_list=[], directory_d
     return directory_dict
 
 def expand_directory_dict(directory_dict, base_config):
+    """Merge individual parameter configs with the base config"""
+    # NOTE: Unique parameters overwrite base parameters
     for dir_str in directory_dict:
         directory_dict[dir_str] = merge_base(base_config, directory_dict[dir_str])
 

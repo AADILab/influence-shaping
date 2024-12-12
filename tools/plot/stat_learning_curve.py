@@ -16,6 +16,11 @@ if __name__ == '__main__':
         help='parent directory of trials',
         type=str
     )
+    parser.add_argument(
+        '--individual_trials',
+        help='plot each trial as a different color',
+        action='store_true'
+    )
     args = parser.parse_args()
 
-    plot_stat_learning_curve(Path(args.trials_dir), parser.dump_line_plot_args(args), parser.dump_plot_args(args))
+    plot_stat_learning_curve(Path(args.trials_dir), args.individual_trials, parser.dump_line_plot_args(args), parser.dump_plot_args(args))
