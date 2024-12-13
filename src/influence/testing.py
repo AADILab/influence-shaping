@@ -2,7 +2,7 @@ import unittest
 import numpy as np
 from copy import deepcopy
 from typing import Any
-from influence.librovers import rovers
+from influence.librovers import rovers, eigen
 from influence.custom_env import createEnv
 
 class InfluenceTestCase(unittest.TestCase):
@@ -16,6 +16,10 @@ class InfluenceTestCase(unittest.TestCase):
     def distance(entity_0, entity_1):
         return np.sqrt((entity_0.position().x - entity_1.position().x)**2 + (entity_0.position().y - entity_1.position().y)**2)
     
+    @staticmethod
+    def inverse_distance_squared(entity_0, entity_1):
+        return 1. / InfluenceTestCase.distance(entity_0, entity_1)**2
+
     @staticmethod
     def compute_poi_reward(poi, agent):
         return 1.0 / max(InfluenceTestCase.distance(poi, agent), 1.0)
@@ -31,6 +35,10 @@ class InfluenceTestCase(unittest.TestCase):
     @staticmethod
     def compute_agent_reward(env, agent_id):
         return env.rovers()[agent_id].reward(rovers.AgentPack(agent_id, env.rovers(), env.pois()))
+    
+    @staticmethod
+    def extract_observation(cppyy_observation):
+        return [cppyy_observation(i,0) for i in range(cppyy_observation.size())]
 
 class TestEnv(InfluenceTestCase):
     def __init__(self, *args, **kwargs):

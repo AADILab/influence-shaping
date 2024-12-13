@@ -1,4 +1,5 @@
 import unittest
+import pprint
 
 from influence.testing import TestEnv
 from influence.custom_env import createEnv
@@ -163,6 +164,69 @@ class TestGlobal(TestEnv):
         expected_reward = 3.0
         self.assert_np_close(reward, expected_reward)
 
+class TestCaptureRadius(TestEnv):
+    """Test that poi's can be captured even if rover's cannot sense them if the correct configuration is specified"""
+    def get_config_a(self):
+        # Get a blank environment config, set map size
+        config = self.get_env_template_config()
+        config['env']['map_size'] = [50., 50.]
+
+        # Set up a rover at 30, 20
+        rover_config = self.get_default_rover_config()
+        rover_config['position']['fixed'] = [30., 20.]
+        rover_config['observation_radius'] = 5.0
+        config['env']['agents']['rovers'].append(rover_config)
+
+        # Set up a uav at 30, 20
+        uav_config = self.get_default_uav_config()
+        uav_config['position']['fixed'] = [30., 20.]
+        config['env']['agents']['uavs'].append(uav_config)
+
+        # Set up a hidden poi at 20, 20
+        poi_config = self.get_default_poi_config()
+        poi_config['position']['fixed'] = [20., 20.]
+        poi_config['capture_radius'] = 10.0
+        config['env']['pois']['hidden_pois'].append(poi_config)
+    
+        # Return the filled out config
+        return config
+
+    def test_a_Global(self):
+        """Test that G is computed properly"""
+        # Get our config
+        config = self.get_config_a()
+
+        # Check G. Should be 0.1 (for rover and uav) for capturing poi valued at 1.0 from 10 units away (1.0 / 10 is 0.1)
+        self.assert_correct_rewards(config, expected_rewards=[0.1, 0.1])
+    
+    def test_a_rover_observation_of_poi(self):
+        """Test that rover cannot sense poi"""
+        # Get our config
+        config = self.get_config_a()
+
+        # Get the observation of the rover
+        env = createEnv(config)
+        (cppyy_rover_observation, _), _ = env.reset()
+        rover_observation = self.extract_observation(cppyy_rover_observation)
+
+        # Check that the rover does not sense the poi
+        correct_poi_observation = [-1.0, -1.0, -1.0, -1.0]
+        self.assert_close_lists(rover_observation[8:], correct_poi_observation)
+
+    def test_a_uav_observation_of_poi(self):
+        """Test that uav can sense the poi"""
+        # Get our config
+        config = self.get_config_a()
+
+        # Get the observation of hte uav
+        env = createEnv(config)
+        (_, cppyy_uav_observation), _ = env.reset()
+        uav_observation = self.extract_observation(cppyy_uav_observation)
+
+        # Check that the uav can sense the poi
+        sensor_val = self.inverse_distance_squared(env.rovers()[1], env.pois()[0])
+        correct_poi_observation = [-1.0, -1.0, sensor_val, -1.0]
+        self.assert_close_lists(uav_observation[8:], correct_poi_observation)
 
 if __name__ == '__main__':
     unittest.main()
