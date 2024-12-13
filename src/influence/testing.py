@@ -162,3 +162,15 @@ class TestEnv(InfluenceTestCase):
                     f'Agent paths in env: {self.get_agent_paths_from_env(env)}\n' + \
                     f'POI positions in env: {self.get_poi_positions_from_env(env)}\n'
             )
+
+    def assert_final_rewards(self, env, agent_paths, expected_final_rewards, msg: Any = ''):
+        # Reset env
+        _ = env.reset()
+        # Loop through paths
+        for positions in agent_paths:
+            # Set all agent positions
+            for agent_id, (x,y) in enumerate(positions):
+                env.rovers()[agent_id].set_position(x, y)
+        # Check rewards at the end
+        rewards = env.rewards()
+        self.assert_close_lists(rewards, expected_final_rewards, msg=msg)
