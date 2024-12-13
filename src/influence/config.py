@@ -45,9 +45,7 @@ def set_value(dict_: dict, keys: list[str], value: Any):
         set_value(dict_[keys[0]], keys[1:], value)
 
 def expand_replace_unique(dict_: dict):
-    print("expand_replace_unique()")
     keys, items = get_replace_unique_keys_items(dict_)
-    print(keys, items)
     item_dicts = []
     for item in items:
         item_dict = {}
@@ -69,7 +67,7 @@ def merge_dicts(dict1, dict2):
                 del dict2[key]['~replace_duplicate']
             if '~replace_unique' in dict2[key] and isinstance(dict1[key], list):
                 dict2[key] = expand_replace_unique(dict2[key])
-                for i in range(len(dict2[key])):
+                for i in range(len(dict1[key])):
                     merge_dicts(dict1[key][i], deepcopy(dict2[key][i]))
                 # dict1[key] = dict2[key]
                 # merge_dicts(dict1, dict2)
@@ -111,7 +109,7 @@ def merge_dicts_list(list_of_dicts):
 
 def merge_base(dict1, dict2):
     new_dict = deepcopy(dict1)
-    merge_dicts(new_dict, dict2)
+    merge_dicts(new_dict, deepcopy(dict2))
     return new_dict
 
 def consolidate_parameters(parameter_dicts, addtl_list=[]):
@@ -157,6 +155,8 @@ def write_config_tree(sweep_config_dir, top_write_dir):
     consolidated_dict = consolidate_parameters(sweep_config['parameter_dicts'])
     # Create a dictionary where each key is a directory and the value is the unique parameter set
     directory_dict = create_directory_dict(consolidated_dict, path_len=len(sweep_config['parameter_dicts'])-1)
+    # # I'm curious if I make sure each value is deepcopied whether it will resolve my issue with ~commands
+    # directory_dict = {k: deepcopy(v) for (k,v) in directory_dict.items()} # Answer: no (not on its own at least)
     # Now each value is a full set of parameters, including the base parameters
     expand_directory_dict(directory_dict, sweep_config['base_dict'])
     # Write each set of parameters as a config file
