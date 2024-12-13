@@ -241,7 +241,7 @@ class CooperativeCoevolutionaryAlgorithm():
             for action_arr in actions_arrs:
                 action = rovers.tensor(action_arr)
                 actions.append(action)
-            observations, rewards = env.step(actions)
+            observations = env.step_without_rewards(actions)
 
             # Get all the states and all the actions of all agents
             agent_positions = [[agent.position().x, agent.position().y] for agent in env.rovers()]
@@ -259,6 +259,7 @@ class CooperativeCoevolutionaryAlgorithm():
                 entities = env.pois()
             )
             team_fitness = rovers.rewards.Global().compute(agent_pack)
+            rewards = env.rewards()
             fitnesses = tuple([(r,) for r in rewards]+[(team_fitness,)])
         else:
             # Each index corresponds to an agent's rewards
