@@ -420,12 +420,17 @@ def createEnv(config):
     ]
     pois = rover_pois + hidden_pois
 
+    debug_reward_equals_G = False
+    if 'debug' in config and 'reward_equals_G' in config['debug']:
+        debug_reward_equals_G = config['debug']['reward_equals_G']
+
     env = Env(
         rovers.CustomInit(agent_positions, poi_positions),
         agents,
         pois,
         width=cppyy.gbl.ulong(config["env"]["map_size"][0]),
-        height=cppyy.gbl.ulong(config["env"]["map_size"][1])
+        height=cppyy.gbl.ulong(config["env"]["map_size"][1]),
+        debug_reward_equals_G = debug_reward_equals_G
     )
     return env
 
