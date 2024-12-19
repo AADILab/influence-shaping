@@ -6,6 +6,7 @@ from tqdm import tqdm
 import multiprocessing
 import random
 import pickle
+from typing import List
 
 from influence.evo_network import NeuralNetwork
 
@@ -30,6 +31,11 @@ class EvalInfo():
     def __init__(self, fitnesses, joint_trajectory):
         self.fitnesses = fitnesses
         self.joint_trajectory = joint_trajectory
+
+class TeamInfo():
+    def __init__(self, policies, seed):
+        self.policies = policies
+        self.seed = seed
 
 class CooperativeCoevolutionaryAlgorithm():
     def __init__(self, config_dir):
@@ -83,6 +89,9 @@ class CooperativeCoevolutionaryAlgorithm():
         else:
             self.delete_previous_checkpoint = True
 
+        # Check if we are using a random seed
+        self.random_seed_val = self.config['debug']['random_seed']['set_seed']
+
         # Create the type of fitness we're optimizing
         creator.create("FitnessMax", base.Fitness, weights=(1.0,))
         creator.create("Individual", list, fitness=creator.FitnessMax)
@@ -95,6 +104,14 @@ class CooperativeCoevolutionaryAlgorithm():
         else:
             self.toolbox.register("map", map)
             self.map = map
+
+    def get_seed(self):
+        if self.random_seed_val is None:
+            return None
+        else:
+            out = self.random_seed_val
+            self.random_seed_val += 1
+            return out
 
     # This makes it possible to pass evaluation to multiprocessing
     # Without this, the pool tries to pickle the entire object, including itself
@@ -136,12 +153,12 @@ class CooperativeCoevolutionaryAlgorithm():
             tools.initRepeat(list, self.generateUAVSubpopulation, n=self.num_uavs)
 
     def formEvaluationTeam(self, population):
-        eval_team = []
+        policies = []
         for subpop in population:
             # Use max with a key function to get the individual with the highest fitness[0] value
             best_ind = max(subpop, key=lambda ind: ind.fitness.values[0])
-            eval_team.append(best_ind)
-        return eval_team
+            policies.append(best_ind)
+        return TeamInfo(policies, self.get_seed())
 
     def evaluateEvaluationTeam(self, population):
         # Create evaluation team
@@ -150,7 +167,7 @@ class CooperativeCoevolutionaryAlgorithm():
         eval_teams = [eval_team for _ in range(self.num_evaluations_per_team)]
         return self.evaluateTeams(eval_teams)
 
-    def formTeams(self, population, inds=None):
+    def formTeams(self, population, inds=None) -> List[TeamInfo]:
         # Start a list of teams
         teams = []
 
@@ -162,20 +179,20 @@ class CooperativeCoevolutionaryAlgorithm():
         # For each individual in a subpopulation
         for i in team_inds:
             # Make a team
-            team = []
+            policies = []
             # For each subpopulation in the population
             for subpop in population:
                 # Put the i'th indiviudal on the team
-                team.append(subpop[i])
+                policies.append(subpop[i])
             # Need to save that team for however many evaluations
             # we're doing per team
             for _ in range(self.num_evaluations_per_team):
                 # Save that team
-                teams.append(team)
+                teams.append(TeamInfo(policies, self.get_seed()))
 
         return teams
 
-    def evaluateTeams(self, teams):
+    def evaluateTeams(self, teams: List[TeamInfo]):
         if self.use_multiprocessing:
             jobs = self.map(self.evaluateTeam, teams)
             eval_infos = jobs.get()
@@ -183,15 +200,22 @@ class CooperativeCoevolutionaryAlgorithm():
             eval_infos = list(self.map(self.evaluateTeam, teams))
         return eval_infos
 
-    def evaluateTeam(self, team, compute_team_fitness=True):
+    def evaluateTeam(self, team: TeamInfo, compute_team_fitness=True):
+        # Set up random seed if one was specified
+        if not isinstance(team, TeamInfo):
+            raise Exception('team should be TeamInfo')
+        if team.seed is not None:
+            random.seed(team.seed)
+            np.random.seed(team.seed)
+
         # Set up networks
         rover_nns = [deepcopy(self.rover_nn_template) for _ in range(self.num_rovers)]
         uav_nns = [deepcopy(self.uav_nn_template) for _ in range(self.num_uavs)]
 
         # Load in the weights
-        for rover_nn, individual in zip(rover_nns, team[:self.num_rovers]):
+        for rover_nn, individual in zip(rover_nns, team.policies[:self.num_rovers]):
             rover_nn.setWeights(individual)
-        for uav_nn, individual in zip(uav_nns, team[self.num_rovers:]):
+        for uav_nn, individual in zip(uav_nns, team.policies[self.num_rovers:]):
             uav_nn.setWeights(individual)
         agent_nns = rover_nns + uav_nns
 
@@ -343,7 +367,7 @@ class CooperativeCoevolutionaryAlgorithm():
                     average_fitnesses[ind] = average_fitnesses[ind] / self.num_evaluations_per_team
                 # And now get that back to the individuals
                 fitnesses = tuple([(f,) for f in average_fitnesses])
-                for individual, fit in zip(team, fitnesses):
+                for individual, fit in zip(team.policies, fitnesses):
                     individual.fitness.values = fit
 
     def setPopulation(self, population, offspring):
@@ -506,6 +530,11 @@ class CooperativeCoevolutionaryAlgorithm():
         if load_checkpoint and len(checkpoint_dirs := self.getCheckpointDirs(trial_dir)) > 0:
             pop, self.gen = self.loadCheckpoint(checkpoint_dirs)
         else:
+            # Check if we are starting with a random seed
+            if self.random_seed_val is not None:
+                random.seed(self.get_seed())
+                np.random.seed(self.get_seed())
+
             # Init gen counter
             self.gen = 0
 
