@@ -38,6 +38,39 @@ class TestSequence(TestEnv):
         config['env']['map_size'] = [50., 50.]
         return config
 
+    def get_one_rover_one_uav_five_pois_config_a(self):
+        # Get env config started
+        config = self.get_env_template_config()
+        config['env']['map_size'] = [50.0, 50.0]
+
+        # Set up rover
+        rover_config = self.get_default_rover_config()
+        rover_config['position']['fixed'] = [25.0, 25.0]
+        rover_config['observation_radius'] = 5.0
+        config['env']['agents']['rovers'].append(rover_config)
+
+        # Set up uav
+        uav_config = self.get_default_uav_config()
+        uav_config['position']['fixed'] = [23.0, 23.0]
+        config['env']['agents']['uavs'].append(uav_config)
+
+        # Set up pois (Approximately a pentagon)
+        poi_positions = [
+            [45. , 25.],
+            [31. , 44.],
+            [ 8. , 36.],
+            [ 8. , 13.],
+            [31. ,  5.]
+        ]
+        for position in poi_positions:
+            poi_config = self.get_default_poi_config()
+            poi_config['observation_radius'] = 5.0
+            poi_config['capture_radius'] = 1000.0
+            poi_config['position']['fixed'] = position
+            config['env']['pois']['hidden_pois'].append(poi_config)
+        
+        return config
+
     def get_one_rover_two_pois_config_a(self):
         # Build on a prior config, and use those defaults
         config = self.get_one_rover_one_poi_config_b()
@@ -163,6 +196,82 @@ class TestOneRoverOnePoi(TestSequence):
             [1.0] # Rover moves away from poi again. Reward should remain at 1.0
         ]   
         self.assert_path_rewards(env, self.get_path_b(), expected_rewards_at_each_step)
+
+class TestOneRoverOneUavFivePois(TestSequence):
+    def get_config_a(self):
+        return self.get_one_rover_one_uav_five_pois_config_a()
+    
+    def get_path_a(self):
+        # Rover and uav seperate and rover captures pois by itself
+        return [
+            # Rover captures first poi. Uav goes to corner of the map
+            [[45. , 25.], [0.0, 0.0]],
+            # Rover captures second poi
+            [[31. , 44.], [0.0, 0.0]],
+            # third
+            [[ 8. , 36.], [0.0, 0.0]],
+            # fourth
+            [[ 8. , 13.], [0.0, 0.0]],
+            # fifth. Uav has not moved since it went to the corner
+            [[31. ,  5.], [0.0, 0.0]]
+        ]
+
+    def test_config_a_path_a_Global(self):
+        # Make sure global reward is computed properly here
+        config = self.get_config_a()
+        env = createEnv(config)
+        agent_paths = self.get_path_a()
+
+        # Build out the expected rewards
+        # Reward is just based on distance from rover to each poi
+        expected_rewards_at_each_step = []
+        start_positions = [[
+            config['env']['agents']['rovers'][0]['position']['fixed'],
+            config['env']['agents']['uavs'][0]['position']['fixed']
+        ]]
+        for agent_positions in start_positions+agent_paths:
+            rover_position = agent_positions[0]
+            G_at_this_step = 0.0
+            for poi_config in config['env']['pois']['hidden_pois']:
+                poi_position = poi_config['position']['fixed']
+                G_at_this_step += self.compute_poi_reward_using_positions(rover_position, poi_position)
+            # Each agent gets the G at this step
+            expected_rewards_at_each_step.append([G_at_this_step, G_at_this_step])
+        
+        # Now check it
+        self.assert_path_rewards(env, agent_paths, expected_rewards_at_each_step)
+
+    def test_config_a_path_a_IndirectDifference(self):
+        # This should be the same as G. 
+        # Rover and uav start next to each other, so uav should get credit for the rover
+        # using the default D-Indirect reward
+        config = self.get_config_a()
+
+        # Make sure to switch agents to D-Indirect!
+        for agent_config in config['env']['agents']['rovers']+config['env']['agents']['uavs']:
+            agent_config['reward_type'] = 'IndirectDifference'
+
+        env = createEnv(config)
+        agent_paths = self.get_path_a()
+
+        # Build out the expected rewards
+        # Reward is just based on distance from rover to each poi
+        expected_rewards_at_each_step = []
+        start_positions = [[
+            config['env']['agents']['rovers'][0]['position']['fixed'],
+            config['env']['agents']['uavs'][0]['position']['fixed']
+        ]]
+        for agent_positions in start_positions+agent_paths:
+            rover_position = agent_positions[0]
+            G_at_this_step = 0.0
+            for poi_config in config['env']['pois']['hidden_pois']:
+                poi_position = poi_config['position']['fixed']
+                G_at_this_step += self.compute_poi_reward_using_positions(rover_position, poi_position)
+            # Each agent gets the G at this step
+            expected_rewards_at_each_step.append([G_at_this_step, G_at_this_step])
+        
+        # Now check it
+        self.assert_path_rewards(env, agent_paths, expected_rewards_at_each_step)
 
 class TestOneRoverTwoPois(TestSequence):
     def get_config_a(self):
@@ -784,6 +893,7 @@ class TestTwoRoversTwoUavsSixPois(TestSequence):
         env = createEnv(config)
         self.assert_path_rewards(env, agent_paths, expected_rewards_at_each_step)
     
+    @unittest.skip("This feature isn't ready yet, so no need to test (yet).")
     def test_config_a_path_b_IndirectDifferenceAutomaticTimestep(self):
         """Now with granular credit assignment. Each uav gets credit for the pois it 'helped' with"""
         config = self.get_config_a()

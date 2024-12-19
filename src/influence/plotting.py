@@ -132,7 +132,9 @@ def add_learning_curve(ax: Axes, df: pd.DataFrame, line_plot_args: LinePlotArgs,
     """Add the team's learning curve from the specified fitness directory to the Axes object"""
 
     # Get the points for plotting team fitness
+    # print(df['generation'])
     gens, fits = line_plot_args.get_pts(xs=df['generation'], ys=df['team_fitness_aggregated'])
+    # print(gens)
     ax.plot(gens, fits, label=label)
 
     return gens
@@ -144,6 +146,7 @@ def generate_learning_curve_plot(fitness_dir, individual_agents, line_plot_args:
 
     # Get the fitnesses
     df = pd.read_csv(fitness_dir)
+    print(df['generation'])
 
     # Get points for plotting team fitness
     gens = add_learning_curve(ax, df, line_plot_args)

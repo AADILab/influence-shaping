@@ -1,3 +1,5 @@
+debug:
+  reward_equals_G: false
 ccea:
   evaluation:
     evaluation_method: HallOfFame
@@ -30,10 +32,10 @@ ccea:
 data:
   checkpoints:
     delete_previous: true
-    frequency: 100
+    frequency: 1
     save: true
   save_trajectories:
-    num_gens_between_save: 100
+    num_gens_between_save: 1
     switch: true
 env:
   agents:
@@ -100,4 +102,4 @@ experiment:
   num_trials: 10
 processing:
   num_threads: 15
-  use_multiprocessing: false
+  use_multiprocessing: true

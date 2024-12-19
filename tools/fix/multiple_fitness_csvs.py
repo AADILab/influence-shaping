@@ -28,6 +28,11 @@ def fix_csv(csv_dir: Path, out_dir: Path):
             new_lines.append(line)
         # Otherwise get to work
         else:
+            # Check if the final character in the line is a \n by itself
+            if line[-2:] == ',\n':
+                # Get rid of that comma
+                line = line[:-2]+'\n'
+
             new_line_list = []
             list_line = line.split(',')
             for num in list_line:

@@ -89,5 +89,5 @@ outfigs
 temp.sh
 example/result/trial_*
 **/trial_*
-scratch
-scratch/
+# scratch
+# scratch/

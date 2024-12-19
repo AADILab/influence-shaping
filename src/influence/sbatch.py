@@ -55,7 +55,7 @@ def write_sbatch_executables(top_dir: Path, batch_dir_root: Path, seperate_trial
         "#SBATCH --partition=share,dgx2,ampere,preempt,mime1",
         "#SBATCH -c 15",
         "#SBATCH --mem=16G",
-        "#SBATCH --time=7-00:00:00",
+        "#SBATCH --time=2-00:00:00",
         "#SBATCH --requeue",
         "",
         "source ~/hpc-share/miniforge/bin/activate",

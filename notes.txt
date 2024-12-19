@@ -9,12 +9,12 @@ different tunable paramters
 So it looks like I need a few parameters to be able to tweak
 
 IndirectDifference:
-    timescale: episode OR timestep
-    credit: All or nothing OR Global OR Difference OR Local (all or nothing is a mix of Difference and Local. Only one agent can get credit for influencing a particular agent, but SOMEONE will get credit for influencing each agent)
     type: removal OR weighted_sum (remove agents that you influence, or get a weighted sum of their difference rewards)
-    asssignment: 
-        type: automatic OR manual
-        manual: [ints of who this agent gets credit for]
+    assignment: automatic OR manual
+    manual: [ints of who this agent gets credit for]
+    automatic:
+        timescale: episode OR timestep
+        credit: All or nothing OR Global OR Difference OR Local (all or nothing is a mix of Difference and Local. Only one agent can get credit for influencing a particular agent, but SOMEONE will get credit for influencing each agent)
 
 look at what's happening with D-Indirect in the anamoly
 (behaviors should show something weird here)
