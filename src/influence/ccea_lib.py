@@ -90,7 +90,18 @@ class CooperativeCoevolutionaryAlgorithm():
             self.delete_previous_checkpoint = True
 
         # Check if we are using a random seed
-        self.random_seed_val = self.config['debug']['random_seed']['set_seed']
+        self.random_seed_val = None
+        if 'debug' in self.config:
+            if 'random_seed' in self.config['debug']:
+                if 'set_seed' in self.config['debug']['random_seed']:
+                    self.random_seed_val = self.config['debug']['random_seed']['set_seed']
+        
+        # Check if we are incrementing that seed
+        self.increment_seed_every_trial = False
+        if 'debug' in self.config:
+            if 'random_seed' in self.config['debug']:
+                if 'increment_every_trial' in self.config['debug']['random_seed']:
+                    self.increment_seed_every_trial = self.config['debug']['random_seed']['increment_every_trial']
 
         # Create the type of fitness we're optimizing
         creator.create("FitnessMax", base.Fitness, weights=(1.0,))
@@ -104,6 +115,10 @@ class CooperativeCoevolutionaryAlgorithm():
         else:
             self.toolbox.register("map", map)
             self.map = map
+
+    def reset_seed(self):
+        """Resets the random seed to what was specified in config"""
+        self.random_seed_val = self.config['debug']['random_seed']['set_seed']
 
     def get_seed(self):
         if self.random_seed_val is None:
@@ -161,10 +176,9 @@ class CooperativeCoevolutionaryAlgorithm():
         return TeamInfo(policies, self.get_seed())
 
     def evaluateEvaluationTeam(self, population):
-        # Create evaluation team
-        eval_team = self.formEvaluationTeam(population)
-        # Evaluate that team however many times we are evaluating teams
-        eval_teams = [eval_team for _ in range(self.num_evaluations_per_team)]
+        # Create evaluation team _ times
+        eval_teams = [self.formEvaluationTeam(population) for _ in range(self.num_evaluations_per_team)]
+        # Evaluate the teams
         return self.evaluateTeams(eval_teams)
 
     def formTeams(self, population, inds=None) -> List[TeamInfo]:
@@ -321,7 +335,7 @@ class CooperativeCoevolutionaryAlgorithm():
             remaining_offspring = tools.selWorst(subpopulation, len(subpopulation)-self.n_elites)
             # Add those remaining individuals through a binary tournament
             offspring += tools.selTournament(remaining_offspring, len(remaining_offspring), tournsize=2)
-        # Return a deepcopy so that modifying an individual that was selected does not modify every single individual
+        # Return a deepcopy so that modifying an individual that wasexample/mountain/result/GlobalMultiThreaded selected does not modify every single individual
         # that came from the same selected individual
         return [ deepcopy(individual) for individual in offspring ]
 
@@ -532,6 +546,11 @@ class CooperativeCoevolutionaryAlgorithm():
         else:
             # Check if we are starting with a random seed
             if self.random_seed_val is not None:
+                # Reset the seed so seed is consistent across trials
+                self.reset_seed()
+                # unless we specified we want to increment based on the trial number
+                if self.increment_seed_every_trial:
+                    self.random_seed_val += num_trial
                 random.seed(self.get_seed())
                 np.random.seed(self.get_seed())
 
@@ -568,6 +587,16 @@ class CooperativeCoevolutionaryAlgorithm():
             return None
 
         for _ in tqdm(range(self.config["ccea"]["num_generations"]-self.gen)):
+            # Set the seed if one was specified at the start of the generation
+            if self.random_seed_val is not None:
+                # Reset the seed so seed is consistent across trials
+                self.reset_seed()
+                # unless we specified we want to increment based on the trial number
+                if self.increment_seed_every_trial:
+                    self.random_seed_val += num_trial
+                random.seed(self.get_seed())
+                np.random.seed(self.get_seed())
+
             # Update gen counter
             self.gen = self.gen+1
 

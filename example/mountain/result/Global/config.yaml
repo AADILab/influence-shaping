@@ -1,5 +1,5 @@
 debug:
-  reward_equals_G: false
+  reward_equals_G: true
   random_seed:
     set_seed: 0
     increment_every_trial: true
@@ -131,4 +131,4 @@ experiment:
   num_trials: 3
 processing:
   num_threads: 15
-  use_multiprocessing: false
+  use_multiprocessing: true
