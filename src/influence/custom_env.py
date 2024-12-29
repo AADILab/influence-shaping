@@ -193,8 +193,8 @@ def createAgent(agent_config, agent_types, poi_types, type_):
             assignment = 'automatic',
             manual = cppyy.gbl.std.vector[cppyy.gbl.int](),
             automatic_parameters = AutomaticParameters(
-                timescale = 'timestep',
-                credit = 'Local'
+                timescale = 'trajectory',
+                credit = 'AllOrNothing'
             )
         )
 
@@ -237,7 +237,11 @@ class AbstractRoverConstraint(rovers.IConstraint):
         constraint_satisfied = False
         for agent in entity_pack.agents:
             if agent.type() == 'rover':
-                dist = calculateDistance(agent.path()[t], entity_pack.entity.position())
+                if agent.path()[t].x == -1 and agent.path()[t].y == -1:
+                    # [-1, -1] means this rover was counterfactually removed
+                    dist = np.inf
+                else:
+                    dist = calculateDistance(agent.path()[t], entity_pack.entity.position())
                 dists.append(dist)
                 if self.captured(dist, agent, entity_pack.entity):
                     count += 1

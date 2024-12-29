@@ -838,15 +838,15 @@ class TestTwoRoversTwoUavsSixPois(TestSequence):
             # Rover B and uav B stay still
             [[10.0, 90.0], [60.0, 50.0], [10.0, 90.0], [58.0, 48.0]],
             # Rover A visits top POI on the right, joined by uav B
-            [[90.0, 90.0], [60.0, 50.0], [10.0, 90.0], [90.0, 10.0]],
+            [[90.0, 90.0], [60.0, 50.0], [10.0, 90.0], [90.0, 90.0]],
             # Rover A visits middle left POI. Joined by uav A
-            [[10.0, 50.0], [60.0, 50.0], [10.0, 50.0], [90.0, 10.0]],
+            [[10.0, 50.0], [60.0, 50.0], [10.0, 50.0], [90.0, 90.0]],
             # Rover A visits middle right POI. Joined by uav B
             [[90.0, 50.0], [60.0, 50.0], [10.0, 50.0], [90.0, 50.0]],
             # Rover A visits bottom left POI. Joined by uav A
             [[10.0, 10.0], [60.0, 50.0], [10.0, 10.0], [90.0, 50.0]],
             # Rover A visits bottom right POI. Joined by uav B
-            [[90.0, 10.0], [60.0, 50.0], [10.0, 10.0], [90.0, 50.0]]
+            [[90.0, 10.0], [60.0, 50.0], [10.0, 10.0], [90.0, 10.0]]
         ]
     
     def test_config_a_path_b_Global(self):
@@ -893,7 +893,7 @@ class TestTwoRoversTwoUavsSixPois(TestSequence):
         env = createEnv(config)
         self.assert_path_rewards(env, agent_paths, expected_rewards_at_each_step)
     
-    @unittest.skip("This feature isn't ready yet, so no need to test (yet).")
+    # @unittest.skip("This feature isn't ready yet, so no need to test (yet).")
     def test_config_a_path_b_IndirectDifferenceAutomaticTimestep(self):
         """Now with granular credit assignment. Each uav gets credit for the pois it 'helped' with"""
         config = self.get_config_a()
