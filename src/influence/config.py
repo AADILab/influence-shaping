@@ -105,7 +105,8 @@ def merge_dicts_list(list_of_dicts):
     if len(list_of_dicts) == 1:
         return list_of_dicts[0]
     else:
-        return merge_base(list_of_dicts[0], merge_dicts_list(list_of_dicts[1:]))
+        # return merge_base(list_of_dicts[0], merge_dicts_list(list_of_dicts[1:]))
+        return merge_base(merge_dicts_list(list_of_dicts[:-1]), list_of_dicts[-1])
 
 def merge_base(dict1, dict2):
     new_dict = deepcopy(dict1)
@@ -151,14 +152,20 @@ def write_config_tree(sweep_config_dir, top_write_dir):
     sweep_config = load_config(sweep_config_dir)
     # Expand the keys in the config - ['key1:key2:key3'] to ['key1']['key2']['key3']
     expand_keys(sweep_config)
-    # Consolidate all of the sweep parameters into a "tree" where each leaf is a unique parameter set
-    consolidated_dict = consolidate_parameters(sweep_config['parameter_dicts'])
+
+    # Consolidate base parameters with all sweep parameters into a "tree" where each leaf is a unique parameter set
+    consolidated_dict = consolidate_parameters(sweep_config['parameter_dicts'], addtl_list=[sweep_config['base_dict']])
+
+    # # Consolidate all of the sweep parameters into a "tree" where each leaf is a unique parameter set
+    # consolidated_dict = consolidate_parameters(sweep_config['parameter_dicts'])
+
     # Create a dictionary where each key is a directory and the value is the unique parameter set
     directory_dict = create_directory_dict(consolidated_dict, path_len=len(sweep_config['parameter_dicts'])-1)
     # # I'm curious if I make sure each value is deepcopied whether it will resolve my issue with ~commands
     # directory_dict = {k: deepcopy(v) for (k,v) in directory_dict.items()} # Answer: no (not on its own at least)
     # Now each value is a full set of parameters, including the base parameters
-    expand_directory_dict(directory_dict, sweep_config['base_dict'])
+    # expand_directory_dict(directory_dict, sweep_config['base_dict'])
+
     # Write each set of parameters as a config file
     write_directory_dict(directory_dict, top_write_dir)
 

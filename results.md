@@ -32,4 +32,9 @@ Take a look at the results for 1_rover_1_uav/random_pois_10x10 for rabbit as opp
 
 One last thing I'd like to try. I want to fix the randomly generated numbers to see if G and D-Indirect consistently perform identically given the same random seed.
 
-This one will just be a 1_rover_1_uav/random_pois_10x10 experiment where we compare G and D-Indirect using the same seed for random number generation. The results for G and D-Indirect should look exactly the same
+This one will just be a 1_rover_1_uav/random_pois_10x10 experiment where we compare G and D-Indirect using the same seed for random number generation. The results for G and D-Indirect should look exactly the same... And it turns out they do look exactly the same. This successfully demonstrated that the only differences in performance between G and D-Indirect came from the randomness of mutations and selection, nothing to do with the fitness shaping method itself.
+
+### tackle
+
+Time to do a big sweep of different experiments playing around with map size (this includes number of pois), numbers of rovers, and uavs. The idea here is to get a good lay of the land of what is going on with sequentially observable pois with the small observation radius of rovers, large capture radius for pois, and comparing D-Indirect with static influence vs dynamic influence.
+
