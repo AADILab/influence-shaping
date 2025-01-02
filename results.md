@@ -38,3 +38,9 @@ This one will just be a 1_rover_1_uav/random_pois_10x10 experiment where we comp
 
 Time to do a big sweep of different experiments playing around with map size (this includes number of pois), numbers of rovers, and uavs. The idea here is to get a good lay of the land of what is going on with sequentially observable pois with the small observation radius of rovers, large capture radius for pois, and comparing D-Indirect with static influence vs dynamic influence.
 
+**NOTE:** I discovered an issue with these results. These results are supposed to be testing D-Indirect with dynamic influence, but were run with an out-of-date version of the rovers submodule that does not support timestep based credit for D-Indirect. So likely the timestep based D-Indirect results are actually using the previous D-Indirect that is trajectory based.
+
+### ultra
+
+tackle is taking too long (and was run with outdated code). This is going to be a smaller subset of those experiments with less generations and less timesteps.
+

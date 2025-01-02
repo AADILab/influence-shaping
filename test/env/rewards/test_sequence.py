@@ -99,7 +99,39 @@ class TestSequence(TestEnv):
         poi_config['position']['fixed'] = [10.0, 20.0]
         config['env']['pois']['rover_pois'].append(poi_config)
         return config
-    
+
+    def get_two_rovers_three_uavs_two_pois_config_a(self):
+        config = self.get_env_template_config()
+        poi_positions = [
+            [10.0, 40.0],
+            [40.0, 10.0]
+        ]
+        for position in poi_positions:
+            poi_config = self.get_default_poi_config()
+            poi_config['position']['fixed'] = position
+            poi_config['observation_radius'] = 5.0
+            config['env']['pois']['hidden_pois'].append(poi_config)
+        rover_positions = [
+            [25.0, 25.0],
+            [26.0, 25.0]
+        ]
+        for position in rover_positions:
+            rover_config = self.get_default_rover_config()
+            rover_config['position']['fixed'] = position
+            rover_config['observation_radius'] = 5.0
+            config['env']['agents']['rovers'].append(rover_config)
+        uav_positions = [
+            [25.0, 24.0],
+            [26.0, 24.0],
+            [27.0, 24.0]
+        ]
+        for position in uav_positions:
+            uav_config = self.get_default_uav_config()
+            uav_config['position']['fixed'] = position
+            config['env']['agents']['uavs'].append(uav_config)
+        config['env']['map_size'] = [50.0, 50.0]
+        return config
+
     def get_two_rovers_two_uavs_six_pois_config_a(self):
         # Modify defaults for the remainder of the test where called
         self.default_poi_config['observation_radius'] = 5.0
@@ -465,6 +497,27 @@ class TestTwoRoversTwoPois(TestSequence):
         ]
         self.assert_path_rewards(env, self.get_path_a(), expected_rewards_at_each_step)
 
+    def test_config_a_path_a_IndirectDifference(self):
+        # -- 2 rovers, 2 POIs. Each rover visits its respective POI.
+        config = self.get_config_a()
+        # Switch rovers to D-Indirect and run the env (should be the same as D in this case)
+        for rover_config in config['env']['agents']['rovers']:
+            rover_config['reward_type'] = 'IndirectDifference'
+        env = createEnv(config)
+        expected_rewards_at_each_step = [
+            # Initial Setup. Too far to get rewards.
+            [0.0, 0.0],
+            # Rover A visited POI. D for Rover A goes up
+            [1.0, 0.0],
+            # Rover A goes home. No changes in D
+            [1.0, 0.0],
+            # Rover B visits second POI. D for Rover B goes up
+            [1.0, 1.0],
+            # Rover B goes home. No changes in D
+            [1.0, 1.0]
+        ]
+        self.assert_path_rewards(env, self.get_path_a(), expected_rewards_at_each_step)
+
     def test_config_a_path_b_Global(self):
         # -- 2 rovers, 2 POIs. Each rover visits both POIs.
         config = self.get_config_a()
@@ -523,11 +576,10 @@ class TestTwoRoversTwoUavsSixPois(TestSequence):
     def get_config_a(self):
         return self.get_two_rovers_two_uavs_six_pois_config_a()
     
-    def get_path_a(self):
+    def get_path_a1(self):
         """This is an ideal path where each rover-uav pair observe the set of POIs on their side"""
         return [
-            # Rover A and uav A visit top POI on the left.
-            # Rover B and uav B visit top POI on the right
+            # Rover A and uav A visit top POI on the left while Rover B and uav B visit top POI on the right
             [[10.0, 90.0], [90.0, 90.0], [10.0, 90.0], [90.0, 90.0]],
             # Rover-uav pairs continue to middle POIs
             [[10.0, 50.0], [90.0, 50.0], [10.0, 50.0], [90.0, 50.0]],
@@ -535,10 +587,10 @@ class TestTwoRoversTwoUavsSixPois(TestSequence):
             [[10.0, 10.0], [90.0, 10.0], [10.0, 10.0], [90.0, 10.0]]
         ]
 
-    def test_config_a_path_a_Global(self):
+    def test_config_a_path_a1_Global(self):
         """Keep agents using G and compute rewards"""
         config = self.get_config_a()
-        agent_paths = self.get_path_a()
+        agent_paths = self.get_path_a1()
         expected_rewards_at_each_step = [
             # Initial setup. Too far to get rewards
             [0.0, 0.0, 0.0, 0.0],
@@ -555,14 +607,14 @@ class TestTwoRoversTwoUavsSixPois(TestSequence):
     def test_config_a_path_a_Global_final(self):
         """Make sure the final G rewards match when we don't compute rewards at each step"""
         config = self.get_config_a()
-        self.assert_final_rewards(createEnv(config), self.get_path_a(), expected_final_rewards = [6.0, 6.0, 6.0, 6.0])
+        self.assert_final_rewards(createEnv(config), self.get_path_a1(), expected_final_rewards = [6.0, 6.0, 6.0, 6.0])
 
     def test_config_a_path_a_Difference(self):
         """Switch agents to D"""
         config = self.get_config_a()
         for agent_config in config['env']['agents']['rovers']+config['env']['agents']['uavs']:
             agent_config['reward_type'] = 'Difference'
-        agent_paths = self.get_path_a()
+        agent_paths = self.get_path_a1()
         expected_rewards_at_each_step = [
             # Initial setup. Too far to get rewards
             [0.0, 0.0, 0.0, 0.0],
@@ -581,14 +633,14 @@ class TestTwoRoversTwoUavsSixPois(TestSequence):
         config = self.get_config_a()
         for agent_config in config['env']['agents']['rovers']+config['env']['agents']['uavs']:
             agent_config['reward_type'] = 'Difference'
-        self.assert_final_rewards(createEnv(config), self.get_path_a(), expected_final_rewards=[3.0, 3.0, 0.0, 0.0])
+        self.assert_final_rewards(createEnv(config), self.get_path_a1(), expected_final_rewards=[3.0, 3.0, 0.0, 0.0])
     
-    def test_config_a_path_a_Mixed(self):
+    def test_config_a_path_a1_Mixed(self):
         """Switch rovers to D. Keep uavs using G"""
         config = self.get_config_a()
         for rover_config in config['env']['agents']['rovers']:
             rover_config['reward_type'] = 'Difference'
-        agent_paths = self.get_path_a()
+        agent_paths = self.get_path_a1()
         expected_rewards_at_each_step = [
             # Initial setup. No rewards
             [0.0, 0.0, 0.0, 0.0],
@@ -602,19 +654,19 @@ class TestTwoRoversTwoUavsSixPois(TestSequence):
         env = createEnv(config)
         self.assert_path_rewards(env, agent_paths, expected_rewards_at_each_step)
     
-    def test_config_a_path_a_Mixed_final(self):
+    def test_config_a_path_a1_Mixed_final(self):
         """Make sure final mixed G,D rewards match when we don't compute rewards each step"""
         config = self.get_config_a()
         for rover_config in config['env']['agents']['rovers']:
             rover_config['reward_type'] = 'Difference'
-        self.assert_final_rewards(createEnv(config), self.get_path_a(), expected_final_rewards=[3.0, 3.0, 6.0, 6.0])
+        self.assert_final_rewards(createEnv(config), self.get_path_a1(), expected_final_rewards=[3.0, 3.0, 6.0, 6.0])
     
-    def test_config_a_path_a_IndirectDifferenceAutomatic(self):
+    def test_config_a_path_a1_IndirectDifferenceAutomatic(self):
         """Using Default D-Indirect. Trajectory based, all or nothing credit, remove agents you get credit for"""
         config = self.get_config_a()
         for agent_config in config['env']['agents']['rovers']+config['env']['agents']['uavs']:
             agent_config['reward_type'] = 'IndirectDifference'
-        agent_paths = self.get_path_a()
+        agent_paths = self.get_path_a1()
         expected_rewards_at_each_step = [
             # Initial setup. No rewards
             [0.0, 0.0, 0.0, 0.0],
@@ -628,13 +680,13 @@ class TestTwoRoversTwoUavsSixPois(TestSequence):
         env = createEnv(config)
         self.assert_path_rewards(env, agent_paths, expected_rewards_at_each_step)
     
-    def test_config_a_path_a_IndirectDifferenceAutomatic_final(self):
+    def test_config_a_path_a1_IndirectDifferenceAutomatic_final(self):
         config = self.get_config_a()
         for agent_config in config['env']['agents']['rovers']+config['env']['agents']['uavs']:
             agent_config['reward_type'] = 'IndirectDifference'
-        self.assert_final_rewards(createEnv(config), self.get_path_a(), expected_final_rewards=[3.0, 3.0, 3.0, 3.0])
+        self.assert_final_rewards(createEnv(config), self.get_path_a1(), expected_final_rewards=[3.0, 3.0, 3.0, 3.0])
 
-    def test_config_a_path_a_IndirectDifferenceAutomaticTimestep(self):
+    def test_config_a_path_a1_IndirectDifferenceAutomaticTimestep(self):
         """Using D-Indirect that computes influence based on individual timesteps"""
         config = self.get_config_a()
         for agent_config in config['env']['agents']['rovers']+config['env']['agents']['uavs']:
@@ -648,7 +700,7 @@ class TestTwoRoversTwoUavsSixPois(TestSequence):
                     'credit': 'AllOrNothing'
                 }
             }
-        agent_paths = self.get_path_a()
+        agent_paths = self.get_path_a1()
         expected_rewards_at_each_step = [
             # Initial setup. No rewards
             [0.0, 0.0, 0.0, 0.0],
@@ -662,7 +714,7 @@ class TestTwoRoversTwoUavsSixPois(TestSequence):
         env = createEnv(config)
         self.assert_path_rewards(env, agent_paths, expected_rewards_at_each_step)
     
-    def test_config_a_path_a_IndirectDifferenceAutomaticTimestep(self):
+    def test_config_a_path_a1_IndirectDifferenceAutomaticTimestep(self):
         config = self.get_config_a()
         for agent_config in config['env']['agents']['rovers']+config['env']['agents']['uavs']:
             agent_config['reward_type'] = 'IndirectDifference'
@@ -675,7 +727,7 @@ class TestTwoRoversTwoUavsSixPois(TestSequence):
                     'credit': 'AllOrNothing'
                 }
             }
-        self.assert_final_rewards(createEnv(config), self.get_path_a(), expected_final_rewards=[3.0, 3.0, 3.0, 3.0])
+        self.assert_final_rewards(createEnv(config), self.get_path_a1(), expected_final_rewards=[3.0, 3.0, 3.0, 3.0])
 
     def test_config_a_path_a_IndirectDifferenceManual_0to0_1to1(self):
         """Using D-Indirect with manual assignment of rovers to uavs
@@ -704,7 +756,7 @@ class TestTwoRoversTwoUavsSixPois(TestSequence):
         config['env']['agents']['uavs'][0]['IndirectDifference']['manual'] = [0]
         config['env']['agents']['uavs'][1]['IndirectDifference']['manual'] = [1]
         # Set up paths and rewards. Then test
-        agent_paths = self.get_path_a()
+        agent_paths = self.get_path_a1()
         expected_rewards_at_each_step = [
             # Initial setup. No rewards
             [0.0, 0.0, 0.0, 0.0],
@@ -718,7 +770,7 @@ class TestTwoRoversTwoUavsSixPois(TestSequence):
         env = createEnv(config)
         self.assert_path_rewards(env, agent_paths, expected_rewards_at_each_step)
 
-    def test_config_a_path_a_IndirectDifferenceManual_1to0_0to1(self):
+    def test_config_a_path_a1_IndirectDifferenceManual_1to0_0to1(self):
         """Using D-Indirect with manual assignment of rovers to uavs
         Uav 1 gets credit for rover 0
         Uav 0 gets credit for rover 1
@@ -745,7 +797,7 @@ class TestTwoRoversTwoUavsSixPois(TestSequence):
         config['env']['agents']['uavs'][1]['IndirectDifference']['manual'] = [0]
         config['env']['agents']['uavs'][0]['IndirectDifference']['manual'] = [1]
         # Set up paths and rewards, then test
-        agent_paths = self.get_path_a()
+        agent_paths = self.get_path_a1()
         expected_rewards_at_each_step = [
             # Initial setup. No rewards
             [0.0, 0.0, 0.0, 0.0],
@@ -761,7 +813,7 @@ class TestTwoRoversTwoUavsSixPois(TestSequence):
         env = createEnv(config)
         self.assert_path_rewards(env, agent_paths, expected_rewards_at_each_step)
 
-    def test_config_a_path_a_IndirectDifferenceManual_0to0and1(self):
+    def test_config_a_path_a1_IndirectDifferenceManual_0to0and1(self):
         """Uav 0 gets credit for rovers 0 and 1"""
         config = self.get_config_a()
         # Switch everyone to D-Indirect
@@ -782,7 +834,7 @@ class TestTwoRoversTwoUavsSixPois(TestSequence):
         # Assign rovers to uavs
         config['env']['agents']['uavs'][0]['IndirectDifference']['manual'] = [0,1]
         # Set up paths and rewards. Then test
-        agent_paths = self.get_path_a()
+        agent_paths = self.get_path_a1()
         expected_rewards_at_each_step = [
             # Initial setup. No rewards
             [0.0, 0.0, 0.0, 0.0],
@@ -796,7 +848,7 @@ class TestTwoRoversTwoUavsSixPois(TestSequence):
         env = createEnv(config)
         self.assert_path_rewards(env, agent_paths, expected_rewards_at_each_step)
 
-    def test_config_a_path_a_IndirectDifferenceManual_1to0and1(self):
+    def test_config_a_path_a1_IndirectDifferenceManual_1to0and1(self):
         """Uav 1 gets credit for rovers 0 and 1"""
         config = self.get_config_a()
         # Switch everyone to D-Indirect
@@ -817,7 +869,7 @@ class TestTwoRoversTwoUavsSixPois(TestSequence):
         # Assign rovers to uavs
         config['env']['agents']['uavs'][1]['IndirectDifference']['manual'] = [0,1]
         # Set up paths and rewards. Then test
-        agent_paths = self.get_path_a()
+        agent_paths = self.get_path_a1()
         expected_rewards_at_each_step = [
             # Initial setup. No rewards
             [0.0, 0.0, 0.0, 0.0],
@@ -831,7 +883,7 @@ class TestTwoRoversTwoUavsSixPois(TestSequence):
         env = createEnv(config)
         self.assert_path_rewards(env, agent_paths, expected_rewards_at_each_step)
     
-    def get_path_b(self):
+    def get_path_a2(self):
         """Rover A observes all of the POIs with support from both uavs at different points in time"""
         return [
             # Rover A and uav A visit top POI on the left.
@@ -849,10 +901,10 @@ class TestTwoRoversTwoUavsSixPois(TestSequence):
             [[90.0, 10.0], [60.0, 50.0], [10.0, 10.0], [90.0, 10.0]]
         ]
     
-    def test_config_a_path_b_Global(self):
+    def test_config_a_path_a2_Global(self):
         """Global rewards"""
         config = self.get_config_a()
-        agent_paths = self.get_path_b()
+        agent_paths = self.get_path_a2()
         expected_rewards_at_each_step = [
             # Initial setup. No rewards
             [0.0, 0.0, 0.0, 0.0],
@@ -872,13 +924,13 @@ class TestTwoRoversTwoUavsSixPois(TestSequence):
         env = createEnv(config)
         self.assert_path_rewards(env, agent_paths, expected_rewards_at_each_step)
 
-    def test_config_a_path_b_IndirectDifferenceAutomatic(self):
+    def test_config_a_path_a2_IndirectDifferenceAutomatic(self):
         """Default trajectory based D-Indirect"""
         config = self.get_config_a()
         # Switch all agents to default D-Indirect
         for agent_config in config['env']['agents']['rovers']+config['env']['agents']['uavs']:
             agent_config['reward_type'] = 'IndirectDifference'
-        agent_paths = self.get_path_b()
+        agent_paths = self.get_path_a2()
         expected_rewards_at_each_step = [
             # Initial setup. No rewards
             [0.0, 0.0, 0.0, 0.0],
@@ -892,9 +944,8 @@ class TestTwoRoversTwoUavsSixPois(TestSequence):
         ]
         env = createEnv(config)
         self.assert_path_rewards(env, agent_paths, expected_rewards_at_each_step)
-    
-    # @unittest.skip("This feature isn't ready yet, so no need to test (yet).")
-    def test_config_a_path_b_IndirectDifferenceAutomaticTimestep(self):
+
+    def test_config_a_path_a2_IndirectDifferenceAutomaticTimestep(self):
         """Now with granular credit assignment. Each uav gets credit for the pois it 'helped' with"""
         config = self.get_config_a()
         # Switch all agents to D-Indirect (with timestep based/ more granular credit assignment)
@@ -909,7 +960,7 @@ class TestTwoRoversTwoUavsSixPois(TestSequence):
                     'credit': 'AllOrNothing'
                 }
             }
-        agent_paths = self.get_path_b()
+        agent_paths = self.get_path_a2()
         expected_rewards_at_each_step = [
             # Initial setup, no rewards
             [0.0, 0.0, 0.0, 0.0],
@@ -928,6 +979,152 @@ class TestTwoRoversTwoUavsSixPois(TestSequence):
         ]
         env = createEnv(config)
         self.assert_path_rewards(env, agent_paths, expected_rewards_at_each_step)
+
+    def test_config_a_path_a2_IndirectDifferenceAutomaticTimestepLocal(self):
+        """Granular credit assignment, this time with local-based credit for influence"""        
+        config = self.get_config_a()
+        # Switch all agents to D-Indirect (with timestep based credit assignment with local influence)
+        for agent_config in config['env']['agents']['rovers']+config['env']['agents']['uavs']:
+            agent_config['reward_type'] = 'IndirectDifference'
+            agent_config['IndirectDifference'] = {
+                'type': 'removal',
+                'assignment': 'automatic',
+                'manual': [],
+                'automatic': {
+                    'timescale': 'timestep',
+                    'credit': 'Local'
+                }
+            }
+        agent_paths = self.get_path_a2()
+        expected_rewards_at_each_step = [
+            # Initial setup, no rewards
+            [0.0, 0.0, 0.0, 0.0],
+            # Uav A gets credit for rover A's observation
+            [1.0, 0.0, 1.0, 0.0],
+            # Uav A gets credit for first observation, uav B gets credit for second observation
+            [2.0, 0.0, 1.0, 1.0],
+            # Uav A gets credit for first and third observations, uav B gets credit for second
+            [3.0, 0.0, 2.0, 1.0],
+            # Uav A gets credit for first, third, uav B gets credit for second, fourth
+            [4.0, 0.0, 2.0, 2.0],
+            # Uav A gets credit for first, third, fifth, uav B gets credit for second, fourth
+            [5.0, 0.0, 3.0, 2.0],
+            # Uav A gets credit for first, third, fifth, uav B gets credit for second, fourth, sixth
+            [6.0, 0.0, 3.0, 3.0]
+        ]
+        env = createEnv(config)
+        self.assert_path_rewards(env, agent_paths, expected_rewards_at_each_step)
+
+class TestTwoRoversThreeUavsTwoPois(TestSequence):
+    def get_config_a(self):
+        return self.get_two_rovers_three_uavs_two_pois_config_a()
+
+    def get_path_a(self):
+        return [
+            # Split off to observe the pois
+            [[10.0, 40.0], [40.0, 10.0], [10.0, 40.0], [10.0, 40.0], [40.0, 10.0]]
+        ]
+
+    def test_config_a_path_a_IndirectDifferenceLocal(self):
+        """This tests if the local credit for influence is computed correctly
+        Each uav gets credit for its influence on nearby rovers
+        """
+        config = self.get_config_a()
+        # Switch to D-Indirect
+        for agent_config in config['env']['agents']['rovers']+config['env']['agents']['uavs']:
+            agent_config['reward_type'] = 'IndirectDifference'
+            agent_config['IndirectDifference'] = {
+                'type': 'removal',
+                'assignment': 'automatic',
+                'automatic': {
+                    'timescale': 'timestep',
+                    'credit': 'Local'
+                }
+            }
+        expected_rewards_at_each_step = [
+            # Init. No reward
+            [0.0, 0.0, 0.0, 0.0, 0.0],
+            # Everyone gets credit!
+            [1.0, 1.0, 1.0, 1.0, 1.0]
+        ]
+        self.assert_path_rewards(createEnv(config), self.get_path_a(), expected_rewards_at_each_step)
+
+    def test_config_a_path_a_IndirectDifferenceSystem(self):
+        """This tests if the system credit for influence is computed correctly
+        Each agent gets credit for all influenced agents
+        (not just the ones it is near, and not just uavs getting credit for rovers)
+        """
+        config = self.get_config_a()
+        # Switch to D-Indirect
+        for agent_config in config['env']['agents']['rovers']+config['env']['agents']['uavs']:
+            agent_config['reward_type'] = 'IndirectDifference'
+            agent_config['IndirectDifference'] = {
+                'type': 'removal',
+                'assignment': 'automatic',
+                'automatic': {
+                    'timescale': 'timestep',
+                    'credit': 'System'
+                }
+            }
+        expected_rewards_at_each_step = [
+            # Init. No reward
+            [0.0, 0.0, 0.0, 0.0, 0.0],
+            # Everyone gets credit!
+            [2.0, 2.0, 2.0, 2.0, 2.0]
+        ]
+        self.assert_path_rewards(createEnv(config), self.get_path_a(), expected_rewards_at_each_step)
+
+    def test_config_a_path_a_IndirectDifferenceDifference(self):
+        """This tests if the difference credit for influence is computed correctly
+        A uav only gets credit for influencing a rover if no other uav is influencing that rover
+        """
+        config = self.get_config_a()
+        # Switch to D-Indirect
+        for agent_config in config['env']['agents']['rovers']+config['env']['agents']['uavs']:
+            agent_config['reward_type'] = 'IndirectDifference'
+            agent_config['IndirectDifference'] = {
+                'type': 'removal',
+                'assignment': 'automatic',
+                'automatic': {
+                    'timescale': 'timestep',
+                    'credit': 'Difference'
+                }
+            }
+        expected_rewards_at_each_step = [
+            # Init. No reward
+            [0.0, 0.0, 0.0, 0.0, 0.0],
+            # Only one uav gets credit for influencing the rover
+            # that no one else is influencing
+            # Rovers get credit as usual
+            [1.0, 1.0, 0.0, 0.0, 1.0]
+        ]
+        self.assert_path_rewards(createEnv(config), self.get_path_a(), expected_rewards_at_each_step)
+
+
+    def test_config_a_path_a_IndirectDifferenceAllOrNothing(self):
+        """This tests if the all-or-nothing credit for influence is computed correctly
+        Maximum 1 uav gets credit per rover, even if multiple uavs are influencing one rover,
+        Also, even if no one influenced a rover, someone has to get credit for it
+        """
+        config = self.get_config_a()
+        # Switch to D-Indirect
+        for agent_config in config['env']['agents']['rovers']+config['env']['agents']['uavs']:
+            agent_config['reward_type'] = 'IndirectDifference'
+            agent_config['IndirectDifference'] = {
+                'type': 'removal',
+                'assignment': 'automatic',
+                'automatic': {
+                    'timescale': 'timestep',
+                    'credit': 'AllOrNothing'
+                }
+            }
+        expected_rewards_at_each_step = [
+            # Init. No reward
+            [0.0, 0.0, 0.0, 0.0, 0.0],
+            # Only two uavs get credit
+            [1.0, 1.0, 1.0, 0.0, 1.0]
+        ]
+        self.assert_path_rewards(createEnv(config), self.get_path_a(), expected_rewards_at_each_step)
 
 if __name__ == '__main__':
     unittest.main()

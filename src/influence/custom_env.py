@@ -179,7 +179,7 @@ def createAgent(agent_config, agent_types, poi_types, type_):
         indirect_difference_parameters = IndirectDifferenceParameters(
             type_ = indirect_difference_config['type'],
             assignment = indirect_difference_config['assignment'],
-            manual = listToVec(indirect_difference_config['manual']),
+            manual = listToVec(indirect_difference_config['manual']) if 'manual' in indirect_difference_config else [],
             automatic_parameters = AutomaticParameters(
                 timescale = auto_params_config['timescale'],
                 credit = auto_params_config['credit']
