@@ -44,3 +44,23 @@ Time to do a big sweep of different experiments playing around with map size (th
 
 tackle is taking too long (and was run with outdated code). This is going to be a smaller subset of those experiments with less generations and less timesteps.
 
+Looking through the results, it seems like there isn't much difference in performance between any method when we're using when there is only 1 rover. I suppose that makes sense. I wouldn't expect credit assignment to help out a whole lot when there is only 1 rover capapble of observing pois.
+
+It's a different story when there are 3 rovers. When there are 3 rovers and 1 uav, G is clearly the way to go. That's kind of strange given that there are 3 rovers and that means 3 agents can go around directly receiving credit. You'd think you need credit assignment between rovers so the one that learned to follow the uav does so... but maybe they all learn to follow the uav.
+
+When there are 3 rovers and 3 uavs, credit assignment still doesn't do much. For some reason, D-Indirect-Timestep-System (which I added as a baseline that I expected to perform poorly) is the only method that is able to perform on par with G. No credit assignment is actually doing anything here.
+
+I have two ideas for what to test moving forward.
+1: More timesteps. I realized that when I looked at previous experiments I ran similar to this one, there were more timesteps. When we look at the results for ultra, we see that the teams hit (at best) a little under 2 pois on average.
+
+When we look at quartz/1_rover/1_uav/random_pois_50x50, we see the team hits on average a bit over 2 pois. And the trends for performance actually look like they are going up, not just hitting a point and plateauing.
+
+2: Small capture radius for pois. If the global reward is dense enough, you don't need credit assignment, unless you have a TON of agents. In my case, I only have a few agents. So if I add some sparsity then I should see credit assignment start to matter more again.
+
+### vector
+
+This is the ultra experiments but this time with more timesteps. Instead of 50, we're going to use 150.
+
+### wumbo
+
+This is the vector experiments but with a small capture radius for the pois. Capture radius of 5.0 rather than 1000.0
