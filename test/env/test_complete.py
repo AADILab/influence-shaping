@@ -147,9 +147,15 @@ class TestComplete(InfluenceTestCase):
              -1, -1, -1, -1,
               agent_2_sense_poi_0, -1, agent_2_sense_poi_1, -1]
         ]
-        for expected_observation, observation in zip(expected_observations, observations):
+        # Make the raw observation easier to process for debugging
+        processed_observations = [[] for _ in observations]
+        for ind, observation in enumerate(observations):
             for i in range(observation.size()):
-                self.assertTrue(np.isclose(expected_observation[i], observation[i,0]))
+                processed_observations[ind].append(observation[i,0])
+        # Now check that the observations match what we expect
+        for expected_observation, observation in zip(expected_observations, processed_observations):
+            for expected, actual in zip(expected_observation, observation):
+                self.assertTrue(np.isclose(expected, actual))
 
         # Check the rewards
         expected_G = self.compute_poi_reward(pois[0], agents[0]) + self.compute_poi_reward(pois[1], agents[1])

@@ -90,9 +90,9 @@ class TestEnv(InfluenceTestCase):
                 'pois': {
                     'rover_pois': [],
                     'hidden_pois': []
-                }
+                },
+                'map_size': [0.0, 0.0]
             },
-            'map_size': [0.0, 0.0]
         }
 
     def assert_correct_rewards(self, config, expected_rewards):

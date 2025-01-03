@@ -24,15 +24,23 @@ def calculateAngle(position_0, position_1):
 # Agents should be able to distinguish between rovers and uavs...
 # Unfortunately this means writing my own Lidar class that can differentiate between agent types
 class SmartLidar(rovers.Lidar[rovers.Density]):
-    def __init__(self, resolution, composition_policy, agent_types, poi_types):
+    def __init__(self, resolution, composition_policy, \
+            agent_types, poi_types, \
+            poi_subtypes: List[str], agent_observable_subtypes: List[List[str]],
+            accum_type: List[str]
+            ):
         super().__init__(resolution, composition_policy)
         self.agent_types = agent_types
         self.poi_types = poi_types
+        self.poi_subtypes = poi_subtypes
+        self.agent_observable_subtypes = agent_observable_subtypes
+        self.accum_type = accum_type
         self.m_resolution = resolution
         self.m_composition = composition_policy
 
     def scan(self, agent_pack):
         # print("SmartLidar.scan()")
+        # print("Agent: ", agent_pack.agent_index)
         num_sectors = int(360. / self.m_resolution)
         poi_values = [[] for _ in range(num_sectors)]
         rover_values = [[] for _ in range(num_sectors)]
@@ -54,15 +62,37 @@ class SmartLidar(rovers.Lidar[rovers.Density]):
                 # print("continue, out of range")
                 continue
             # Skip this POI if I am not capable of observing this POI
-            if my_type == "rover" and self.poi_types[poi_ind] == "hidden":
-                continue
+            if self.poi_types[poi_ind] == "hidden":
+                if my_type == "rover":
+                    # Rovers cannot observe these
+                    continue
+                elif my_type == "uav":
+                    # Uav may be able to observe this poi
+                    # print(self.poi_subtypes[poi_ind],' in ',self.agent_observable_subtypes[agent_pack.agent_index])
+                    if self.poi_subtypes[poi_ind] != '' and \
+                        self.poi_subtypes[poi_ind] not in self.agent_observable_subtypes[agent_pack.agent_index]:
+                        # If its not the correct match up, then skip
+                        # print('do not pass Go, do not collect $200')
+                        continue
+                    else:
+                        # print('pass')
+                        pass
+
+            # TODO: I need to know what the subtype of this hidden pois is
+            # I need to know what subtypes this uav can observe
             # Bin the POI according to where it was sensed
+            # print('angle sensed at: ', angle)
+            # print('distance away: ', distance)
+            # print('agent position: [', agent.position().x, ', ', agent.position().y,']')
+            # print('poi position: [', sensed_poi.position().x,', ', sensed_poi.position().y,']')
             if angle < 360.0:
                 sector = int( angle / self.m_resolution )
             else:
                 sector = 0
             # print("sector: ", sector, type(sector))
+            # print('poi value:' , sensed_poi.value() / max([0.001, distance**2]))
             poi_values[sector].append(sensed_poi.value() / max([0.001, distance**2]))
+            # print('poi_values[sector]: ', poi_values[sector])
         # print("Finished POI sensing")
 
         # print("Observe Agents")
@@ -122,7 +152,10 @@ class SmartLidar(rovers.Lidar[rovers.Density]):
                 cpp_vector = cppyy.gbl.std.vector[cppyy.gbl.double]()
                 for r in rover_values[i]:
                     cpp_vector.push_back(r)
-                state[i] = self.m_composition.compose(cpp_vector, 0.0, num_rovers)
+                if self.accum_type[agent_pack.agent_index] == 'average':
+                    state[i] = self.m_composition.compose(cpp_vector, 0.0, num_rovers)
+                elif self.accum_type[agent_pack.agent_index] == 'sum':
+                    state[i] = self.m_composition.compose(cpp_vector, 0.0, 1)
             if num_uavs > 0:
                 # print("num_uavs > 0")
                 # print("uav_values["+str(i)+"]: ", uav_values[i], type(uav_values[i]), type(uav_values[i][0]))
@@ -130,7 +163,10 @@ class SmartLidar(rovers.Lidar[rovers.Density]):
                 cpp_vector = cppyy.gbl.std.vector[cppyy.gbl.double]()
                 for u in uav_values[i]:
                     cpp_vector.push_back(u)
-                state[num_sectors + i] = self.m_composition.compose(cpp_vector, 0.0, num_uavs)
+                if self.accum_type[agent_pack.agent_index] == 'average':
+                    state[num_sectors + i] = self.m_composition.compose(cpp_vector, 0.0, num_uavs)
+                elif self.accum_type[agent_pack.agent_index] == 'sum':
+                    state[num_sectors + i] = self.m_composition.compose(cpp_vector, 0.0, 1)
             if num_pois > 0:
                 # print("num_pois > 0")
                 # print("poi_values["+str(i)+"]: ", poi_values[i], type(poi_values[i]), type(poi_values[i][0]))
@@ -140,7 +176,10 @@ class SmartLidar(rovers.Lidar[rovers.Density]):
                 cpp_vector = cppyy.gbl.std.vector[cppyy.gbl.double]()
                 for p in poi_values[i]:
                     cpp_vector.push_back(p)
-                state[num_sectors*2 + i] = self.m_composition.compose(cpp_vector, 0.0, num_pois)
+                if self.accum_type[agent_pack.agent_index] == 'average':
+                    state[num_sectors*2 + i] = self.m_composition.compose(cpp_vector, 0.0, num_pois)
+                elif self.accum_type[agent_pack.agent_index] == 'sum':
+                    state[num_sectors*2 + i] = self.m_composition.compose(cpp_vector, 0.0, 1)
 
         return rovers.tensor(state)
 
@@ -163,7 +202,7 @@ def createUAV(obs_radius, reward_type, resolution, agent_types, poi_types):
     uav = rovers.Rover[SmartLidar, Discrete, Reward](reward_type, type_, obs_radius, SmartLidar(resolution=resolution, composition_policy=rovers.Density(), agent_types=agent_types, poi_types=poi_types), Reward())
     return uav
 
-def createAgent(agent_config, agent_types, poi_types, type_):
+def createAgent(agent_config, agent_types, poi_types, poi_subtypes, agent_observable_subtypes, accum_type, type_):
     """Create an agent using the agent's config and type"""
     # unpack config
     reward_type = agent_config['reward_type']
@@ -210,7 +249,10 @@ def createAgent(agent_config, agent_types, poi_types, type_):
             resolution=resolution, 
             composition_policy=rovers.Density(), 
             agent_types=agent_types, 
-            poi_types=poi_types
+            poi_types=poi_types,
+            poi_subtypes=poi_subtypes,
+            agent_observable_subtypes=agent_observable_subtypes,
+            accum_type=accum_type
         ),
         Reward()
     )
@@ -351,6 +393,27 @@ def createEnv(config):
     agent_types = ["rover"]*NUM_ROVERS + ["uav"]*NUM_UAVS
     poi_types = ["rover"]*NUM_ROVER_POIS+["hidden"]*NUM_HIDDEN_POIS
 
+    poi_subtypes = []
+    for poi_config in config['env']['pois']['rover_pois']+config['env']['pois']['hidden_pois']:
+        if 'subtype' in poi_config:
+            poi_subtypes.append(poi_config['subtype'])
+        else:
+            poi_subtypes.append('')
+
+    agent_observable_subtypes = []
+    for agent_config in config['env']['agents']['rovers']+config['env']['agents']['uavs']:
+        if 'observable_subtypes' in agent_config:
+            agent_observable_subtypes.append(agent_config['observable_subtypes'])
+        else:
+            agent_observable_subtypes.append([])
+
+    accum_type = []
+    for agent_config in config['env']['agents']['rovers']+config['env']['agents']['uavs']:
+        if 'sensor' in agent_config and 'accum_type' in agent_config['sensor']:
+            accum_type.append(agent_config['sensor']['accum_type'])
+        else:
+            accum_type.append('average')
+
     # rovers_ = [
     #     createRover(
     #         obs_radius=rover["observation_radius"],
@@ -366,6 +429,9 @@ def createEnv(config):
             agent_config=rover_config, 
             agent_types=agent_types,
             poi_types=poi_types,
+            poi_subtypes=poi_subtypes,
+            agent_observable_subtypes=agent_observable_subtypes,
+            accum_type=accum_type,
             type_='rover'
         )
         for rover_config in config['env']['agents']['rovers']
@@ -385,6 +451,9 @@ def createEnv(config):
             agent_config=uav_config,
             agent_types=agent_types,
             poi_types=poi_types,
+            poi_subtypes=poi_subtypes,
+            agent_observable_subtypes=agent_observable_subtypes,
+            accum_type=accum_type,
             type_ = 'uav'
         )
         for uav_config in config['env']['agents']['uavs']
