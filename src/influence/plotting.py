@@ -231,7 +231,7 @@ def generate_stat_learning_curve_plot(trials_dir: Path, individual_trials: bool,
 
         ax.legend()
     else:
-        gens = add_stat_learning_curve(ax, trials_dir, individual_trials, label=trials_dir.name, line_plot_args=line_plot_args)
+        gens = add_stat_learning_curve(ax, trials_dir, label=trials_dir.name, line_plot_args=line_plot_args)
 
     ax.set_xlabel('Generations')
     ax.set_ylabel('Performance')
