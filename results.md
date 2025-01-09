@@ -99,3 +99,52 @@ I think moving forward I should keep the sparsity from small capture radius. I'm
 
 ### australia
 
+This was an attempt to run a larger experiment where I introduced poi types. I set up 4 pairs of rovers+uavs (4 rovers, 4 uavs, paired 1-1). I divided a 100,100 map into 4 squares (2x2 smaller squares), and put one uav-rover pair at the center of each square.
+
+I did 3 variants of this. In the first variant, I used standard pois (20 of them) that spawn randomly (uniform) across the full map. In the second, I used 4 poi types (A,B,C,D), where each one corresponds to a type that one of the uavs can sense. Uav 0 could sense [A], Uav 1 could sense [B], etc. In the third, those pois of different types were constrained to spawn in the subsquare that matched the uav with the sensing capability to sense that poi.
+
+The results are quite messy. It seems like in the standard 20 pois case the rovers and uavs cannot effectively learn to coordinate and instead just try to spread out to maximize their coverage of the space. G only gets up to about 5 pois on average, and that's the highest performing method. D is the lowest (as expected), and the different D-Indirect or mixed fitness shaping variants land somewhere in between G and D.
+
+After explaining the results to the lab, I was suggested to try a few things in order to debug what's going on.
+
+1. Increase observation radius of rovers. The idea is that they should not have a hard time seeing uavs and that their limited observation radius may make it too difficult for them to find a uav to follow.
+
+2. Increase network size. 12 inputs to 10 hidden units does not seem right. Try increasing the number of hidden units, and this might make it possible to learn better policies.
+
+3. Make a rover policy where it follows the nearest uav. It would use a large observation radius to almost always see a uav. And I can play with what to do when it does not see a uav. (I am thinking to just have the rover sit still. It's up to the uavs to find and direct the rover.)
+
+4. Change the rover's action to just choosing which uav to follow. (The idea is to simplify this problem so that the rovers don't have to learn that they have to follow uavs, just make it so that the rovers automatically follow the uavs and they are just choosing who to follow.)
+
+I'm not sure this line of experiments will yeild much (but I will set them all up). I am instead thinking that setting up atomic tests are the best way to go. In other words, take the smallest version of this problem, explore it, optimize it, then scale it back up. I think that's the best way to get a handle on what's going on.
+
+### brisbane
+
+This is the first atomic test (actually ran this before the lab discussion of australia results). I did two configs. One config was a rover-uav pair discovering 5 pois. The rover has a small observation radius (5 units) but spawns next to the uav. The pair is able to get up to about 2.5 pois on average after 1,000 generations with G. This suggests to me that the small observation radius of rovers should not be an issue. This was also with 5 hidden pois so the rover is entirely dependent on the uav.
+
+In the other variant, I designed a fully independent rover that has a large observation radius (1,000 units aka the entire map) and the pois are not hidden from the rover. They are normal pois. The rover is able to get a slightly higher performance on average using G after 1,000 generations. The average is about 3 pois. It learns really fast compared to the much more pronounced learning curve when we have 1 rover and 1 uav.
+
+### cassowary
+
+This is a large set of atomic tests with 1 rover and 1 uav. I wanted to fiddle with a lot of different parameters to see if any of them could learn to get all 5 pois, or generally just perform better than other variants.
+
+Here are the parameters I played with
+timesteps: 50, 100, 150
+standard deviation for mutating weights: 0.1, 0.5, 0.9
+independent probability of mutating weights: 0.1, 0.5, 0.9
+density sensor vs exponential sensor for rovers and uavs
+uav max velocity: 1.0, 2.0
+rover observation radius: 5.0, 1000.0
+
+### dingo
+
+Same as cassowary, but with 3 pois. (I realized I could queue up more experiments to the HPC and number of pois had been another parameter on my mind I wanted to experiment with.)
+
+### emu
+
+I'm just running here steps 1 and 2 of exploring the australia results.
+
+1. Increase obervation radius of rovers (5.0, 50.0, 100.0)
+2. Increase network size (10, 15, 20)
+
+Just running with the standard pois, no need to play with different poi types yet.
+NOTE: I am not rerunning the combination of parameters that gives us the original standard pois experiment in australia. I am going to populate the results for that combination using the original australia experiment results. That saves a bunch of computation and gets me these results faster.
