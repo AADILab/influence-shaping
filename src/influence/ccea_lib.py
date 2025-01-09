@@ -62,14 +62,30 @@ class CooperativeCoevolutionaryAlgorithm():
 
         self.num_steps = self.config["ccea"]["num_steps"]
 
-        if self.num_rovers > 0:
-            self.num_rover_sectors = int(360/self.config["env"]["agents"]["rovers"][0]["resolution"])
-            self.rover_nn_template = self.generateTemplateNN(self.num_rover_sectors)
-            self.rover_nn_size = self.rover_nn_template.num_weights
-        if self.num_uavs > 0:
-            self.num_uav_sectors = int(360/self.config["env"]["agents"]["uavs"][0]["resolution"])
-            self.uav_nn_template = self.generateTemplateNN(self.num_uav_sectors)
-            self.uav_nn_size = self.uav_nn_template.num_weights
+        self.template_nns = self.get_template_nns('rovers')+self.get_template_nns('uavs')
+        self.nn_sizes = [template_nn.num_weights for template_nn in self.template_nns]
+
+        # Make sure each agent has a sensor type config set
+        for agent_config in self.config['env']['agents']['rovers']+self.config['env']['agents']['uavs']:
+            if 'sensor' not in agent_config:
+                agent_config['sensor'] = {'type': 'SmartLidar'}
+            elif 'type' not in agent_config['sensor']:
+                agent_config['sensor']['type'] = 'SmartLidar'
+
+        # Save number of sensors that each agent has
+        self.num_sensors_rovers = []
+        for i in range(self.num_rovers):
+            if self.config["env"]["agents"]["rovers"][i]['sensor']['type'] == 'SmartLidar':
+                self.num_sensors_rovers.append(3*int(360/self.config["env"]["agents"]["rovers"][i]["resolution"]))
+            elif self.config['env']['agents']['rovers'][i]['sensor']['type'] == 'UavDistanceLidar':
+                self.num_sensors_rovers.append(self.num_uavs)
+        self.num_sensors_uavs = []
+        for i in range(self.num_uavs):
+            if self.config["env"]["agents"]["uavs"][i]['sensor']['type'] == 'SmartLidar':
+                self.num_sensors_uavs.append(3*int(360/self.config["env"]["agents"]["uavs"][i]["resolution"]))
+            elif self.config['env']['agents']['uavs'][i]['sensor']['type'] == 'UavDistanceLidar':
+                self.num_sensors_uavs.append(self.num_uavs)
+
         self.use_multiprocessing = self.config["processing"]["use_multiprocessing"]
         self.num_threads = self.config["processing"]["num_threads"]
 
@@ -140,6 +156,23 @@ class CooperativeCoevolutionaryAlgorithm():
     def __setstate__(self, state):
         self.__dict__.update(state)
 
+    def get_template_nns(self, agent_type: str):
+        template_nns = []
+        for i in range(len(self.config['env']['agents'][agent_type])):
+            if (
+                'sensor' not in self.config['env']['agents'][agent_type][i] or
+                'type' not in self.config['env']['agents'][agent_type][i]['sensor'] or
+                self.config['env']['agents'][agent_type][i]['sensor']['type'] == 'SmartLidar'
+            ):
+                num_sectors = int(360/self.config["env"]["agents"][agent_type][i]["resolution"])
+                template_nns.append(
+                    NeuralNetwork(num_inputs=3*num_sectors, num_hidden=self.num_hidden, num_outputs=2)
+                )
+            elif self.config['env']['agents'][agent_type][i]['sensor']['type'] == 'UavDistanceLidar':
+                template_nns.append(
+                    NeuralNetwork(num_inputs=self.num_uavs, num_hidden=self.num_hidden, num_outputs=self.num_uavs+1)
+                )
+        return template_nns
 
     def generateTemplateNN(self, num_sectors):
         agent_nn = NeuralNetwork(num_inputs=3*num_sectors, num_hidden=self.num_hidden, num_outputs=2)
@@ -164,8 +197,15 @@ class CooperativeCoevolutionaryAlgorithm():
         return tools.initRepeat(list, self.generateUAVIndividual, n=self.config["ccea"]["population"]["subpopulation_size"])
 
     def population(self):
-        return tools.initRepeat(list, self.generateRoverSubpopulation, n=self.num_rovers) + \
-            tools.initRepeat(list, self.generateUAVSubpopulation, n=self.num_uavs)
+        pop = []
+        # Generating subpopulation for each agent
+        for agent_id in range(self.num_rovers+self.num_uavs):
+            # Filling subpopulation for each agent
+            subpop=[]
+            for _ in range(self.config["ccea"]["population"]["subpopulation_size"]):
+                subpop.append(self.generateIndividual(individual_size=self.nn_sizes[agent_id]))
+            pop.append(subpop)
+        return pop
 
     def formEvaluationTeam(self, population):
         policies = []
@@ -223,15 +263,15 @@ class CooperativeCoevolutionaryAlgorithm():
             np.random.seed(team.seed)
 
         # Set up networks
-        rover_nns = [deepcopy(self.rover_nn_template) for _ in range(self.num_rovers)]
-        uav_nns = [deepcopy(self.uav_nn_template) for _ in range(self.num_uavs)]
+        # TODO: AND action space of each rover in the config
+        # TODO: Make it so that each agent can have a different size NN?
+        #       (This lets us give rovers one size and uavs a different size when we change their
+        #        observations and actions)
+        agent_nns = [deepcopy(template_nn) for template_nn in self.template_nns]
 
         # Load in the weights
-        for rover_nn, individual in zip(rover_nns, team.policies[:self.num_rovers]):
-            rover_nn.setWeights(individual)
-        for uav_nn, individual in zip(uav_nns, team.policies[self.num_rovers:]):
-            uav_nn.setWeights(individual)
-        agent_nns = rover_nns + uav_nns
+        for nn, individual in zip(agent_nns, team.policies):
+            nn.setWeights(individual)
 
         # Set up the enviornment
         env = createEnv(self.config)
@@ -267,8 +307,13 @@ class CooperativeCoevolutionaryAlgorithm():
                 flist = list(filter(None, slist))
                 nlist = [float(s) for s in flist]
                 observation_arr = np.array(nlist, dtype=np.float64)
+                #TODO: If a rover's action is simply selecting what uav to follow, then
+                # I need to remember that in this action array... also it may not be able to
+                # be an array if different agents have different action spaces...
+                # NOTE: the action_arr is for a single agent, so above comment may not actually be an issue
                 action_arr = agent_nn.forward(observation_arr)
                 # Multiply by agent velocity
+                # TODO: Only multiply by velocity if we know that the action is a dx,dy
                 if ind <= self.num_rovers:
                     action_arr*=self.config["ccea"]["network"]["rover_max_velocity"]
                 else:
@@ -467,17 +512,20 @@ class CooperativeCoevolutionaryAlgorithm():
                     header += "hidden_poi_"+str(i)+"_x,hidden_poi_"+str(i)+"_y,"
                 # Observations
                 for i in range(self.num_rovers):
-                    for j in range(self.num_rover_sectors*3):
+                    for j in range(self.num_sensors_rovers[i]):
+                    # for j in range(self.num_rover_sectors*3):
                         header += "rover_"+str(i)+"_obs_"+str(j)+","
                 for i in range(self.num_uavs):
-                    for j in range(self.num_uav_sectors*3):
+                    for j in range(self.num_sensors_uavs[i]):
+                    # for j in range(self.num_uav_sectors*3):
                         header += "uav_"+str(i)+"_obs_"+str(j)+","
                 # Actions
                 for i in range(self.num_rovers):
                     header += "rover_"+str(i)+"_dx,rover_"+str(i)+"_dy,"
                 for i in range(self.num_uavs):
                     header += "uav_"+str(i)+"_dx,uav_"+str(i)+"_dy,"
-                header+="\n"
+                # There will always be a floating comma at the end. Replace it with newline
+                header = header[:-1] + '\n'
                 # Write out the header at the top of the csv
                 file.write(header)
                 # Now fill in the csv with the data

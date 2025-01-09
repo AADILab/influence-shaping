@@ -24,6 +24,9 @@ def calculateAngle(position_0, position_1):
 # Agents should be able to distinguish between rovers and uavs...
 # Unfortunately this means writing my own Lidar class that can differentiate between agent types
 class SmartLidar(rovers.Lidar[rovers.Density]):
+    """This low resolution lidar differntiates between agent types
+    (different sectors for rovers and uavs)
+    """
     def __init__(self, resolution, composition_policy, \
             agent_types, poi_types, \
             poi_subtypes: List[str], agent_observable_subtypes: List[List[str]],
@@ -190,6 +193,25 @@ class SmartLidar(rovers.Lidar[rovers.Density]):
 
         return rovers.tensor(state)
 
+class UavDistanceLidar(rovers.ISensor):
+    """This lidar gives distance to each uav in the environment"""
+    def __init__(self, agent_types):
+        super().__init__()
+        self.agent_types = agent_types
+
+    def scan(self, agent_pack):
+        agent = agent_pack.agents[agent_pack.agent_index]
+        distances = []
+        for i in range(agent_pack.agents.size()):
+            if self.agent_types[i] == "uav":
+                distance = calculateDistance(agent.position(), agent_pack.agents[i].position())
+                if distance <= agent.obs_radius():
+                    distances.append( distance / agent.obs_radius() )
+                else:
+                    distances.append(-1.0)
+
+        return rovers.tensor(distances)
+
 # First we're going to create a simple rover
 def createRover(obs_radius, reward_type, resolution, agent_types, poi_types):
     Discrete = thyme.spaces.Discrete
@@ -215,6 +237,11 @@ def createAgent(agent_config, agent_types, poi_types, poi_subtypes, agent_observ
     reward_type = agent_config['reward_type']
     obs_radius = agent_config['observation_radius']
     resolution = agent_config['resolution']
+
+    # Figure out what sensor type this agent is using
+    sensor_type = 'SmartLidar'
+    if 'sensor' in agent_config and 'type' in agent_config['sensor']:
+        sensor_type = agent_config['sensor']['type']
 
     # repackage indirect difference parameters
     IndirectDifferenceParameters = rovers.IndirectDifferenceParameters
@@ -247,23 +274,35 @@ def createAgent(agent_config, agent_types, poi_types, poi_subtypes, agent_observ
     Discrete = thyme.spaces.Discrete
     Reward = rovers.rewards.Global
 
-    return rovers.Rover[SmartLidar, Discrete, Reward](
-        indirect_difference_parameters,
-        reward_type,
-        type_,
-        obs_radius,
-        SmartLidar(
-            resolution=resolution, 
-            composition_policy=rovers.Density(), 
-            agent_types=agent_types, 
-            poi_types=poi_types,
-            poi_subtypes=poi_subtypes,
-            agent_observable_subtypes=agent_observable_subtypes,
-            accum_type=accum_type,
-            measurement_type=measurement_type
-        ),
-        Reward()
-    )
+    if sensor_type == 'SmartLidar':
+        return rovers.Rover[SmartLidar, Discrete, Reward](
+            indirect_difference_parameters,
+            reward_type,
+            type_,
+            obs_radius,
+            SmartLidar(
+                resolution=resolution,
+                composition_policy=rovers.Density(),
+                agent_types=agent_types,
+                poi_types=poi_types,
+                poi_subtypes=poi_subtypes,
+                agent_observable_subtypes=agent_observable_subtypes,
+                accum_type=accum_type,
+                measurement_type=measurement_type
+            ),
+            Reward()
+        )
+    elif sensor_type == 'UavDistanceLidar':
+        return rovers.Rover[UavDistanceLidar, Discrete, Reward](
+            indirect_difference_parameters,
+            reward_type,
+            type_,
+            obs_radius,
+            UavDistanceLidar(
+                agent_types=agent_types,
+            ),
+            Reward()
+        )
 
 # Now create a POI constraint where this POI can only be observed by rovers with "rover" type
 class AbstractRoverConstraint(rovers.IConstraint):
@@ -429,16 +468,6 @@ def createEnv(config):
         else:
             measurement_type.append('inverse_distance_squared')
 
-    # rovers_ = [
-    #     createRover(
-    #         obs_radius=rover["observation_radius"],
-    #         reward_type=rover["reward_type"],
-    #         resolution=rover["resolution"],
-    #         agent_types=agent_types,
-    #         poi_types=poi_types
-    #     )
-    #     for rover in config["env"]["agents"]["rovers"]
-    # ]
     rovers_ = [
         createAgent(
             agent_config=rover_config, 
