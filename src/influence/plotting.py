@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, Union, Tuple
 import os
 
 import pandas as pd
@@ -6,9 +6,51 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 from matplotlib.axes import Axes
 import numpy as np
+from pprint import pprint
 
 from influence.config import load_config
 from influence.parsing import PlotArgs, LinePlotArgs, BatchPlotArgs, BatchLinePlotArgs
+
+COMPARISON_NAMES = [
+    'Global',
+    'Difference',
+    'D-Indirect-Traj',
+    'D-Indirect-Timestep',
+    'D-Indirect-Timestep-Local',
+    'D-Indirect-Timestep-System',
+    'D-Indirect-Timestep-Difference',
+    'D-I-Sys-uavs-D-rovers',
+    'G-uavs-D-rovers'
+]
+COMPARISON_COLORS = list(plt.cm.colors.TABLEAU_COLORS.values())
+
+COMPARISON_COLORS_DICT = {
+    name: color for name, color in zip(COMPARISON_NAMES, COMPARISON_COLORS)
+}
+
+def sort_fitness_path_list(input_list: List[Path]):
+    # Filter into fitness shaping names and non-fitness shaping names
+    fit_list = []
+    nonfit_list = []
+    for path in input_list:
+        if path.name in COMPARISON_NAMES:
+            fit_list.append(path)
+        else:
+            nonfit_list.append(path)
+
+    # Now sort the fitness names so they match the COMPARISON_NAMES list
+    # NOTE: This assumes a maximum 1:1 correspondence between fitness shaping method names and directories
+    # If for whatever reason this assumption is wrong later, there could be issues.
+    sorted_fit_list = []
+    for name in COMPARISON_NAMES:
+        for path in fit_list:
+            if path.name == name:
+                sorted_fit_list.append(path)           
+
+    # Sort nonfit list using standard sorting
+    nonfit_list.sort()
+
+    return sorted_fit_list+nonfit_list
 
 def get_num_entities(labels: List[str]):
     num_rovers = 0
@@ -177,7 +219,7 @@ def plot_learning_curve(fitness_dir: Path, individual_agents: str, line_plot_arg
     fig = generate_learning_curve_plot(fitness_dir, individual_agents, line_plot_args, plot_args)
     plot_args.finish_figure(fig)
 
-def add_stat_learning_curve(ax: Axes, trials_dir: Path, label: str, line_plot_args: LinePlotArgs):
+def add_stat_learning_curve(ax: Axes, trials_dir: Path, label: str, line_plot_args: LinePlotArgs, color: Optional[Union[str,Tuple[float]]] = None):
     # Get the directories of trials
     dirs = [trials_dir/dir for dir in os.listdir(trials_dir) if 'trial_' in dir]
 
@@ -201,8 +243,12 @@ def add_stat_learning_curve(ax: Axes, trials_dir: Path, label: str, line_plot_ar
     upp_err = line_plot_args.get_ys(upp_err)
 
     # Plot statistics
-    ax.plot(gens, avg, label=label)
-    ax.fill_between(gens, low_err, upp_err, alpha=0.2)
+    if color is None:
+        ax.plot(gens, avg, label=label)
+        ax.fill_between(gens, low_err, upp_err, alpha=0.2)
+    else:
+        ax.plot(gens, avg, label=label, color=color)
+        ax.fill_between(gens, low_err, upp_err, alpha=0.2, facecolor=color)
 
     return gens
 
@@ -247,7 +293,7 @@ def plot_stat_learning_curve(trials_dir, individual_trials, line_plot_args, plot
     fig = generate_stat_learning_curve_plot(trials_dir, individual_trials, line_plot_args, plot_args)
     plot_args.finish_figure(fig)
 
-def generate_comparison_plot(experiment_dir: Path, line_plot_args: LinePlotArgs, plot_args: PlotArgs):
+def generate_comparison_plot(experiment_dir: Path, use_fitness_colors: bool, line_plot_args: LinePlotArgs, plot_args: PlotArgs):
     """Generate plot of experiment using experiment directory
     experiment_dir is parent of parent of trial directories
     """
@@ -256,9 +302,21 @@ def generate_comparison_plot(experiment_dir: Path, line_plot_args: LinePlotArgs,
     # Get the parent dirs of trials
     dirs = [experiment_dir/dir for dir in os.listdir(experiment_dir)]
 
+    # If we are using the fitness color set, then sort the methods so order is always consistent
+    sorted_dirs = sort_fitness_path_list(dirs)
+
     xlim = 0
-    for trials_dir in dirs:
-        gens = add_stat_learning_curve(ax, trials_dir, label=trials_dir.name, line_plot_args=line_plot_args)
+    for i, trials_dir in enumerate(sorted_dirs):
+        color=None
+        if use_fitness_colors:
+            if trials_dir.name in COMPARISON_NAMES:
+                color=COMPARISON_COLORS_DICT[trials_dir.name]
+            else:
+                # Don't use any reserved colors if we are plotting using consistent fitness colors
+                # and this stat curve is not one of the named fitness shaping methods with an assigned color
+                color = COMPARISON_COLORS[(i+len(COMPARISON_NAMES))%len(COMPARISON_COLORS)]
+        gens = add_stat_learning_curve(ax, trials_dir, label=trials_dir.name, line_plot_args=line_plot_args, color=color)
+
         if gens[-1] > xlim:
             xlim = gens[-1]
     
@@ -273,8 +331,8 @@ def generate_comparison_plot(experiment_dir: Path, line_plot_args: LinePlotArgs,
 
     return fig
 
-def plot_comparison(experiment_dir: Path, line_plot_args: LinePlotArgs, plot_args: PlotArgs):
-    fig = generate_comparison_plot(experiment_dir, line_plot_args, plot_args)
+def plot_comparison(experiment_dir: Path, use_fitness_colors: bool, line_plot_args: LinePlotArgs, plot_args: PlotArgs):
+    fig = generate_comparison_plot(experiment_dir, use_fitness_colors, line_plot_args, plot_args)
     plot_args.finish_figure(fig)
 
 def get_example_trial_dirs(parent_dir: Path):
@@ -302,7 +360,7 @@ def get_example_trial_dirs(parent_dir: Path):
 
     return low_trial_dir, med_trial_dir, high_trial_dir
 
-def generate_experiment_tree_plots(root_dir: Path, out_dir: Path, batch_plot_args: BatchPlotArgs, batch_line_plot_args: BatchLinePlotArgs):
+def generate_experiment_tree_plots(root_dir: Path, out_dir: Path, use_fitness_colors: bool, batch_plot_args: BatchPlotArgs, batch_line_plot_args: BatchLinePlotArgs):
     """Generate all the plots in this experiment tree"""
     
     experiment_dirs = set()
@@ -318,6 +376,7 @@ def generate_experiment_tree_plots(root_dir: Path, out_dir: Path, batch_plot_arg
 
         plot_comparison(
             experiment_dir=dir_,
+            use_fitness_colors=use_fitness_colors,
             line_plot_args=batch_line_plot_args.build_line_plot_args(),
             plot_args=batch_plot_args.build_plot_args(
                 title=dir_name, output=out_dir/dir_name/'comparison.png'
@@ -380,8 +439,8 @@ def generate_joint_trajectory_tree_plots(root_dir: Path, out_dir: Path, individu
             )
         )
 
-def plot_comparison_tree(root_dir: Path, out_dir: Path, batch_plot_args: BatchPlotArgs, batch_line_plot_args: BatchLinePlotArgs):
-    generate_experiment_tree_plots(root_dir, out_dir, batch_plot_args, batch_line_plot_args)
+def plot_comparison_tree(root_dir: Path, out_dir: Path, use_fitness_colors:bool, batch_plot_args: BatchPlotArgs, batch_line_plot_args: BatchLinePlotArgs):
+    generate_experiment_tree_plots(root_dir, out_dir, use_fitness_colors, batch_plot_args, batch_line_plot_args)
 
 def plot_joint_trajectory_tree(root_dir: Path, out_dir: Path, individual_colors: bool, no_shading: bool, downsample: int, batch_plot_args: BatchPlotArgs):
     generate_joint_trajectory_tree_plots(root_dir, out_dir, individual_colors, no_shading, downsample, batch_plot_args)

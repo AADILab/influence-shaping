@@ -19,10 +19,10 @@ if __name__ == '__main__':
         type=str
     )
     parser.add_argument(
-        '--individual_agents',
-        help="include individual agents' shaped rewards",
+        '--fitness_colors',
+        help='use defined colors for plotting results of fitness shaping methods',
         action='store_true'
     )
     args = parser.parse_args()
 
-    plot_comparison(Path(args.comparison_dir), parser.dump_line_plot_args(args), parser.dump_plot_args(args))
+    plot_comparison(Path(args.comparison_dir), args.fitness_colors, parser.dump_line_plot_args(args), parser.dump_plot_args(args))

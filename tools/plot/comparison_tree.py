@@ -22,8 +22,13 @@ if __name__ == '__main__':
         help='directory to save plots to',
         type=str
     )
+    parser.add_argument(
+        '--fitness_colors',
+        help='plot with consistent colors based on names of fitness shaping methods',
+        action='store_true'
+    )
     parser.add_plot_args()
 
     args = parser.parse_args()
 
-    plot_comparison_tree(Path(args.root_dir), Path(args.out_dir), parser.dump_batch_plot_args(args), parser.dump_batch_line_plot_args(args))
+    plot_comparison_tree(Path(args.root_dir), Path(args.out_dir), args.fitness_colors, parser.dump_batch_plot_args(args), parser.dump_batch_line_plot_args(args))
