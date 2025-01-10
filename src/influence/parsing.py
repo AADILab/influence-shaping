@@ -57,6 +57,7 @@ class PlotArgs():
             if not os.path.exists(self.output.parent):
                 os.makedirs(self.output.parent)
             fig.savefig(self.output)
+            plt.close(fig)
         
         if not self.silent:
             plt.show()

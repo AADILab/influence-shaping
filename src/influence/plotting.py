@@ -249,6 +249,11 @@ def add_stat_learning_curve(ax: Axes, trials_dir: Path, label: str, line_plot_ar
     else:
         ax.plot(gens, avg, label=label, color=color)
         ax.fill_between(gens, low_err, upp_err, alpha=0.2, facecolor=color)
+    
+    # Set ax ylim based on poi values in config
+    config = load_config(trials_dir/'config.yaml')
+    high_y = sum(poi_config['value'] for poi_config in config['env']['pois']['hidden_pois']+config['env']['pois']['rover_pois'])
+    ax.set_ylim([0, high_y])
 
     return gens
 
@@ -283,7 +288,10 @@ def generate_stat_learning_curve_plot(trials_dir: Path, individual_trials: bool,
     ax.set_ylabel('Performance')
 
     ax.set_xlim([0, gens[-1]])
-    ax.set_ylim([0, 1.1])
+    # Set the y limit based on the values of pois in the config
+    config = load_config(trials_dir/'config.yaml')
+    high_y = sum([poi_config['value'] for poi_config in config['env']['pois']['hidden_pois']+config['env']['pois']['rover_pois']])
+    ax.set_ylim([0, high_y])
 
     plot_args.apply(ax)
 
@@ -292,6 +300,36 @@ def generate_stat_learning_curve_plot(trials_dir: Path, individual_trials: bool,
 def plot_stat_learning_curve(trials_dir, individual_trials, line_plot_args, plot_args):
     fig = generate_stat_learning_curve_plot(trials_dir, individual_trials, line_plot_args, plot_args)
     plot_args.finish_figure(fig)
+
+def generate_stat_learning_curve_tree_plots(root_dir: Path, out_dir: Path, individual_trials: bool, batch_plot_args: BatchPlotArgs, batch_line_plot_args: BatchLinePlotArgs):
+    """Generate all the stat learning curve plots in this experiment tree"""
+
+    experiment_dirs = set()
+    for root, _, files in os.walk(root_dir):
+        if 'config.yaml' in files:
+            experiment_dirs.add(Path(root))
+    
+    for dir_ in experiment_dirs:
+        dir_list = str(dir_).split('/')
+        dir_name = '/'.join(dir_list[dir_list.index(root_dir.name)+1:])
+
+        file_append = ''
+        if individual_trials:
+            file_append+='.ind'
+        if batch_line_plot_args.window_size is not None:
+            file_append+='.w'+str(batch_line_plot_args.window_size)
+        
+        plot_stat_learning_curve(
+            trials_dir=dir_,
+            individual_trials=individual_trials,
+            line_plot_args=batch_line_plot_args.build_line_plot_args(),
+            plot_args=batch_plot_args.build_plot_args(
+                title=dir_name, output=out_dir/dir_name/('stat_learning_curve'+file_append+'.png')
+            )
+        )
+
+def plot_stat_learning_curve_tree(root_dir: Path, out_dir: Path, individual_trials: bool, batch_plot_args: BatchPlotArgs, batch_line_plot_args: BatchLinePlotArgs):
+    generate_stat_learning_curve_tree_plots(root_dir, out_dir, individual_trials, batch_plot_args, batch_line_plot_args)
 
 def generate_comparison_plot(experiment_dir: Path, use_fitness_colors: bool, line_plot_args: LinePlotArgs, plot_args: PlotArgs):
     """Generate plot of experiment using experiment directory
@@ -374,12 +412,16 @@ def generate_experiment_tree_plots(root_dir: Path, out_dir: Path, use_fitness_co
         dir_list = str(dir_).split("/")
         dir_name = "/".join(dir_list[dir_list.index(root_dir.name)+1:])
 
+        file_append = ''
+        if batch_line_plot_args.window_size is not None:
+            file_append+='.w'+str(batch_line_plot_args.window_size)
+
         plot_comparison(
             experiment_dir=dir_,
             use_fitness_colors=use_fitness_colors,
             line_plot_args=batch_line_plot_args.build_line_plot_args(),
             plot_args=batch_plot_args.build_plot_args(
-                title=dir_name, output=out_dir/dir_name/'comparison.png'
+                title=dir_name, output=out_dir/dir_name/('comparison'+file_append+'.png')
             )
         )
 
