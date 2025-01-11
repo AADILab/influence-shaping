@@ -3,7 +3,7 @@ import numpy as np
 
 # Neural network class for evaluation
 class NeuralNetwork:
-    def __init__(self, num_inputs: int, num_hidden: Union[int, List[int]], num_outputs: int) -> None:
+    def __init__(self, num_inputs: int, num_hidden: Union[int, List[int]], num_outputs: int, hidden_activation_func: str, output_activation_func: str) -> None:
         if type(num_hidden) == int:
             num_hidden = [num_hidden]
         self.num_inputs, self.num_hidden, self.num_outputs = num_inputs, num_hidden, num_outputs
@@ -15,6 +15,16 @@ class NeuralNetwork:
         self.weights = self.initWeights()
         # Store shape and size for later
         self.num_weights = self.calculateNumWeights()
+
+        if hidden_activation_func == 'tanh':
+            self.hidden_activation = np.tanh
+        elif hidden_activation_func == 'relu':
+            self.hidden_activation = self.relu
+        
+        if output_activation_func == 'tanh':
+            self.output_activation = np.tanh
+        elif output_activation_func == 'softmax':
+            self.output_activation = self.softmax
 
     def shape(self):
         return (self.num_inputs, self.num_hidden, self.num_outputs)
@@ -38,7 +48,10 @@ class NeuralNetwork:
             # Feedforward through the weights w. summations
             f = b.dot(self.weights[layer_ind])
             # Activate the summations
-            a = self.activation(f)
+            if layer_ind < self.num_layers-1:
+                a = self.hidden_activation(f)
+            else:
+                a = self.output_activation(f)
         return a
 
     def setWeights(self, list_of_weights: List[float])->None:
@@ -66,8 +79,19 @@ class NeuralNetwork:
                     weight_list.append(element)
         return weight_list
 
-    def activation(self, arr: np.ndarray) -> np.ndarray:
-        return np.tanh(arr)
+    # def activation(self, arr: np.ndarray) -> np.ndarray:
+    #     return np.tanh(arr)
+
+    def relu(self, arr: np.ndarray) -> np.ndarray:
+        res = arr.copy()
+        res[res<0] = 0
+        return res
+
+    def softmax(self, arr: np.ndarray) -> np.ndarray:
+        """Compute a numerically stable softmax"""
+        e_x = np.exp(arr - np.max(arr))
+        return e_x / e_x.sum()
+
 
     def calculateNumWeights(self) -> int:
         return sum([w.size for w in self.weights])

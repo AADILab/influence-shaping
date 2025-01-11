@@ -21,6 +21,28 @@ import yaml
 import pprint
 from tqdm import tqdm
 
+def bound_value(value, upper, lower):
+    """Bound the value between an upper and lower bound"""
+    if value > upper:
+        return upper
+    elif value < lower:
+        return lower
+    else:
+        return value
+    
+def bound_velocity(velocity, max_velocity):
+    """Bound the velocity to meet max velocity constraint"""
+    if velocity > max_velocity:
+        return max_velocity
+    elif velocity < -max_velocity:
+        return -max_velocity
+    else:
+        return velocity
+
+def bound_velocity_arr(velocity_arr, max_velocity):
+    """Bound the velocities in a 1D array to meet the max velocity constraint"""
+    return np.array([bound_velocity(velocity, max_velocity) for velocity in velocity_arr])
+
 class JointTrajectory():
     def __init__(self, joint_state_trajectory, joint_observation_trajectory, joint_action_trajectory):
         self.states = joint_state_trajectory
@@ -159,19 +181,38 @@ class CooperativeCoevolutionaryAlgorithm():
     def get_template_nns(self, agent_type: str):
         template_nns = []
         for i in range(len(self.config['env']['agents'][agent_type])):
-            if (
-                'sensor' not in self.config['env']['agents'][agent_type][i] or
-                'type' not in self.config['env']['agents'][agent_type][i]['sensor'] or
-                self.config['env']['agents'][agent_type][i]['sensor']['type'] == 'SmartLidar'
-            ):
-                num_sectors = int(360/self.config["env"]["agents"][agent_type][i]["resolution"])
-                template_nns.append(
-                    NeuralNetwork(num_inputs=3*num_sectors, num_hidden=self.num_hidden, num_outputs=2)
-                )
+            # Fill defaults for sensor and action
+            if 'sensor' not in self.config['env']['agents'][agent_type][i]:
+                self.config['env']['agents'][agent_type][i]['sensor'] = {'type' : 'SmartLidar'}
+            elif 'type' not in self.config['env']['agents'][agent_type][i]:
+                self.config['env']['agents'][agent_type][i]['sensor']['type'] = 'SmartLidar'
+            if 'action' not in self.config['env']['agents'][agent_type][i]:
+                self.config['env']['agents'][agent_type][i]['action'] = {'type': 'dxdy'}
+            elif 'type' not in self.config['env']['agents'][agent_type][i]['action']:
+                self.config['env']['agents'][agent_type][i]['action']['type'] = 'dxdy'
+            # Figure out number of inputs to nn from observation size
+            if self.config['env']['agents'][agent_type][i]['sensor']['type'] == 'SmartLidar':
+                num_inputs = 3*int(360/self.config["env"]["agents"][agent_type][i]["resolution"])
             elif self.config['env']['agents'][agent_type][i]['sensor']['type'] == 'UavDistanceLidar':
-                template_nns.append(
-                    NeuralNetwork(num_inputs=self.num_uavs, num_hidden=self.num_hidden, num_outputs=self.num_uavs+1)
+                num_inputs = self.num_uavs
+            # Figure out number of outputs from action
+            if self.config['env']['agents'][agent_type][i]['action']['type'] == 'dxdy':
+                num_outputs = 2
+                output_activation_function='tanh'
+            elif self.config['action']['type'] == 'pick_uav':
+                num_outputs = self.num_uavs+1
+                output_activation_function='softmax'
+            # Create template nn
+            template_nns.append(
+                NeuralNetwork(
+                    num_inputs=num_inputs, 
+                    num_hidden=self.num_hidden, 
+                    num_outputs=num_outputs, 
+                    hidden_activation_func='tanh', 
+                    output_activation_func=output_activation_function
                 )
+            )
+
         return template_nns
 
     def generateTemplateNN(self, num_sectors):
@@ -263,7 +304,6 @@ class CooperativeCoevolutionaryAlgorithm():
             np.random.seed(team.seed)
 
         # Set up networks
-        # TODO: AND action space of each rover in the config
         # TODO: Make it so that each agent can have a different size NN?
         #       (This lets us give rovers one size and uavs a different size when we change their
         #        observations and actions)
@@ -307,20 +347,47 @@ class CooperativeCoevolutionaryAlgorithm():
                 flist = list(filter(None, slist))
                 nlist = [float(s) for s in flist]
                 observation_arr = np.array(nlist, dtype=np.float64)
-                #TODO: If a rover's action is simply selecting what uav to follow, then
-                # I need to remember that in this action array... also it may not be able to
-                # be an array if different agents have different action spaces...
-                # NOTE: the action_arr is for a single agent, so above comment may not actually be an issue
                 action_arr = agent_nn.forward(observation_arr)
+                if (self.config['env']['agents']['rovers']+self.config['env']['agents']['uavs'])[ind]['action']['type'] == 'dxdy':
+                # Multiply by agent velocity
                 # Multiply by agent velocity
                 # TODO: Only multiply by velocity if we know that the action is a dx,dy
-                if ind <= self.num_rovers:
-                    action_arr*=self.config["ccea"]["network"]["rover_max_velocity"]
-                else:
-                    action_arr*=self.config["ccea"]["network"]["uav_max_velocity"]
+                    # Multiply by agent velocity
+                # TODO: Only multiply by velocity if we know that the action is a dx,dy
+                    if ind <= self.num_rovers:
+                        input_action_arr=action_arr*self.config["ccea"]["network"]["rover_max_velocity"]
+                    else:
+                        input_action_arr=action_arr*self.config["ccea"]["network"]["uav_max_velocity"]
+                elif (self.config['env']['agents']['rovers']+self.config['env']['agents']['uavs'])[ind]['action']['type'] == 'pick_uav':
+                    # The action arr is the same size as however many uavs there are
+                    # We need to get the argmax of this array to tell us which uav to follow
+                    uav_ind = np.argmax(action_arr)
+                    if uav_ind == self.num_uavs:
+                        # Rover chose the null uav, which means stay still. Don't follow anyone
+                        input_action_arr = np.array([0.0, 0.0])
+                    else:
+                        # Rover chose a uav, so compute a dx,dy where agent makes the biggest step possible towards its chosen uav
+                        uav_ind_in_env = self.num_rovers+uav_ind
+                        uav_position = np.array([env.rovers()[uav_ind_in_env].position().x, env.rovers()[uav_ind_in_env].position().y])
+                        agent_position = np.array([env.rovers()[ind].position().x, env.rovers()[ind].position().y])
+                        input_action_arr = uav_position - agent_position
+                        # Impose velocity boundaries on this delta step
+                        if ind < self.num_rovers: # This is a rover
+                            # Impose rover velocity boundaries
+                            input_action_arr = bound_velocity_arr(
+                                velocity_arr=input_action_arr,
+                                max_velocity=self.config['ccea']['network']['rover_max_velocity']
+                            )
+                        else: # This is a uav
+                            # Impose uav velocity boundaries
+                            input_action_arr = bound_velocity_arr(
+                                velocity_arr=input_action_arr, 
+                                max_velocity=self.config['ccea']['network']['uav_max_velocity']
+                            )
+
                 # Save this info for debugging purposes
                 observation_arrs.append(observation_arr)
-                actions_arrs.append(action_arr)
+                actions_arrs.append(input_action_arr)
             for action_arr in actions_arrs:
                 action = rovers.tensor(action_arr)
                 actions.append(action)
