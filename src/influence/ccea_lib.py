@@ -6,7 +6,7 @@ from tqdm import tqdm
 import multiprocessing
 import random
 import pickle
-from typing import List
+from typing import List, Union, Optional
 
 from influence.evo_network import NeuralNetwork
 
@@ -42,6 +42,17 @@ def bound_velocity(velocity, max_velocity):
 def bound_velocity_arr(velocity_arr, max_velocity):
     """Bound the velocities in a 1D array to meet the max velocity constraint"""
     return np.array([bound_velocity(velocity, max_velocity) for velocity in velocity_arr])
+
+class FollowPolicy():
+    @staticmethod
+    def forward(observation: np.ndarray) -> int:
+        if all(observation==-1):
+            return [0.0 for _ in observation]+[1]
+        else:
+            f_obs = [o if o !=-1 else np.inf for o in observation]
+            action = [0.0 for _ in observation]
+            action[np.argmin(f_obs)] = 1
+            return action
 
 class JointTrajectory():
     def __init__(self, joint_state_trajectory, joint_observation_trajectory, joint_action_trajectory):
@@ -84,8 +95,9 @@ class CooperativeCoevolutionaryAlgorithm():
 
         self.num_steps = self.config["ccea"]["num_steps"]
 
-        self.template_nns = self.get_template_nns('rovers')+self.get_template_nns('uavs')
-        self.nn_sizes = [template_nn.num_weights for template_nn in self.template_nns]
+        self.template_policies = self.get_template_policies('rovers')+self.get_template_policies('uavs')
+        # self.template_nns = self.get_template_nns('rovers')+self.get_template_nns('uavs')
+        self.nn_sizes = [template_nn.num_weights if type(template_nn) is NeuralNetwork else None for template_nn in self.template_policies]
 
         # Make sure each agent has a sensor type config set
         for agent_config in self.config['env']['agents']['rovers']+self.config['env']['agents']['uavs']:
@@ -178,10 +190,32 @@ class CooperativeCoevolutionaryAlgorithm():
     def __setstate__(self, state):
         self.__dict__.update(state)
 
-    def get_template_nns(self, agent_type: str):
-        template_nns = []
+    def get_template_nn(self, agent_config: dict):
+        # Figure out number of inputs to nn from observation size
+        if agent_config['sensor']['type'] == 'SmartLidar':
+            num_inputs = 3*int(360/agent_config["resolution"])
+        elif agent_config['sensor']['type'] == 'UavDistanceLidar':
+            num_inputs = self.num_uavs
+        # Figure out number of outputs from action
+        if agent_config['action']['type'] == 'dxdy':
+            num_outputs = 2
+            output_activation_function='tanh'
+        elif agent_config['action']['type'] == 'pick_uav':
+            num_outputs = self.num_uavs+1
+            output_activation_function='softmax'
+        # Create template nn
+        return NeuralNetwork(
+            num_inputs=num_inputs, 
+            num_hidden=self.num_hidden, 
+            num_outputs=num_outputs, 
+            hidden_activation_func='tanh', 
+            output_activation_func=output_activation_function
+        )
+
+    def get_template_policies(self, agent_type: str):
+        template_policies = []
         for i in range(len(self.config['env']['agents'][agent_type])):
-            # Fill defaults for sensor and action
+            # Fill defaults for sensor, action, policy
             if 'sensor' not in self.config['env']['agents'][agent_type][i]:
                 self.config['env']['agents'][agent_type][i]['sensor'] = {'type' : 'SmartLidar'}
             elif 'type' not in self.config['env']['agents'][agent_type][i]:
@@ -190,30 +224,17 @@ class CooperativeCoevolutionaryAlgorithm():
                 self.config['env']['agents'][agent_type][i]['action'] = {'type': 'dxdy'}
             elif 'type' not in self.config['env']['agents'][agent_type][i]['action']:
                 self.config['env']['agents'][agent_type][i]['action']['type'] = 'dxdy'
-            # Figure out number of inputs to nn from observation size
-            if self.config['env']['agents'][agent_type][i]['sensor']['type'] == 'SmartLidar':
-                num_inputs = 3*int(360/self.config["env"]["agents"][agent_type][i]["resolution"])
-            elif self.config['env']['agents'][agent_type][i]['sensor']['type'] == 'UavDistanceLidar':
-                num_inputs = self.num_uavs
-            # Figure out number of outputs from action
-            if self.config['env']['agents'][agent_type][i]['action']['type'] == 'dxdy':
-                num_outputs = 2
-                output_activation_function='tanh'
-            elif self.config['action']['type'] == 'pick_uav':
-                num_outputs = self.num_uavs+1
-                output_activation_function='softmax'
-            # Create template nn
-            template_nns.append(
-                NeuralNetwork(
-                    num_inputs=num_inputs, 
-                    num_hidden=self.num_hidden, 
-                    num_outputs=num_outputs, 
-                    hidden_activation_func='tanh', 
-                    output_activation_func=output_activation_function
-                )
-            )
-
-        return template_nns
+            if 'policy' not in self.config['env']['agents'][agent_type][i]:
+                self.config['env']['agents'][agent_type][i]['policy'] = {'type': 'network'}
+            elif 'type' not in self.config['env']['agents'][agent_type][i]['policy']:
+                self.config['env']['agents'][agent_type][i]['policy']['type'] = 'network'
+            # Now figure out what template policy this agent uses
+            if self.config['env']['agents'][agent_type][i]['policy']['type'] == 'network':
+                template_policy = self.get_template_nn(self.config['env']['agents'][agent_type][i])
+            elif self.config['env']['agents'][agent_type][i]['policy']['type'] == 'follow':
+                template_policy = FollowPolicy()
+            template_policies.append(template_policy)
+        return template_policies
 
     def generateTemplateNN(self, num_sectors):
         agent_nn = NeuralNetwork(num_inputs=3*num_sectors, num_hidden=self.num_hidden, num_outputs=2)
@@ -241,18 +262,27 @@ class CooperativeCoevolutionaryAlgorithm():
         pop = []
         # Generating subpopulation for each agent
         for agent_id in range(self.num_rovers+self.num_uavs):
-            # Filling subpopulation for each agent
-            subpop=[]
-            for _ in range(self.config["ccea"]["population"]["subpopulation_size"]):
-                subpop.append(self.generateIndividual(individual_size=self.nn_sizes[agent_id]))
+            if type(self.template_policies[agent_id]) is NeuralNetwork:
+                # Filling subpopulation for each agent
+                subpop=[]
+                for _ in range(self.config["ccea"]["population"]["subpopulation_size"]):
+                    subpop.append(self.generateIndividual(individual_size=self.nn_sizes[agent_id]))
+            else:
+                # Subpopulation of None for fixed policies
+                subpop=[]
+                for _ in range(self.config["ccea"]["population"]["subpopulation_size"]):
+                    subpop.append(None)
             pop.append(subpop)
         return pop
 
     def formEvaluationTeam(self, population):
         policies = []
         for subpop in population:
-            # Use max with a key function to get the individual with the highest fitness[0] value
-            best_ind = max(subpop, key=lambda ind: ind.fitness.values[0])
+            if subpop[0] is None:
+                best_ind = 0
+            else:
+                # Use max with a key function to get the individual with the highest fitness[0] value
+                best_ind = max(subpop, key=lambda ind: ind.fitness.values[0])
             policies.append(best_ind)
         return TeamInfo(policies, self.get_seed())
 
@@ -286,16 +316,61 @@ class CooperativeCoevolutionaryAlgorithm():
                 teams.append(TeamInfo(policies, self.get_seed()))
 
         return teams
+    
+    def buildMap(self, teams):
+        return self.map(self.evaluateTeam, teams)
+        # if self.use_multiprocessing:
+        #     return self.map(
+        #         self.evaluateTeam,
+        #         zip(
+        #             teams,
+        #             [self.template_policies for _ in teams],
+        #             [self.config for _ in teams],
+        #             [self.num_rovers for _ in teams],
+        #             [self.num_uavs for _ in teams],
+        #             [self.num_steps for _ in teams]
+        #         )
+        #     )
+        # else:
+        #     return self.map(
+        #         self.evaluateTeam, 
+        #         teams,
+        #         [self.template_policies for _ in teams],
+        #         [self.config for _ in teams],
+        #         [self.num_rovers for _ in teams],
+        #         [self.num_uavs for _ in teams],
+        #         [self.num_steps for _ in teams]
+        #     )
 
     def evaluateTeams(self, teams: List[TeamInfo]):
         if self.use_multiprocessing:
-            jobs = self.map(self.evaluateTeam, teams)
+            jobs = self.buildMap(teams)
             eval_infos = jobs.get()
         else:
-            eval_infos = list(self.map(self.evaluateTeam, teams))
+            eval_infos = list(self.buildMap(teams))
         return eval_infos
-
+    
     def evaluateTeam(self, team: TeamInfo, compute_team_fitness=True):
+        return self.evaluateTeamStatic(
+            team,
+            self.template_policies,
+            self.config,
+            self.num_rovers,
+            self.num_uavs,
+            self.num_steps,
+            compute_team_fitness
+        )
+
+    @staticmethod
+    def evaluateTeamStatic(
+        team: TeamInfo, 
+        template_policies: List[Union[NeuralNetwork|FollowPolicy]],
+        config: dict,
+        num_rovers: int,
+        num_uavs: int,
+        num_steps: int,
+        compute_team_fitness=True
+    ):
         # Set up random seed if one was specified
         if not isinstance(team, TeamInfo):
             raise Exception('team should be TeamInfo')
@@ -307,14 +382,16 @@ class CooperativeCoevolutionaryAlgorithm():
         # TODO: Make it so that each agent can have a different size NN?
         #       (This lets us give rovers one size and uavs a different size when we change their
         #        observations and actions)
-        agent_nns = [deepcopy(template_nn) for template_nn in self.template_nns]
+        # agent_nns = [deepcopy(template_nn) for template_nn in self.template_nns]
+        agent_policies = [deepcopy(template_policy) for template_policy in template_policies]
 
         # Load in the weights
-        for nn, individual in zip(agent_nns, team.policies):
-            nn.setWeights(individual)
+        for nn, individual in zip(agent_policies, team.policies):
+            if type(nn) is NeuralNetwork:
+                nn.setWeights(individual)
 
         # Set up the enviornment
-        env = createEnv(self.config)
+        env = createEnv(config)
 
         observations, _ = env.reset()
 
@@ -333,12 +410,12 @@ class CooperativeCoevolutionaryAlgorithm():
         joint_observation_trajectory = [observations_arrs]
         joint_action_trajectory = []
 
-        for _ in range(self.num_steps):
+        for _ in range(num_steps):
             # Compute the actions of all rovers
             observation_arrs = []
             actions_arrs = []
             actions = []
-            for ind, (observation, agent_nn) in enumerate(zip(observations, agent_nns)):
+            for ind, (observation, agent_nn) in enumerate(zip(observations, agent_policies)):
                 # observation_arr = []
                 # for i in range(len(observation)):
                 #     observation_arr.append(observation(i))
@@ -348,41 +425,41 @@ class CooperativeCoevolutionaryAlgorithm():
                 nlist = [float(s) for s in flist]
                 observation_arr = np.array(nlist, dtype=np.float64)
                 action_arr = agent_nn.forward(observation_arr)
-                if (self.config['env']['agents']['rovers']+self.config['env']['agents']['uavs'])[ind]['action']['type'] == 'dxdy':
+                if (config['env']['agents']['rovers']+config['env']['agents']['uavs'])[ind]['action']['type'] == 'dxdy':
                 # Multiply by agent velocity
                 # Multiply by agent velocity
                 # TODO: Only multiply by velocity if we know that the action is a dx,dy
                     # Multiply by agent velocity
                 # TODO: Only multiply by velocity if we know that the action is a dx,dy
-                    if ind <= self.num_rovers:
-                        input_action_arr=action_arr*self.config["ccea"]["network"]["rover_max_velocity"]
+                    if ind <= num_rovers:
+                        input_action_arr=action_arr*config["ccea"]["network"]["rover_max_velocity"]
                     else:
-                        input_action_arr=action_arr*self.config["ccea"]["network"]["uav_max_velocity"]
-                elif (self.config['env']['agents']['rovers']+self.config['env']['agents']['uavs'])[ind]['action']['type'] == 'pick_uav':
+                        input_action_arr=action_arr*config["ccea"]["network"]["uav_max_velocity"]
+                elif (config['env']['agents']['rovers']+config['env']['agents']['uavs'])[ind]['action']['type'] == 'pick_uav':
                     # The action arr is the same size as however many uavs there are
                     # We need to get the argmax of this array to tell us which uav to follow
                     uav_ind = np.argmax(action_arr)
-                    if uav_ind == self.num_uavs:
+                    if uav_ind == num_uavs:
                         # Rover chose the null uav, which means stay still. Don't follow anyone
                         input_action_arr = np.array([0.0, 0.0])
                     else:
                         # Rover chose a uav, so compute a dx,dy where agent makes the biggest step possible towards its chosen uav
-                        uav_ind_in_env = self.num_rovers+uav_ind
+                        uav_ind_in_env = int(num_rovers+uav_ind)
                         uav_position = np.array([env.rovers()[uav_ind_in_env].position().x, env.rovers()[uav_ind_in_env].position().y])
                         agent_position = np.array([env.rovers()[ind].position().x, env.rovers()[ind].position().y])
                         input_action_arr = uav_position - agent_position
                         # Impose velocity boundaries on this delta step
-                        if ind < self.num_rovers: # This is a rover
+                        if ind < num_rovers: # This is a rover
                             # Impose rover velocity boundaries
                             input_action_arr = bound_velocity_arr(
                                 velocity_arr=input_action_arr,
-                                max_velocity=self.config['ccea']['network']['rover_max_velocity']
+                                max_velocity=config['ccea']['network']['rover_max_velocity']
                             )
                         else: # This is a uav
                             # Impose uav velocity boundaries
                             input_action_arr = bound_velocity_arr(
                                 velocity_arr=input_action_arr, 
-                                max_velocity=self.config['ccea']['network']['uav_max_velocity']
+                                max_velocity=config['ccea']['network']['uav_max_velocity']
                             )
 
                 # Save this info for debugging purposes
@@ -434,8 +511,9 @@ class CooperativeCoevolutionaryAlgorithm():
         for num_individual in range(self.num_mutants):
             mutant_id = num_individual + self.n_elites
             for subpop in population:
-                self.mutateIndividual(subpop[mutant_id])
-                del subpop[mutant_id].fitness.values
+                if subpop[0] is not None:
+                    self.mutateIndividual(subpop[mutant_id])
+                    del subpop[mutant_id].fitness.values
 
     def selectSubPopulation(self, subpopulation):
         # Get the best N individuals
@@ -456,8 +534,11 @@ class CooperativeCoevolutionaryAlgorithm():
         offspring = []
         # For each subpopulation in the population
         for subpop in population:
-            # Perform a selection on that subpopulation and add it to the offspring population
-            offspring.append(self.selectSubPopulation(subpop))
+            if subpop[0] is not None:
+                # Perform a selection on that subpopulation and add it to the offspring population
+                offspring.append(self.selectSubPopulation(subpop))
+            else:
+                offspring.append(subpop)
         return offspring
 
     def shuffle(self, population):
@@ -494,7 +575,8 @@ class CooperativeCoevolutionaryAlgorithm():
                 # And now get that back to the individuals
                 fitnesses = tuple([(f,) for f in average_fitnesses])
                 for individual, fit in zip(team.policies, fitnesses):
-                    individual.fitness.values = fit
+                    if individual is not None:
+                        individual.fitness.values = fit
 
     def setPopulation(self, population, offspring):
         for subpop, subpop_offspring in zip(population, offspring):

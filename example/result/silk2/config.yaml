@@ -62,7 +62,23 @@ env:
         network:
           hidden_layers: [10] # List of int
       action:
-        type: dxdy # OR pick_uav (make it so it can pick to not follow any uav and just stay still)
+        type: pick_uav # OR pick_uav (make it so it can pick to not follow any uav and just stay still)
+    - observation_radius: 5.0
+      position:
+        fixed:
+        - 25.0
+        - 25.0
+        spawn_rule: fixed
+      resolution: 90
+      reward_type: Global
+      sensor:
+        type: UavDistanceLidar # OR SmartLidar
+        accum_type: average
+        measurement_type: exponential_negative_distance
+      policy:
+        type: follow # OR follow
+      action:
+        type: pick_uav # OR pick_uav (make it so it can pick to not follow any uav and just stay still)
     uavs:
     - observable_subtypes:
       - A
