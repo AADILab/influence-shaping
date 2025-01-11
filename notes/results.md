@@ -148,3 +148,15 @@ I'm just running here steps 1 and 2 of exploring the australia results.
 
 Just running with the standard pois, no need to play with different poi types yet.
 NOTE: I am not rerunning the combination of parameters that gives us the original standard pois experiment in australia. I am going to populate the results for that combination using the original australia experiment results. That saves a bunch of computation and gets me these results faster.
+
+### falcon
+
+More atomic experiments. Looking at:
+
+- 1, 2, 3 pois
+- 20, 50, 100, 150 timesteps
+- 5 1000 observation radius for rover
+10 trials
+
+I'm hoping I can find a small atomic experiment that starts with a low G but hits the high score after 1,000 generations. Then I can scale that up and presumably that problem will really benefit from credit assignment. There is too much going on with the bigger experiments to know what is going wrong from just looking at the results.
+
