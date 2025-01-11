@@ -187,7 +187,7 @@ class TestPickUav(TestEnv):
             self.assert_close_lists(uav_pos, init_uav_position)
 
     def test_d(self):
-        """Rover chooses to follow the closest uav in the map. Rover does not follow the farther rover"""
+        """Rover chooses to follow the closest uav in the map. Rover does not follow the farther uav"""
         # Set up environment with rovers, uavs, and pois
         config = self.get_env_template_config()
         init_rover_position = [5., 5.]

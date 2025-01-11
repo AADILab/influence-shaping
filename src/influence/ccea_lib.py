@@ -218,7 +218,7 @@ class CooperativeCoevolutionaryAlgorithm():
             # Fill defaults for sensor, action, policy
             if 'sensor' not in self.config['env']['agents'][agent_type][i]:
                 self.config['env']['agents'][agent_type][i]['sensor'] = {'type' : 'SmartLidar'}
-            elif 'type' not in self.config['env']['agents'][agent_type][i]:
+            elif 'type' not in self.config['env']['agents'][agent_type][i]['sensor']:
                 self.config['env']['agents'][agent_type][i]['sensor']['type'] = 'SmartLidar'
             if 'action' not in self.config['env']['agents'][agent_type][i]:
                 self.config['env']['agents'][agent_type][i]['action'] = {'type': 'dxdy'}
@@ -424,6 +424,7 @@ class CooperativeCoevolutionaryAlgorithm():
                 flist = list(filter(None, slist))
                 nlist = [float(s) for s in flist]
                 observation_arr = np.array(nlist, dtype=np.float64)
+                # print("observation_arr:", observation_arr)
                 action_arr = agent_nn.forward(observation_arr)
                 if (config['env']['agents']['rovers']+config['env']['agents']['uavs'])[ind]['action']['type'] == 'dxdy':
                 # Multiply by agent velocity
@@ -438,13 +439,16 @@ class CooperativeCoevolutionaryAlgorithm():
                 elif (config['env']['agents']['rovers']+config['env']['agents']['uavs'])[ind]['action']['type'] == 'pick_uav':
                     # The action arr is the same size as however many uavs there are
                     # We need to get the argmax of this array to tell us which uav to follow
+                    # print('action_arr:', action_arr)
                     uav_ind = np.argmax(action_arr)
+                    # print('uav_ind:', uav_ind)
                     if uav_ind == num_uavs:
                         # Rover chose the null uav, which means stay still. Don't follow anyone
                         input_action_arr = np.array([0.0, 0.0])
                     else:
                         # Rover chose a uav, so compute a dx,dy where agent makes the biggest step possible towards its chosen uav
                         uav_ind_in_env = int(num_rovers+uav_ind)
+                        # print("uav_ind_in_env: ", uav_ind_in_env)
                         uav_position = np.array([env.rovers()[uav_ind_in_env].position().x, env.rovers()[uav_ind_in_env].position().y])
                         agent_position = np.array([env.rovers()[ind].position().x, env.rovers()[ind].position().y])
                         input_action_arr = uav_position - agent_position

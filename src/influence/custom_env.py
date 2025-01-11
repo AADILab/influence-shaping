@@ -3,6 +3,7 @@ from influence.librovers import rovers, thyme
 import numpy as np
 import cppyy
 import random
+from pprint import pprint
 
 def listToVec(list_: List[int]):
     return cppyy.gbl.std.vector[cppyy.gbl.int](list_)
@@ -240,8 +241,10 @@ def createAgent(agent_config, agent_types, poi_types, poi_subtypes, agent_observ
 
     # Figure out what sensor type this agent is using
     sensor_type = 'SmartLidar'
+    # pprint(agent_config)
     if 'sensor' in agent_config and 'type' in agent_config['sensor']:
         sensor_type = agent_config['sensor']['type']
+    # print(sensor_type)
 
     # repackage indirect difference parameters
     IndirectDifferenceParameters = rovers.IndirectDifferenceParameters
