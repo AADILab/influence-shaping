@@ -556,7 +556,7 @@ class CooperativeCoevolutionaryAlgorithm():
         if self.num_evaluations_per_team == 1:
             for team, eval_info in zip(teams, eval_infos):
                 fitnesses = eval_info.fitnesses
-                for individual, fit in zip(team, fitnesses):
+                for individual, fit in zip(team.policies, fitnesses):
                     individual.fitness.values = fit
         else:
             team_list = []
