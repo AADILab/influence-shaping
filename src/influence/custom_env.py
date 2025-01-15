@@ -31,7 +31,8 @@ class SmartLidar(rovers.Lidar[rovers.Density]):
     def __init__(self, resolution, composition_policy, \
             agent_types, poi_types, \
             poi_subtypes: List[str], agent_observable_subtypes: List[List[str]],
-            accum_type: List[str], measurement_type: List[str]
+            accum_type: List[str], measurement_type: List[str],
+            observation_radii: List[float], default_values: List[float]
             ):
         super().__init__(resolution, composition_policy)
         self.agent_types = agent_types
@@ -40,6 +41,8 @@ class SmartLidar(rovers.Lidar[rovers.Density]):
         self.agent_observable_subtypes = agent_observable_subtypes
         self.accum_type = accum_type
         self.measurement_type = measurement_type
+        self.observation_radii = observation_radii
+        self.default_values = default_values
         self.m_resolution = resolution
         self.m_composition = composition_policy
 
@@ -48,6 +51,10 @@ class SmartLidar(rovers.Lidar[rovers.Density]):
             return 1.0 / max([0.001, distance**2])
         elif self.measurement_type[agent_id] == 'exponential_negative_distance':
             return 2.718**(-distance)
+        elif self.measurement_type[agent_id] == 'one_minus_inverse_distance_over_observation_radius':
+            return 1 - distance/self.observation_radii[agent_id]
+        else:
+            raise Exception(f'Measurement type for agent {agent_id} is not defined!')
 
     def scan(self, agent_pack):
         # print("SmartLidar.scan()")
@@ -148,7 +155,7 @@ class SmartLidar(rovers.Lidar[rovers.Density]):
 
         # Encode the state
         # print("Encoding state")
-        state = np.array([-1.0 for _ in range(num_sectors*3)])
+        state = np.array([self.default_values[agent_pack.agent_index] for _ in range(num_sectors*3)])
         # print("state: ", state)
         for i in range(num_sectors):
             # print("Building sector ", i)
@@ -232,7 +239,7 @@ def createUAV(obs_radius, reward_type, resolution, agent_types, poi_types):
     uav = rovers.Rover[SmartLidar, Discrete, Reward](reward_type, type_, obs_radius, SmartLidar(resolution=resolution, composition_policy=rovers.Density(), agent_types=agent_types, poi_types=poi_types), Reward())
     return uav
 
-def createAgent(agent_config, agent_types, poi_types, poi_subtypes, agent_observable_subtypes, accum_type, measurement_type, type_):
+def createAgent(agent_config, agent_types, poi_types, poi_subtypes, agent_observable_subtypes, accum_type, measurement_type, type_, observation_radii, default_values):
     """Create an agent using the agent's config and type"""
     # unpack config
     reward_type = agent_config['reward_type']
@@ -291,7 +298,9 @@ def createAgent(agent_config, agent_types, poi_types, poi_subtypes, agent_observ
                 poi_subtypes=poi_subtypes,
                 agent_observable_subtypes=agent_observable_subtypes,
                 accum_type=accum_type,
-                measurement_type=measurement_type
+                measurement_type=measurement_type,
+                observation_radii=observation_radii,
+                default_values=default_values
             ),
             Reward()
         )
@@ -470,6 +479,15 @@ def createEnv(config):
             measurement_type.append(agent_config['sensor']['measurement_type'])
         else:
             measurement_type.append('inverse_distance_squared')
+    
+    observation_radii = [agent_config['observation_radius'] for agent_config in config['env']['agents']['rovers']+config['env']['agents']['uavs']]
+    
+    default_values = []
+    for agent_config in config['env']['agents']['rovers']+config['env']['agents']['uavs']:
+        if 'sensor' in agent_config and 'default_value' in agent_config['sensor']:
+            default_values.append(agent_config['sensor']['default_value'])
+        else:
+            default_values.append(-1.0)
 
     rovers_ = [
         createAgent(
@@ -480,7 +498,9 @@ def createEnv(config):
             agent_observable_subtypes=agent_observable_subtypes,
             accum_type=accum_type,
             measurement_type=measurement_type,
-            type_='rover'
+            type_='rover',
+            observation_radii=observation_radii,
+            default_values=default_values
         )
         for rover_config in config['env']['agents']['rovers']
     ]
@@ -503,7 +523,9 @@ def createEnv(config):
             agent_observable_subtypes=agent_observable_subtypes,
             accum_type=accum_type,
             measurement_type=measurement_type,
-            type_ = 'uav'
+            type_ = 'uav',
+            observation_radii=observation_radii,
+            default_values=default_values
         )
         for uav_config in config['env']['agents']['uavs']
     ]
