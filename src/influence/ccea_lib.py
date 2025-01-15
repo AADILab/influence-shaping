@@ -557,7 +557,8 @@ class CooperativeCoevolutionaryAlgorithm():
             for team, eval_info in zip(teams, eval_infos):
                 fitnesses = eval_info.fitnesses
                 for individual, fit in zip(team.policies, fitnesses):
-                    individual.fitness.values = fit
+                    if individual is not None:
+                        individual.fitness.values = fit
         else:
             team_list = []
             eval_info_list = []
