@@ -239,7 +239,7 @@ def createUAV(obs_radius, reward_type, resolution, agent_types, poi_types):
     uav = rovers.Rover[SmartLidar, Discrete, Reward](reward_type, type_, obs_radius, SmartLidar(resolution=resolution, composition_policy=rovers.Density(), agent_types=agent_types, poi_types=poi_types), Reward())
     return uav
 
-def createAgent(agent_config, agent_types, poi_types, poi_subtypes, agent_observable_subtypes, accum_type, measurement_type, type_, observation_radii, default_values):
+def createAgent(agent_config, agent_types, poi_types, poi_subtypes, agent_observable_subtypes, accum_type, measurement_type, type_, observation_radii, default_values, map_size):
     """Create an agent using the agent's config and type"""
     # unpack config
     reward_type = agent_config['reward_type']
@@ -281,11 +281,28 @@ def createAgent(agent_config, agent_types, poi_types, poi_subtypes, agent_observ
             )
         )
 
+    # Set up agent bounds if they are not specified
+    bounds = {
+        'high_x': map_size[0],
+        'low_x': 0.0,
+        'high_y': map_size[1],
+        'low_y': 0.0
+    }
+    if 'bounds' in agent_config:
+        bounds = agent_config['bounds']
+
     Discrete = thyme.spaces.Discrete
     Reward = rovers.rewards.Global
+    Bounds = rovers.Bounds
 
     if sensor_type == 'SmartLidar':
         return rovers.Rover[SmartLidar, Discrete, Reward](
+            Bounds(
+                low_x=bounds['low_x'],
+                high_x=bounds['high_x'],
+                low_y=bounds['low_y'],
+                high_y=bounds['high_y']
+            ),
             indirect_difference_parameters,
             reward_type,
             type_,
@@ -306,6 +323,12 @@ def createAgent(agent_config, agent_types, poi_types, poi_subtypes, agent_observ
         )
     elif sensor_type == 'UavDistanceLidar':
         return rovers.Rover[UavDistanceLidar, Discrete, Reward](
+            Bounds(
+                low_x=bounds['low_x'],
+                high_x=bounds['high_x'],
+                low_y=bounds['low_y'],
+                high_y=bounds['high_y']
+            ),
             indirect_difference_parameters,
             reward_type,
             type_,
@@ -500,7 +523,8 @@ def createEnv(config):
             measurement_type=measurement_type,
             type_='rover',
             observation_radii=observation_radii,
-            default_values=default_values
+            default_values=default_values,
+            map_size=config['env']['map_size']
         )
         for rover_config in config['env']['agents']['rovers']
     ]
@@ -525,7 +549,8 @@ def createEnv(config):
             measurement_type=measurement_type,
             type_ = 'uav',
             observation_radii=observation_radii,
-            default_values=default_values
+            default_values=default_values,
+            map_size=config['env']['map_size']
         )
         for uav_config in config['env']['agents']['uavs']
     ]
