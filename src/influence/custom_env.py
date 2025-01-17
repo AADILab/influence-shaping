@@ -266,7 +266,8 @@ def createAgent(agent_config, agent_types, poi_types, poi_subtypes, agent_observ
             automatic_parameters = AutomaticParameters(
                 timescale = auto_params_config['timescale'],
                 credit = auto_params_config['credit']
-            )
+            ),
+            add_G = indirect_difference_config['add_G'] if 'add_G' in indirect_difference_config else False
         )
         
     else:
@@ -278,7 +279,8 @@ def createAgent(agent_config, agent_types, poi_types, poi_subtypes, agent_observ
             automatic_parameters = AutomaticParameters(
                 timescale = 'trajectory',
                 credit = 'AllOrNothing'
-            )
+            ),
+            add_G = False
         )
 
     # Set up agent bounds if they are not specified
