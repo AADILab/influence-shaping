@@ -149,6 +149,9 @@ I'm just running here steps 1 and 2 of exploring the australia results.
 Just running with the standard pois, no need to play with different poi types yet.
 NOTE: I am not rerunning the combination of parameters that gives us the original standard pois experiment in australia. I am going to populate the results for that combination using the original australia experiment results. That saves a bunch of computation and gets me these results faster.
 
+### emu_subset
+NOTE: I cancelled a lot of emu experiments to run a much smaller subset because running all of them was taking too long to run. I just ran observation radius 50 + network size 10, and observation radius 50 + network size 15.
+
 ### falcon
 
 More atomic experiments. Looking at:
@@ -160,3 +163,29 @@ More atomic experiments. Looking at:
 
 I'm hoping I can find a small atomic experiment that starts with a low G but hits the high score after 1,000 generations. Then I can scale that up and presumably that problem will really benefit from credit assignment. There is too much going on with the bigger experiments to know what is going wrong from just looking at the results.
 
+### galah
+
+Atomic experiments, now with 2 rovers, 2 uavs, and 2 pois. For some reason G is still winning here. I am running a version of this where the rover can see the pois, no uavs, and the rovers have a large observation radius. In that case, I should at least see D outperform G.
+
+### galah_follow
+
+galah experiments but rovers follow the nearest uav (without learning)
+
+### galah_independent_rovers
+
+galah experiments but now with rovers that are fully capable of getting to pois on their own. I am hoping to see D outperform G here. If not, I need to do some investigating. And maybe take out the hall of fame evaluation. I think that is helping too much.
+
+G outperforms D. Why? Credit assignment should be helping a whole lot here. It's just rovers that need to learn to each get the pois near where they individually spawn. Also for some reason D-Indirect-Timestep is performing equivalently to G even though it should be equivalen to D... Not sure why that is happening but I don't think it's worth debugging right now. right now I want to see D outperform G one way or another... Maybe I can do a version of this where rovers have small observation radii and are faaaar away from each other in that case D should really work.
+
+I think the thing that is messing up credit assignment is that the rovers are close enough to see each other as input to their networks and that is causing them to act differently based on who their partner is. So you can't isolate them very well.
+
+### galah_independent_rovers_seperate
+Rovers have much smaller observation radii and are really far away from one another.
+
+### hammerhead
+
+This is completing the four squares experiments that Kagan asked for Tues Jan 7, 2025. One variant where rovers learn to follow uavs and one variant where rovers are preprogrammed to follow.
+
+### irukandji
+
+This is re-running some experiments from emu that seem to have given me some conflicting results I'm investigating. Hopefully by running these again I can get some clarity on what is going on.

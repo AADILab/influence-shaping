@@ -23,3 +23,8 @@ Tell me how many of my jobs are currently running
 _squeue --Format=jobid,partition,name:50,state:20,timeused,timeleft,nodelist -u gonzaeve | grep PENDING | wc -l_
 
 Tell me how many of my jobs are still pending
+
+
+
+squeue -w cn-v-[1-8] --Format=jobid:10,partition:10,name:70,state:10,timeused:10,timeleft:12,nodelist:10
+
