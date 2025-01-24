@@ -99,7 +99,7 @@ def plot_poi(ax, poi_config, x, y, color, radius_shading):
             radius = poi_config['observation_radius'],
             color=color,
             fill=True,
-            alpha=0.05
+            alpha=0.2
             )
         ax.add_patch(outer_circle)
 
@@ -188,7 +188,7 @@ def generate_learning_curve_plot(fitness_dir, individual_agents, line_plot_args:
 
     # Get the fitnesses
     df = pd.read_csv(fitness_dir)
-    print(df['generation'])
+    # print(df['generation'])
 
     # Get points for plotting team fitness
     gens = add_learning_curve(ax, df, line_plot_args)
@@ -199,8 +199,13 @@ def generate_learning_curve_plot(fitness_dir, individual_agents, line_plot_args:
             rover_label = 'rover_'+str(i)+'_'
             fits = line_plot_args.get_ys(ys=df[rover_label])
             ax.plot(gens, fits, label=rover_label)
+        if num_uavs > 0:
+            if 'uav_0_' in df:
+                _flag = 1
+            elif 'uav_0' in df:
+                _flag = 0
         for i in range(num_uavs):
-            uav_label = 'uav_'+str(i)+'_'
+            uav_label = 'uav_'+str(i)+_flag*'_'
             fits = line_plot_args.get_ys(ys=df[uav_label])
             ax.plot(gens, fits, label=uav_label)
         ax.legend()
