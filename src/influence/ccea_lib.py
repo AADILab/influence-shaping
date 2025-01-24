@@ -92,6 +92,15 @@ class CooperativeCoevolutionaryAlgorithm():
         self.num_mutants = self.subpopulation_size - self.n_elites
         self.num_evaluations_per_team = self.config["ccea"]["evaluation"]["multi_evaluation"]["num_evaluations"]
         self.aggregation_method = self.config["ccea"]["evaluation"]["multi_evaluation"]["aggregation_method"]
+        # self.rigid_preserve_elites = False
+        self.elite_preservation = None
+        if 'elite_preservation' in self.config['ccea']['selection']['n_elites_binary_tournament']:
+            self.elite_preservation = self.config['ccea']['selection']['n_elites_binary_tournament']['elite_preservation']
+        
+        if 'save_elite_fitness' not in self.config['data']:
+            self.config['data']['save_elite_fitness'] = {}
+        if 'switch' not in self.config['data']['save_elite_fitness']:
+            self.config['data']['save_elite_fitness']['switch'] = False
 
         self.num_steps = self.config["ccea"]["num_steps"]
 
@@ -292,14 +301,30 @@ class CooperativeCoevolutionaryAlgorithm():
         # Evaluate the teams
         return self.evaluateTeams(eval_teams)
 
-    def formTeams(self, population, inds=None) -> List[TeamInfo]:
+    # def formTeams(self, population, inds=None) -> List[TeamInfo]:
+    def formTeams(self, population) -> List[TeamInfo]:
         # Start a list of teams
         teams = []
 
-        if inds is None:
-            team_inds = range(self.subpopulation_size)
+        if self.elite_preservation == 'individual_elites' and self.gen != 0:
+            # Skip the individual elites for team formation
+            # We want to hold on to these elites and don't want a new fitness assigned to them
+            team_inds = [i+self.n_elites for i in range(self.subpopulation_size-self.n_elites)]
+        
         else:
-            team_inds = inds
+            # Zip the individuals of each subpopulation into the teams
+            team_inds = list(range(self.subpopulation_size))
+
+        # if self.rigid_preserve_elites and self.gen != 0:
+        #     team_inds = [i+self.n_elites for i in range(self.subpopulation_size-self.n_elites)]
+        # else:
+            # team_inds = list(range(self.subpopulation_size))
+        # team_inds = list(range(self.subpopulation_size))
+
+        # if inds is None:
+        #     team_inds = range(self.subpopulation_size)
+        # else:
+        #     team_inds = inds
 
         # For each individual in a subpopulation
         for i in team_inds:
@@ -520,8 +545,14 @@ class CooperativeCoevolutionaryAlgorithm():
                     del subpop[mutant_id].fitness.values
 
     def selectSubPopulation(self, subpopulation):
-        # Get the best N individuals
-        offspring = tools.selBest(subpopulation, self.n_elites)
+        # If we are preserving elites, then start with the elites
+        if self.elite_preservation:
+            offspring = subpopulation[:self.n_elites]
+        # Otherwise, get the best n_elites from the entire subpopulation, 
+        # and overwrite existing elites if we found someone better.
+        else:
+            offspring = tools.selBest(subpopulation, self.n_elites)
+
         if self.include_elites_in_tournament:
             offspring += tools.selTournament(subpopulation, len(subpopulation)-self.n_elites, tournsize=2)
         else:
@@ -547,7 +578,15 @@ class CooperativeCoevolutionaryAlgorithm():
 
     def shuffle(self, population):
         for subpop in population:
-            random.shuffle(subpop)
+            # If we're preserving elites, then shuffle everyone else
+            if self.elite_preservation:
+                non_elites = subpop[self.n_elites:]
+                random.shuffle(non_elites)
+                # Replace the entire subpop with elites and shuffled non-elites
+                subpop[:] = subpop[:self.n_elites] + non_elites
+            # Otherwise, shuffle everyone, including elites
+            else:
+                random.shuffle(subpop)
 
     def assignFitnesses(self, teams, eval_infos):
         # There may be several eval_infos for the same team
@@ -587,8 +626,8 @@ class CooperativeCoevolutionaryAlgorithm():
         for subpop, subpop_offspring in zip(population, offspring):
             subpop[:] = subpop_offspring
 
-    def createEvalFitnessCSV(self, trial_dir):
-        eval_fitness_dir = trial_dir / "fitness.csv"
+    def createEvalFitnessCSV(self, trial_dir, filename='fitness.csv'):
+        eval_fitness_dir = trial_dir / filename
         header = "generation,team_fitness_aggregated"
         for j in range(self.num_rovers):
             header += ",rover_"+str(j)+"_"
@@ -604,8 +643,8 @@ class CooperativeCoevolutionaryAlgorithm():
         with open(eval_fitness_dir, 'w') as file:
             file.write(header)
 
-    def writeEvalFitnessCSV(self, trial_dir, eval_infos):
-        eval_fitness_dir = trial_dir / "fitness.csv"
+    def writeEvalFitnessCSV(self, trial_dir, eval_infos, filename='fitness.csv'):
+        eval_fitness_dir = trial_dir / filename
         gen = str(self.gen)
         if len(eval_infos) == 1:
             eval_info = eval_infos[0]
@@ -761,6 +800,8 @@ class CooperativeCoevolutionaryAlgorithm():
 
             # Create csv file for saving evaluation fitnesses
             self.createEvalFitnessCSV(trial_dir)
+            if self.config['data']['save_elite_fitness']['switch']:
+                self.createEvalFitnessCSV(trial_dir, filename='elite_fitness.csv')
 
             # Initialize the population
             pop = self.population()
@@ -774,11 +815,34 @@ class CooperativeCoevolutionaryAlgorithm():
             # Assign fitnesses to individuals
             self.assignFitnesses(teams, eval_infos)
 
+            # If we are preserving elite teams, then sort the subpopulations accordingly
+            # (Sort individuals according to their TEAM fitness)
+            if self.elite_preservation == 'elite_teams':
+                # Sort indices based on EvalInfo fitness
+                sorted_indices = sorted(range(len(eval_infos)), key=lambda i: eval_infos[i].fitnesses[-1][0], reverse=True)
+
+                # Reorder subpopulations and EvalInfo based on sorted indices
+                sorted_pop = [[subpop[i] for i in sorted_indices] for subpop in pop]
+
+                pop = sorted_pop
+
+            # Use the ordering of the teams to order the individuals the same way
+
             # Evaluate a team with the best indivdiual from each subpopulation
             eval_infos = self.evaluateEvaluationTeam(pop)
 
             # Save fitnesses of the evaluation team
             self.writeEvalFitnessCSV(trial_dir, eval_infos)
+
+            if self.config['data']['save_elite_fitness']['switch']:
+                eval_infos = [self.evaluateTeam(
+                    team=TeamInfo(
+                        policies=[subpop[0] for subpop in pop],
+                        seed=None
+                    ),
+                    compute_team_fitness=True
+                )]
+                self.writeEvalFitnessCSV(trial_dir, eval_infos, filename='elite_fitness.csv')
 
             # Save trajectories of evaluation team
             if self.save_trajectories:
@@ -821,11 +885,35 @@ class CooperativeCoevolutionaryAlgorithm():
             # Now assign fitnesses to each individual
             self.assignFitnesses(teams, eval_infos)
 
+            # If we are preserving elite teams, then sort the subpopulations accordingly
+            # (Sort individuals according to their TEAM fitness)
+            if self.elite_preservation == 'elite_teams':
+                # Sort indices based on EvalInfo fitness
+                sorted_indices = sorted(range(len(eval_infos)), key=lambda i: eval_infos[i].fitnesses[-1][0], reverse=True)
+
+                # Reorder subpopulations and EvalInfo based on sorted indices
+                sorted_pop = [[subpop[i] for i in sorted_indices] for subpop in offspring]
+
+                offspring = sorted_pop
+
             # Evaluate a team with the best indivdiual from each subpopulation
             eval_infos = self.evaluateEvaluationTeam(offspring)
 
             # Save fitnesses
             self.writeEvalFitnessCSV(trial_dir, eval_infos)
+
+            if self.config['data']['save_elite_fitness']['switch']:
+                eval_infos = [self.evaluateTeam(
+                    team=TeamInfo(
+                        # TODO: Shouldn't this be subpop in offspring, not pop?
+                        # Also, there are too many variables representing population here
+                        # offspring, sorted_pop, pop, population... it's confusing
+                        policies=[subpop[0] for subpop in pop],
+                        seed=None
+                    ),
+                    compute_team_fitness=True
+                )]
+                self.writeEvalFitnessCSV(trial_dir, eval_infos, filename='elite_fitness.csv')
 
             # Save trajectories
             if self.save_trajectories and self.gen % self.num_gens_between_save_traj == 0:
