@@ -1,11 +1,8 @@
 ccea:
   evaluation:
-    evaluation_method: HallOfFame
-    hall_of_fame:
-      alpha: 0.5
     multi_evaluation:
       aggregation_method: average
-      num_evaluations: 10
+      num_evaluations: 2
   mutation:
     independent_probability: 0.5
     mean: 0.0

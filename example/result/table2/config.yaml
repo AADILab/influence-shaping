@@ -1,0 +1,159 @@
+ccea:
+  evaluation:
+    multi_evaluation:
+      aggregation_method: average
+      num_evaluations: 1
+  mutation:
+    independent_probability: 0.5
+    mean: 0.0
+    std_deviation: 0.1
+  network:
+    hidden_layers:
+    - 10
+    rover_max_velocity: 1.0
+    uav_max_velocity: 1.0
+  num_generations: 100
+  num_steps: 100
+  population:
+    subpopulation_size: 30
+  selection:
+    n_elites_binary_tournament:
+      include_elites_in_tournament: true
+      n_elites: 5
+    selection_method: NElitesBinaryTournament,
+  weight_initialization:
+    lower_bound: -0.5
+    upper_bound: 0.5
+data:
+  checkpoints:
+    delete_previous: true
+    frequency: 1
+    save: true
+  save_trajectories:
+    num_gens_between_save: 50
+    switch: true
+debug:
+  random_seed:
+    increment_every_trial: true
+    set_seed: 0
+  reward_equals_G: false
+env:
+  agents:
+    rovers:
+    - action:
+        type: pick_uav
+      observation_radius: 5.0
+      policy:
+        type: network
+      position:
+        fixed:
+        - 20.0
+        - 20.0
+        spawn_rule: fixed
+      resolution: 90
+      reward_type: IndirectDifference
+      IndirectDifference:
+        type: removal
+        assignment: automatic
+        manual: []
+        automatic:
+          timescale: timestep
+          credit: Local
+        add_G: true
+      sensor:
+        accum_type: sum
+        type: UavDistanceLidar
+    uavs:
+    - action:
+        type: dxdy
+      observable_subtypes:
+      - A
+      observation_radius: 15.0
+      position:
+        fixed:
+        - 20.0
+        - 40.0
+        spawn_rule: fixed
+      resolution: 90
+      reward_type: IndirectDifference
+      IndirectDifference:
+        type: removal
+        assignment: automatic
+        manual: []
+        automatic:
+          timescale: timestep
+          credit: Local
+        add_G: true
+      sensor:
+        accum_type: sum
+        default_value: 0.0
+        measurement_type: one_minus_inverse_distance_over_observation_radius
+        type: SmartLidar
+      bounds:
+        high_x: 40
+        low_x: 0
+        high_y: 60
+        low_y: 20 
+    - action:
+        type: dxdy
+      observable_subtypes:
+      - B
+      observation_radius: 15.0
+      position:
+        fixed:
+        - 60.0
+        - 40.0
+        spawn_rule: fixed
+      resolution: 90
+      reward_type: IndirectDifference
+      IndirectDifference:
+        type: removal
+        assignment: automatic
+        manual: []
+        automatic:
+          timescale: timestep
+          credit: Local
+        add_G: true
+      sensor:
+        accum_type: sum
+        default_value: 0.0
+        measurement_type: one_minus_inverse_distance_over_observation_radius
+        type: SmartLidar
+      bounds:
+        high_x: 80
+        low_x: 40
+        high_y: 60
+        low_y: 20
+  map_size:
+  - 100.0
+  - 100.0
+  pois:
+    hidden_pois: []
+    rover_pois:
+    - capture_radius: 15.0
+      constraint: sequential
+      coupling: 1
+      observation_radius: 15.0
+      position:
+        fixed:
+        - 20
+        - 40
+        spawn_rule: fixed
+      subtype: A
+      value: 1.0
+    - capture_radius: 15.0
+      constraint: sequential
+      coupling: 1
+      observation_radius: 15.0
+      position:
+        fixed:
+        - 60
+        - 40
+        spawn_rule: fixed
+      subtype: B
+      value: 1.0
+experiment:
+  num_trials: 5
+processing:
+  num_threads: 15
+  use_multiprocessing: true
