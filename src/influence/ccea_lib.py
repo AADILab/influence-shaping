@@ -843,6 +843,14 @@ class CooperativeCoevolutionaryAlgorithm():
             # Assign fitnesses to individuals
             self.assignFitnesses(teams, eval_infos)
 
+            # Organize subpopulations by individual with highest team fitness first
+            if self.sort_teams_by_sum_agent_fitness:
+                lambda_func = lambda ind: ind.agg_team_fitness
+            else:
+                lambda_func = lambda ind: ind.team_fitness
+            for subpop in pop:
+                subpop.sort(key = lambda_func, reverse=True)
+
             # Evaluate a team with the best indivdiual from each subpopulation
             eval_infos = self.evaluateEvaluationTeam(pop)
 
@@ -912,7 +920,7 @@ class CooperativeCoevolutionaryAlgorithm():
                         # TODO: Shouldn't this be subpop in offspring, not pop?
                         # Also, there are too many variables representing population here
                         # offspring, sorted_pop, pop, population... it's confusing
-                        policies=[subpop[0] for subpop in pop],
+                        policies=[subpop[0] for subpop in offspring],
                         seed=None
                     ),
                     compute_team_fitness=True
