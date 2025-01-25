@@ -98,8 +98,8 @@ class CooperativeCoevolutionaryAlgorithm():
             self.elite_preservation = self.config['ccea']['selection']['n_elites_binary_tournament']['elite_preservation']
 
         if self.elite_preservation == 'elite_teams_and_individuals':
-            self.n_elite_teams = self.config['ccea']['selection']['n_elites_binary_tournament']['n_elite_teams']
-            self.n_elite_individuals = self.config['ccea']['selection']['n_elites_binary_tournament']['n_elite_individuals']
+            self.n_elite_teams = self.config['ccea']['selection']['n_elites_binary_tournament']['elite_teams_and_individuals']['n_elite_teams']
+            self.n_elite_individuals = self.config['ccea']['selection']['n_elites_binary_tournament']['elite_teams_and_individuals']['n_elite_individuals']
 
         if 'save_elite_fitness' not in self.config['data']:
             self.config['data']['save_elite_fitness'] = {}
