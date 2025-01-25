@@ -310,10 +310,10 @@ class CooperativeCoevolutionaryAlgorithm():
         # Start a list of teams
         teams = []
 
-        # if (self.elite_preservation == 'individual_elites' or self.elite_preservation == 'elite_teams') and self.gen != 0:
-        #     # Skip the elites for team formation
-        #     # We want to hold on to these elites and don't want a new fitness assigned to them
-        #     team_inds = [i+self.n_elites for i in range(self.subpopulation_size-self.n_elites)]
+        if self.elite_preservation == 'individual_elites' and self.gen != 0:
+            # Skip the elites for team formation
+            # We want to hold on to these elites and don't want a new fitness assigned to them
+            team_inds = [i+self.n_elites for i in range(self.subpopulation_size-self.n_elites)]
         # elif self.elite_preservation == 'elite_teams_and_individuals' and self.gen != 0:
         #     team_inds = [i+self.n_elite_teams+self.n_elite_individuals for i in range(self.subpopulation_size-self.n_elite_teams-self.n_elite_individuals)]
 
@@ -558,14 +558,17 @@ class CooperativeCoevolutionaryAlgorithm():
 
     def selectSubPopulation(self, subpopulation):
         # If we are preserving elites, then start with the elites
-        if self.elite_preservation == 'individual_elites' or self.elite_preservation == 'elite_teams':
+        if self.elite_preservation == 'elite_teams':
             offspring = subpopulation[:self.n_elites]
+            remaining_offspring = subpopulation[self.n_elites:]
         elif self.elite_preservation == 'elite_teams_and_individuals':
             offspring = subpopulation[:self.n_elite_teams+self.n_elite_individuals]
+            remaining_offspring = subpopulation[self.n_elite_teams+self.n_elite_individuals:]
         # Otherwise, get the best n_elites from the entire subpopulation, 
         # and overwrite existing elites if we found someone better.
         else:
             offspring = tools.selBest(subpopulation, self.n_elites)
+            remaining_offspring = tools.selWorst(subpopulation, len(subpopulation)-self.n_elites)
 
         if self.include_elites_in_tournament:
             offspring += tools.selTournament(subpopulation, len(subpopulation)-self.n_elites, tournsize=2)
@@ -573,7 +576,7 @@ class CooperativeCoevolutionaryAlgorithm():
             # Get the remaining worse individuals
             # TODO: When we are doing elite preservation... shouldn't the remaining offspring
             # just be whatever is to the right of the preserved elites???
-            remaining_offspring = tools.selWorst(subpopulation, len(subpopulation)-self.n_elites)
+            
             # Add those remaining individuals through a binary tournament
             offspring += tools.selTournament(remaining_offspring, len(remaining_offspring), tournsize=2)
         # Return a deepcopy so that modifying an individual that wasexample/mountain/result/GlobalMultiThreaded selected does not modify every single individual
