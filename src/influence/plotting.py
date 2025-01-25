@@ -224,60 +224,18 @@ def plot_learning_curve(fitness_dir: Path, individual_agents: str, line_plot_arg
     fig = generate_learning_curve_plot(fitness_dir, individual_agents, line_plot_args, plot_args)
     plot_args.finish_figure(fig)
 
-def add_stat_learning_curve(ax: Axes, trials_dir: Path, label: str, line_plot_args: LinePlotArgs, color: Optional[Union[str,Tuple[float]]] = None):
+def add_stat_learning_curve(ax: Axes, individual_trials: bool, trials_dir: Path, label: str, line_plot_args: LinePlotArgs, color: Optional[Union[str,Tuple[float]]] = None):
     # Get the directories of trials
     dirs = [trials_dir/dir for dir in os.listdir(trials_dir) if 'trial_' in dir]
+
+    # Sort directories by trial number
+    dirs.sort(key=lambda x: int(str(x).split('_')[-1]))
 
     # Get the fitnesses in each trial
     dfs = [pd.read_csv(dir/'fitness.csv') for dir in dirs]
 
-    # Figure out which trial ran the shortest 
-    # (We can only accurately compute statistics for generations that we have all trials' output for)
-    ind = min([len(df['team_fitness_aggregated']) for df in dfs])
-
-    # Compute the statistics
-    avg = np.average([df['team_fitness_aggregated'][:ind] for df in dfs], axis=0)
-    err = np.std([df['team_fitness_aggregated'][:ind] for df in dfs], axis=0) / np.sqrt(len(dfs))
-    upp_err = avg+err
-    low_err = avg-err
-    gens = list(range(len(avg)))
-
-    # Clean up data
-    gens, avg = line_plot_args.get_pts(gens, avg)
-    low_err = line_plot_args.get_ys(low_err)
-    upp_err = line_plot_args.get_ys(upp_err)
-
-    # Plot statistics
-    if color is None:
-        ax.plot(gens, avg, label=label)
-        ax.fill_between(gens, low_err, upp_err, alpha=0.2)
-    else:
-        ax.plot(gens, avg, label=label, color=color)
-        ax.fill_between(gens, low_err, upp_err, alpha=0.2, facecolor=color)
-    
-    # Set ax ylim based on poi values in config
-    config = load_config(trials_dir/'config.yaml')
-    high_y = sum(poi_config['value'] for poi_config in config['env']['pois']['hidden_pois']+config['env']['pois']['rover_pois'])
-    ax.set_ylim([0, high_y])
-
-    return gens
-
-def generate_stat_learning_curve_plot(trials_dir: Path, individual_trials: bool, line_plot_args: LinePlotArgs, plot_args: PlotArgs):
-    """Generate plot of statistics of learning given the parent directoy of trials"""
-
-    fig, ax = plt.subplots(1,1)
-
-    # Plot each trial individual if specified
+    # Plot individual trials if specified
     if individual_trials:
-        # Get the directories of trials
-        dirs = [trials_dir/dir for dir in os.listdir(trials_dir) if 'trial_' in dir]
-
-        # Sort dirs
-        dirs.sort(key=lambda x: int(str(x).split('_')[-1]))
-
-        # Get the fitnesses in each trial
-        dfs = [pd.read_csv(dir/'fitness.csv') for dir in dirs]
-
         # Plot each trial's fitness throughout training
         for df, dir in zip(dfs, dirs):
             gens = add_learning_curve(ax, df, line_plot_args, label=dir.name)
@@ -286,8 +244,48 @@ def generate_stat_learning_curve_plot(trials_dir: Path, individual_trials: bool,
         gens = np.array(gens)
 
         ax.legend()
+
+        return gens
+
+    # Otherwise plot mean and standard error
     else:
-        gens = add_stat_learning_curve(ax, trials_dir, label=trials_dir.name, line_plot_args=line_plot_args)
+        # Figure out which trial ran the shortest
+        # (We can only accurately compute statistics for generations that we have all trials' output for)
+        ind = min([len(df['team_fitness_aggregated']) for df in dfs])
+
+        # Compute the statistics
+        avg = np.average([df['team_fitness_aggregated'][:ind] for df in dfs], axis=0)
+        err = np.std([df['team_fitness_aggregated'][:ind] for df in dfs], axis=0) / np.sqrt(len(dfs))
+        upp_err = avg+err
+        low_err = avg-err
+        gens = list(range(len(avg)))
+
+        # Clean up data
+        gens, avg = line_plot_args.get_pts(gens, avg)
+        low_err = line_plot_args.get_ys(low_err)
+        upp_err = line_plot_args.get_ys(upp_err)
+
+        # Plot statistics
+        if color is None:
+            ax.plot(gens, avg, label=label)
+            ax.fill_between(gens, low_err, upp_err, alpha=0.2)
+        else:
+            ax.plot(gens, avg, label=label, color=color)
+            ax.fill_between(gens, low_err, upp_err, alpha=0.2, facecolor=color)
+
+        # Set ax ylim based on poi values in config
+        config = load_config(trials_dir/'config.yaml')
+        high_y = sum(poi_config['value'] for poi_config in config['env']['pois']['hidden_pois']+config['env']['pois']['rover_pois'])
+        ax.set_ylim([0, high_y])
+
+        return gens
+
+def generate_stat_learning_curve_plot(trials_dir: Path, individual_trials: bool, line_plot_args: LinePlotArgs, plot_args: PlotArgs):
+    """Generate plot of statistics of learning given the parent directoy of trials"""
+
+    fig, ax = plt.subplots(1,1)
+
+    gens = add_stat_learning_curve(ax, individual_trials, trials_dir, label=trials_dir.name, line_plot_args=line_plot_args)
 
     ax.set_xlabel('Generations')
     ax.set_ylabel('Performance')
@@ -358,7 +356,7 @@ def generate_comparison_plot(experiment_dir: Path, use_fitness_colors: bool, lin
                 # Don't use any reserved colors if we are plotting using consistent fitness colors
                 # and this stat curve is not one of the named fitness shaping methods with an assigned color
                 color = COMPARISON_COLORS[(i+len(COMPARISON_NAMES))%len(COMPARISON_COLORS)]
-        gens = add_stat_learning_curve(ax, trials_dir, label=trials_dir.name, line_plot_args=line_plot_args, color=color)
+        gens = add_stat_learning_curve(ax, False, trials_dir, label=trials_dir.name, line_plot_args=line_plot_args, color=color)
 
         if gens[-1] > xlim:
             xlim = gens[-1]
