@@ -3,7 +3,7 @@ for each lower parameter sweep inside of that directory
 '''
 
 from pathlib import Path
-from influence.plotting import plot_comparison_tree
+from influence.plotting import plot_comparison_tree, DEFAULT_FITNESS_NAME
 from influence.parsing import BatchLinePlotParser
 
 if __name__ == '__main__':
@@ -27,8 +27,13 @@ if __name__ == '__main__':
         help='plot with consistent colors based on names of fitness shaping methods',
         action='store_true'
     )
+    parser.add_argument(
+        '--csv_name',
+        help='name of csv to use for fitness',
+        default=DEFAULT_FITNESS_NAME
+    )
     parser.add_plot_args()
 
     args = parser.parse_args()
 
-    plot_comparison_tree(Path(args.root_dir), Path(args.out_dir), args.fitness_colors, parser.dump_batch_plot_args(args), parser.dump_batch_line_plot_args(args))
+    plot_comparison_tree(Path(args.root_dir), Path(args.out_dir), args.fitness_colors, args.csv_name, parser.dump_batch_plot_args(args), parser.dump_batch_line_plot_args(args))

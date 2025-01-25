@@ -28,6 +28,8 @@ COMPARISON_COLORS_DICT = {
     name: color for name, color in zip(COMPARISON_NAMES, COMPARISON_COLORS)
 }
 
+DEFAULT_FITNESS_NAME = 'fitness.csv'
+
 def sort_fitness_path_list(input_list: List[Path]):
     # Filter into fitness shaping names and non-fitness shaping names
     fit_list = []
@@ -224,7 +226,7 @@ def plot_learning_curve(fitness_dir: Path, individual_agents: str, line_plot_arg
     fig = generate_learning_curve_plot(fitness_dir, individual_agents, line_plot_args, plot_args)
     plot_args.finish_figure(fig)
 
-def add_stat_learning_curve(ax: Axes, individual_trials: bool, trials_dir: Path, label: str, line_plot_args: LinePlotArgs, color: Optional[Union[str,Tuple[float]]] = None):
+def add_stat_learning_curve(ax: Axes, individual_trials: bool, csv_name: str, trials_dir: Path, label: str, line_plot_args: LinePlotArgs, color: Optional[Union[str,Tuple[float]]] = None):
     # Get the directories of trials
     dirs = [trials_dir/dir for dir in os.listdir(trials_dir) if 'trial_' in dir]
 
@@ -232,7 +234,7 @@ def add_stat_learning_curve(ax: Axes, individual_trials: bool, trials_dir: Path,
     dirs.sort(key=lambda x: int(str(x).split('_')[-1]))
 
     # Get the fitnesses in each trial
-    dfs = [pd.read_csv(dir/'fitness.csv') for dir in dirs]
+    dfs = [pd.read_csv(dir/csv_name) for dir in dirs]
 
     # Plot individual trials if specified
     if individual_trials:
@@ -280,12 +282,12 @@ def add_stat_learning_curve(ax: Axes, individual_trials: bool, trials_dir: Path,
 
         return gens
 
-def generate_stat_learning_curve_plot(trials_dir: Path, individual_trials: bool, line_plot_args: LinePlotArgs, plot_args: PlotArgs):
+def generate_stat_learning_curve_plot(trials_dir: Path, individual_trials: bool, csv_name: str, line_plot_args: LinePlotArgs, plot_args: PlotArgs):
     """Generate plot of statistics of learning given the parent directoy of trials"""
 
     fig, ax = plt.subplots(1,1)
 
-    gens = add_stat_learning_curve(ax, individual_trials, trials_dir, label=trials_dir.name, line_plot_args=line_plot_args)
+    gens = add_stat_learning_curve(ax, individual_trials, csv_name, trials_dir, label=trials_dir.name, line_plot_args=line_plot_args)
 
     ax.set_xlabel('Generations')
     ax.set_ylabel('Performance')
@@ -300,11 +302,11 @@ def generate_stat_learning_curve_plot(trials_dir: Path, individual_trials: bool,
 
     return fig
 
-def plot_stat_learning_curve(trials_dir, individual_trials, line_plot_args, plot_args):
-    fig = generate_stat_learning_curve_plot(trials_dir, individual_trials, line_plot_args, plot_args)
+def plot_stat_learning_curve(trials_dir, individual_trials, csv_name, line_plot_args, plot_args):
+    fig = generate_stat_learning_curve_plot(trials_dir, individual_trials, csv_name, line_plot_args, plot_args)
     plot_args.finish_figure(fig)
 
-def generate_stat_learning_curve_tree_plots(root_dir: Path, out_dir: Path, individual_trials: bool, batch_plot_args: BatchPlotArgs, batch_line_plot_args: BatchLinePlotArgs):
+def generate_stat_learning_curve_tree_plots(root_dir: Path, out_dir: Path, individual_trials: bool, csv_name: str, batch_plot_args: BatchPlotArgs, batch_line_plot_args: BatchLinePlotArgs):
     """Generate all the stat learning curve plots in this experiment tree"""
 
     experiment_dirs = set()
@@ -317,24 +319,27 @@ def generate_stat_learning_curve_tree_plots(root_dir: Path, out_dir: Path, indiv
         dir_name = '/'.join(dir_list[dir_list.index(root_dir.name)+1:])
 
         file_append = ''
+        if csv_name != DEFAULT_FITNESS_NAME:
+            file_append+='.'+csv_name.split('.')[0]
         if individual_trials:
             file_append+='.ind'
         if batch_line_plot_args.window_size is not None:
             file_append+='.w'+str(batch_line_plot_args.window_size)
-        
+
         plot_stat_learning_curve(
             trials_dir=dir_,
             individual_trials=individual_trials,
+            csv_name=csv_name,
             line_plot_args=batch_line_plot_args.build_line_plot_args(),
             plot_args=batch_plot_args.build_plot_args(
                 title=dir_name, output=out_dir/dir_name/('stat_learning_curve'+file_append+'.png')
             )
         )
 
-def plot_stat_learning_curve_tree(root_dir: Path, out_dir: Path, individual_trials: bool, batch_plot_args: BatchPlotArgs, batch_line_plot_args: BatchLinePlotArgs):
-    generate_stat_learning_curve_tree_plots(root_dir, out_dir, individual_trials, batch_plot_args, batch_line_plot_args)
+def plot_stat_learning_curve_tree(root_dir: Path, out_dir: Path, individual_trials: bool, csv_name: str, batch_plot_args: BatchPlotArgs, batch_line_plot_args: BatchLinePlotArgs):
+    generate_stat_learning_curve_tree_plots(root_dir, out_dir, individual_trials, csv_name, batch_plot_args, batch_line_plot_args)
 
-def generate_comparison_plot(experiment_dir: Path, use_fitness_colors: bool, line_plot_args: LinePlotArgs, plot_args: PlotArgs):
+def generate_comparison_plot(experiment_dir: Path, use_fitness_colors: bool, csv_name: str, line_plot_args: LinePlotArgs, plot_args: PlotArgs):
     """Generate plot of experiment using experiment directory
     experiment_dir is parent of parent of trial directories
     """
@@ -356,7 +361,7 @@ def generate_comparison_plot(experiment_dir: Path, use_fitness_colors: bool, lin
                 # Don't use any reserved colors if we are plotting using consistent fitness colors
                 # and this stat curve is not one of the named fitness shaping methods with an assigned color
                 color = COMPARISON_COLORS[(i+len(COMPARISON_NAMES))%len(COMPARISON_COLORS)]
-        gens = add_stat_learning_curve(ax, False, trials_dir, label=trials_dir.name, line_plot_args=line_plot_args, color=color)
+        gens = add_stat_learning_curve(ax, False, csv_name, trials_dir, label=trials_dir.name, line_plot_args=line_plot_args, color=color)
 
         if gens[-1] > xlim:
             xlim = gens[-1]
@@ -372,8 +377,8 @@ def generate_comparison_plot(experiment_dir: Path, use_fitness_colors: bool, lin
 
     return fig
 
-def plot_comparison(experiment_dir: Path, use_fitness_colors: bool, line_plot_args: LinePlotArgs, plot_args: PlotArgs):
-    fig = generate_comparison_plot(experiment_dir, use_fitness_colors, line_plot_args, plot_args)
+def plot_comparison(experiment_dir: Path, use_fitness_colors: bool, csv_name: str, line_plot_args: LinePlotArgs, plot_args: PlotArgs):
+    fig = generate_comparison_plot(experiment_dir, use_fitness_colors, csv_name, line_plot_args, plot_args)
     plot_args.finish_figure(fig)
 
 def get_example_trial_dirs(parent_dir: Path):
@@ -401,7 +406,7 @@ def get_example_trial_dirs(parent_dir: Path):
 
     return low_trial_dir, med_trial_dir, high_trial_dir
 
-def generate_experiment_tree_plots(root_dir: Path, out_dir: Path, use_fitness_colors: bool, batch_plot_args: BatchPlotArgs, batch_line_plot_args: BatchLinePlotArgs):
+def generate_experiment_tree_plots(root_dir: Path, out_dir: Path, use_fitness_colors: bool, csv_name: str, batch_plot_args: BatchPlotArgs, batch_line_plot_args: BatchLinePlotArgs):
     """Generate all the plots in this experiment tree"""
     
     experiment_dirs = set()
@@ -416,12 +421,15 @@ def generate_experiment_tree_plots(root_dir: Path, out_dir: Path, use_fitness_co
         dir_name = "/".join(dir_list[dir_list.index(root_dir.name)+1:])
 
         file_append = ''
+        if csv_name != DEFAULT_FITNESS_NAME:
+            file_append+='.'+csv_name.split('.')[0]
         if batch_line_plot_args.window_size is not None:
             file_append+='.w'+str(batch_line_plot_args.window_size)
 
         plot_comparison(
             experiment_dir=dir_,
             use_fitness_colors=use_fitness_colors,
+            csv_name=csv_name,
             line_plot_args=batch_line_plot_args.build_line_plot_args(),
             plot_args=batch_plot_args.build_plot_args(
                 title=dir_name, output=out_dir/dir_name/('comparison'+file_append+'.png')
@@ -484,8 +492,8 @@ def generate_joint_trajectory_tree_plots(root_dir: Path, out_dir: Path, individu
             )
         )
 
-def plot_comparison_tree(root_dir: Path, out_dir: Path, use_fitness_colors:bool, batch_plot_args: BatchPlotArgs, batch_line_plot_args: BatchLinePlotArgs):
-    generate_experiment_tree_plots(root_dir, out_dir, use_fitness_colors, batch_plot_args, batch_line_plot_args)
+def plot_comparison_tree(root_dir: Path, out_dir: Path, use_fitness_colors:bool, csv_name: str, batch_plot_args: BatchPlotArgs, batch_line_plot_args: BatchLinePlotArgs):
+    generate_experiment_tree_plots(root_dir, out_dir, use_fitness_colors, csv_name, batch_plot_args, batch_line_plot_args)
 
 def plot_joint_trajectory_tree(root_dir: Path, out_dir: Path, individual_colors: bool, no_shading: bool, downsample: int, batch_plot_args: BatchPlotArgs):
     generate_joint_trajectory_tree_plots(root_dir, out_dir, individual_colors, no_shading, downsample, batch_plot_args)
