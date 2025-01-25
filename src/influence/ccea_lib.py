@@ -43,6 +43,11 @@ def bound_velocity_arr(velocity_arr, max_velocity):
     """Bound the velocities in a 1D array to meet the max velocity constraint"""
     return np.array([bound_velocity(velocity, max_velocity) for velocity in velocity_arr])
 
+# class CustomIndividual(creator.Individual):
+#     def __init__(self):
+#         super().__init__()
+#         self.team_fitness = None
+
 class FollowPolicy():
     @staticmethod
     def forward(observation: np.ndarray) -> int:
@@ -69,6 +74,7 @@ class TeamInfo():
     def __init__(self, policies, seed):
         self.policies = policies
         self.seed = seed
+        self.fitness = None
 
 class CooperativeCoevolutionaryAlgorithm():
     def __init__(self, config_dir):
@@ -87,19 +93,29 @@ class CooperativeCoevolutionaryAlgorithm():
         self.num_rover_pois = len(self.config["env"]["pois"]["rover_pois"])
         self.num_hidden_pois = len(self.config["env"]["pois"]["hidden_pois"])
 
-        self.n_elites = self.config["ccea"]["selection"]["n_elites_binary_tournament"]["n_elites"]
+        self.n_preserve_team_elites = self.config['ccea']['selection']['n_elites_binary_tournament']['n_preserve_team_elites']
+        self.n_preserve_individual_elites = self.config['ccea']['selection']['n_elites_binary_tournament']['n_preserve_individual_elites']
+        self.n_team_elites = self.config['ccea']['selection']['n_elites_binary_tournament']['n_team_elites']
+        self.n_individual_elites = self.config['ccea']['selection']['n_elites_binary_tournament']['n_individual_elites']
+
+        self.n_preserve_elites = self.n_preserve_team_elites + self.n_preserve_individual_elites
+        self.n_current_elites = self.n_team_elites + self.n_individual_elites
+
+        self.total_elites = self.n_preserve_elites + self.n_current_elites
+
+        # self.n_elites = self.config["ccea"]["selection"]["n_elites_binary_tournament"]["n_elites"]
         self.include_elites_in_tournament = self.config["ccea"]["selection"]["n_elites_binary_tournament"]["include_elites_in_tournament"]
-        self.num_mutants = self.subpopulation_size - self.n_elites
+        self.num_mutants = self.subpopulation_size - self.total_elites
         self.num_evaluations_per_team = self.config["ccea"]["evaluation"]["multi_evaluation"]["num_evaluations"]
         self.aggregation_method = self.config["ccea"]["evaluation"]["multi_evaluation"]["aggregation_method"]
         # self.rigid_preserve_elites = False
-        self.elite_preservation = None
-        if 'elite_preservation' in self.config['ccea']['selection']['n_elites_binary_tournament']:
-            self.elite_preservation = self.config['ccea']['selection']['n_elites_binary_tournament']['elite_preservation']
+        # self.elite_preservation = None
+        # if 'elite_preservation' in self.config['ccea']['selection']['n_elites_binary_tournament']:
+        #     self.elite_preservation = self.config['ccea']['selection']['n_elites_binary_tournament']['elite_preservation']
 
-        if self.elite_preservation == 'elite_teams_and_individuals':
-            self.n_elite_teams = self.config['ccea']['selection']['n_elites_binary_tournament']['elite_teams_and_individuals']['n_elite_teams']
-            self.n_elite_individuals = self.config['ccea']['selection']['n_elites_binary_tournament']['elite_teams_and_individuals']['n_elite_individuals']
+        # if self.elite_preservation == 'elite_teams_and_individuals':
+        #     self.n_elite_teams = self.config['ccea']['selection']['n_elites_binary_tournament']['elite_teams_and_individuals']['n_elite_teams']
+        #     self.n_elite_individuals = self.config['ccea']['selection']['n_elites_binary_tournament']['elite_teams_and_individuals']['n_elite_individuals']
 
         if 'save_elite_fitness' not in self.config['data']:
             self.config['data']['save_elite_fitness'] = {}
@@ -310,30 +326,12 @@ class CooperativeCoevolutionaryAlgorithm():
         # Start a list of teams
         teams = []
 
-        if self.elite_preservation == 'individual_elites' and self.gen != 0:
-            # Skip the elites for team formation
+        if self.n_preserve_elites > 0 and self.gen != 0:
+            # Skip the persistent elites for team formation
             # We want to hold on to these elites and don't want a new fitness assigned to them
-            team_inds = [i+self.n_elites for i in range(self.subpopulation_size-self.n_elites)]
-        # elif self.elite_preservation == 'elite_teams_and_individuals' and self.gen != 0:
-        #     team_inds = [i+self.n_elite_teams+self.n_elite_individuals for i in range(self.subpopulation_size-self.n_elite_teams-self.n_elite_individuals)]
+            team_inds = [i+self.n_preserve_elites for i in range(self.subpopulation_size-self.n_preserve_elites)]
 
-        # elif self.elite_preservation == 'elite_teams_and_individuals':
-        #     # Skip the indvidual elites
-
-        # else:
-        #     # Zip the individuals of each subpopulation into the teams
         team_inds = list(range(self.subpopulation_size))
-
-        # if self.rigid_preserve_elites and self.gen != 0:
-        #     team_inds = [i+self.n_elites for i in range(self.subpopulation_size-self.n_elites)]
-        # else:
-            # team_inds = list(range(self.subpopulation_size))
-        # team_inds = list(range(self.subpopulation_size))
-
-        # if inds is None:
-        #     team_inds = range(self.subpopulation_size)
-        # else:
-        #     team_inds = inds
 
         # For each individual in a subpopulation
         for i in team_inds:
@@ -406,8 +404,6 @@ class CooperativeCoevolutionaryAlgorithm():
         compute_team_fitness=True
     ):
         # Set up random seed if one was specified
-        if len(team.policies[0]) != 152:
-            pass
         if not isinstance(team, TeamInfo):
             raise Exception('team should be TeamInfo')
         if team.seed is not None:
@@ -549,38 +545,37 @@ class CooperativeCoevolutionaryAlgorithm():
     def mutate(self, population):
         # Don't mutate the elites from n-elites
         for num_individual in range(self.num_mutants):
-            # TODO: This needs to be modified for when we preserve both team and individual elites
-            mutant_id = num_individual + self.n_elites
+            mutant_id = num_individual + self.total_elites
             for subpop in population:
                 if subpop[0] is not None:
                     self.mutateIndividual(subpop[mutant_id])
                     del subpop[mutant_id].fitness.values
 
     def selectSubPopulation(self, subpopulation):
-        # If we are preserving elites, then start with the elites
-        if self.elite_preservation == 'elite_teams':
-            offspring = subpopulation[:self.n_elites]
-            remaining_offspring = subpopulation[self.n_elites:]
-        elif self.elite_preservation == 'elite_teams_and_individuals':
-            offspring = subpopulation[:self.n_elite_teams+self.n_elite_individuals]
-            remaining_offspring = subpopulation[self.n_elite_teams+self.n_elite_individuals:]
-        # Otherwise, get the best n_elites from the entire subpopulation, 
-        # and overwrite existing elites if we found someone better.
-        else:
-            offspring = tools.selBest(subpopulation, self.n_elites)
-            remaining_offspring = tools.selWorst(subpopulation, len(subpopulation)-self.n_elites)
+        # Assume the persistent elites are best of all time. Leave them alone (for now)
+        # new subpop is the offspring of this subpop
+        # offspring = subpopulation[:self.n_preserve_elites]
+        # small subpop is the subset of subpop that is not persistent
+        # small_subpop = subpopulation[self.n_preserve_elites:]
 
-        if self.include_elites_in_tournament:
-            offspring += tools.selTournament(subpopulation, len(subpopulation)-self.n_elites, tournsize=2)
-        else:
-            # Get the remaining worse individuals
-            # TODO: When we are doing elite preservation... shouldn't the remaining offspring
-            # just be whatever is to the right of the preserved elites???
-            
-            # Add those remaining individuals through a binary tournament
-            offspring += tools.selTournament(remaining_offspring, len(remaining_offspring), tournsize=2)
-        # Return a deepcopy so that modifying an individual that wasexample/mountain/result/GlobalMultiThreaded selected does not modify every single individual
-        # that came from the same selected individual
+        # Get the elites based on team fitness
+        sorted_by_team = sorted(subpopulation, key=lambda ind: ind.team_fitness, reverse=True)
+        # Get the elites based on individual fitness
+        sorted_by_individual = sorted(subpopulation, key=lambda ind: ind.fitness.values[0], reverse=True)
+
+        # Get persistent team elites
+        offspring = sorted_by_team[:self.n_preserve_team_elites]
+        # Get persistent individual elites
+        offspring += sorted_by_individual[:self.n_preserve_individual_elites]
+        # Get current team elites
+        offspring += sorted_by_team[self.n_preserve_team_elites:self.n_preserve_team_elites+self.n_team_elites]
+        # Get current individual_elites
+        offspring += sorted_by_individual[self.n_preserve_individual_elites:self.n_preserve_individual_elites+self.n_individual_elites]
+
+        # Now pick the rest based on a binary tournament. 
+        # Selection here depends on individual (not team) fitness
+        offspring += tools.selTournament(subpopulation, len(subpopulation) - self.total_elites, 2)
+
         return [ deepcopy(individual) for individual in offspring ]
 
     def select(self, population):
@@ -598,14 +593,11 @@ class CooperativeCoevolutionaryAlgorithm():
     def shuffle(self, population):
         for subpop in population:
             # If we're preserving elites, then shuffle everyone else
-            if self.elite_preservation:
-                if self.elite_preservation == 'elite_teams_and_individuals':
-                    non_elites = subpop[self.n_elite_teams+self.n_elite_individuals:]
-                else:
-                    non_elites = subpop[self.n_elites:]
+            if self.n_preserve_elites:
+                non_elites = subpop[self.n_preserve_elites:]
                 random.shuffle(non_elites)
                 # Replace the entire subpop with elites and shuffled non-elites
-                subpop[:] = subpop[:self.n_elites] + non_elites
+                subpop[:] = subpop[:self.n_preserve_elites] + non_elites
             # Otherwise, shuffle everyone, including elites
             else:
                 random.shuffle(subpop)
@@ -620,6 +612,8 @@ class CooperativeCoevolutionaryAlgorithm():
                 for individual, fit in zip(team.policies, fitnesses):
                     if individual is not None:
                         individual.fitness.values = fit
+                        individual.team_fitness = fitnesses[-1][0]
+                team.fitness = eval_info.fitnesses[-1][0]
         else:
             team_list = []
             eval_info_list = []
@@ -837,38 +831,6 @@ class CooperativeCoevolutionaryAlgorithm():
             # Assign fitnesses to individuals
             self.assignFitnesses(teams, eval_infos)
 
-            # If we are preserving elite teams, then sort the subpopulations accordingly
-            # (Sort individuals according to their TEAM fitness)
-            if self.elite_preservation == 'elite_teams' or self.elite_preservation == 'elite_teams_and_individuals':
-                # Sort indices based on EvalInfo team fitness
-                sorted_indices = sorted(range(len(eval_infos)), key=lambda i: eval_infos[i].fitnesses[-1][0], reverse=True)
-
-                # On generation 0 we sort everyone (there are no elites to preserve yet)
-                sorted_pop = [[subpop[i] for i in sorted_indices] for subpop in pop]
-
-                # if self.elite_preservation == 'elite_teams':
-                #     # Reorder subpopulations and EvalInfo based on sorted indices
-                #     sorted_pop = [
-                #         subpop[:self.n_elites] + [
-                #             subpop[i+self.n_elites] 
-                #             for i in sorted_indices
-                #         ] 
-                #         for subpop in pop
-                #     ]
-
-                # elif self.elite_preservation == 'elite_teams_and_individuals':
-                #     sorted_pop = [
-                #         [
-                #             subpop[:self.n_elite_teams+self.n_elite_individuals]+subpop[i+self.n_elite_teams+self.n_elite_individuals] 
-                #             for i in sorted_indices
-                #         ] 
-                #         for subpop in pop
-                #     ]
-
-                pop = sorted_pop
-
-            # Use the ordering of the teams to order the individuals the same way
-
             # Evaluate a team with the best indivdiual from each subpopulation
             eval_infos = self.evaluateEvaluationTeam(pop)
 
@@ -907,9 +869,6 @@ class CooperativeCoevolutionaryAlgorithm():
             # Update gen counter
             self.gen = self.gen+1
 
-            if self.gen == 3:
-                pass
-
             # Perform selection
             offspring = self.select(pop)
 
@@ -928,36 +887,6 @@ class CooperativeCoevolutionaryAlgorithm():
 
             # Now assign fitnesses to each individual
             self.assignFitnesses(teams, eval_infos)
-
-            # If we are preserving elite teams, then sort the subpopulations accordingly
-            # (Sort individuals according to their TEAM fitness)
-            if self.elite_preservation == 'elite_teams' or self.elite_preservation == 'elite_teams_and_individuals':
-                # Sort indices based on EvalInfo team fitness
-                sorted_indices = sorted(range(len(eval_infos)), key=lambda i: eval_infos[i].fitnesses[-1][0], reverse=True)
-
-                sorted_pop = [[subpop[i] for i in sorted_indices] for subpop in offspring]
-
-                # if self.elite_preservation == 'elite_teams':
-                #     # We only sort everything after the elite teams
-                #     sorted_pop = [
-                #         subpop[:self.n_elites] + [
-                #             subpop[i+self.n_elites] 
-                #             for i in sorted_indices
-                #         ] 
-                #         for subpop in offspring
-                #     ]
-
-                # elif self.elite_preservation == 'elite_teams_and_individuals':
-                #     # We only sort everything after the elite teams and elite individuals
-                #     sorted_pop = [
-                #         [
-                #             subpop[:self.n_elite_teams+self.n_elite_individuals]+subpop[i+self.n_elite_teams+self.n_elite_individuals] 
-                #             for i in sorted_indices
-                #         ] 
-                #         for subpop in offspring
-                #     ]
-
-                offspring = sorted_pop
 
             # Evaluate a team with the best indivdiual from each subpopulation
             eval_infos = self.evaluateEvaluationTeam(offspring)
