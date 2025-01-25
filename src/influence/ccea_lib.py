@@ -75,6 +75,7 @@ class TeamInfo():
         self.policies = policies
         self.seed = seed
         self.fitness = None
+        self.agg_fitness = None
 
 class CooperativeCoevolutionaryAlgorithm():
     def __init__(self, config_dir):
@@ -116,6 +117,9 @@ class CooperativeCoevolutionaryAlgorithm():
         # if self.elite_preservation == 'elite_teams_and_individuals':
         #     self.n_elite_teams = self.config['ccea']['selection']['n_elites_binary_tournament']['elite_teams_and_individuals']['n_elite_teams']
         #     self.n_elite_individuals = self.config['ccea']['selection']['n_elites_binary_tournament']['elite_teams_and_individuals']['n_elite_individuals']
+        self.sort_teams_by_sum_agent_fitness = False
+        if 'sort_teams_by_sum_agent_fitness' in self.config['ccea']['selection']['n_elites_binary_tournament']:
+            self.sort_teams_by_sum_agent_fitness = self.config['ccea']['selection']['n_elites_binary_tournament']['sort_teams_by_sum_agent_fitness']
 
         if 'save_elite_fitness' not in self.config['data']:
             self.config['data']['save_elite_fitness'] = {}
@@ -558,8 +562,14 @@ class CooperativeCoevolutionaryAlgorithm():
         # small subpop is the subset of subpop that is not persistent
         # small_subpop = subpopulation[self.n_preserve_elites:]
 
+        # Set up lambda function for team sorting
+        if self.sort_teams_by_sum_agent_fitness:
+            lambda_func = lambda ind: ind.agg_team_fitness
+        else:
+            lambda_func = lambda ind: ind.team_fitness
+
         # Get the elites based on team fitness
-        sorted_by_team = sorted(subpopulation, key=lambda ind: ind.team_fitness, reverse=True)
+        sorted_by_team = sorted(subpopulation, key=lambda_func, reverse=True)
         # Get the elites based on individual fitness
         sorted_by_individual = sorted(subpopulation, key=lambda ind: ind.fitness.values[0], reverse=True)
 
@@ -609,11 +619,13 @@ class CooperativeCoevolutionaryAlgorithm():
         if self.num_evaluations_per_team == 1:
             for team, eval_info in zip(teams, eval_infos):
                 fitnesses = eval_info.fitnesses
+                team.fitness = eval_info.fitnesses[-1][0]
+                team.agg_fitness = sum(fit[0] for fit in fitnesses)
                 for individual, fit in zip(team.policies, fitnesses):
                     if individual is not None:
                         individual.fitness.values = fit
-                        individual.team_fitness = fitnesses[-1][0]
-                team.fitness = eval_info.fitnesses[-1][0]
+                        individual.team_fitness = team.fitness
+                        individual.agg_team_fitness = team.agg_fitness
         else:
             team_list = []
             eval_info_list = []
