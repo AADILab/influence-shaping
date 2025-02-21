@@ -28,3 +28,4 @@ Tell me how many of my jobs are still pending
 
 squeue -w cn-v-[1-8] --Format=jobid:10,partition:10,name:70,state:10,timeused:10,timeleft:12,nodelist:10
 
+watch -n0.1 squeue -u gonzaeve --Format=jobid:10,partition:10,name:70,state:10,timeused:10,timeleft:12,nodelist:10

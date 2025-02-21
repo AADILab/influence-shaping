@@ -189,3 +189,28 @@ This is completing the four squares experiments that Kagan asked for Tues Jan 7,
 ### irukandji
 
 This is re-running some experiments from emu that seem to have given me some conflicting results I'm investigating. Hopefully by running these again I can get some clarity on what is going on.
+
+### xmasbeetle
+
+Lots of debugging here
+
+### yabby
+
+This is where I'm using the new selection mechanisms that Gaurav and I made. N elites with team elites and elite preservation.
+
+#### 02
+
+This one had a mistake in it. The map size is 50x50, but needs to be 150x150, so all rovers and uavs are immediately shoved into one corner because of the way the bounds are used.
+
+#### 04
+
+Redo of 02.
+
+3x3 random circle poi experiments. 1,000 generations. G and D-Indirect-Timestep (the all or nothing variant). Subpopulation size of 50 individuals
+
+There are 3 different versions of this running that do different things with the elites
+1. standard_n_elites - This uses a standard n-elites selection mechanism. Take the top 5 best individuals (based on individual fitness) at this generation and put them into the offspring for this subpopulation. Then fill in the rest with a binary tournament
+2. preserve_n_elites - This takes elite preservation to its logical extreme. This preserves 5 teams (5 individuals based on team fitness) and 5 individuals (5 individuals based on individual fitness). Preservation means that these individuals are not evaluated at each generation. They can be knocked out of preservation status by a better team or individual during selection.  This also takes the top 5 best individuals and top 5 best teams at this generation and puts them into the offspring for the subpopulation. Then the rest of the offspring is filled in with a binary tournament. Any elite (preserved or otherwise) can be selected into the tournament. No elites (preserved or otherwise) are mutated during the mutation step.
+3. use_agg_team_fit - This does all of the elite preservation, with the caveat that teams are not sorted by team fitness. Instead, they are sorted based on the sum of all individual fitnesses for that team. So if a team is 2 rovers, 2 uavs, and each rover got a poi, and one uav got credit for a poi, then the individual fitnesses look like this:
+[ 1, 1, 1, 0 ]. Aggregated fitness is 3. G would be 2. This changes how elite teams are selected, like you were describing last night
+3. best_combo_prediction - My personal prediction of what will work the best. 5 elite teams and 5 elite individuals. No elite preservation. Teams are sorted based on aggregated fitness in each team, not based on that team's fitness.
