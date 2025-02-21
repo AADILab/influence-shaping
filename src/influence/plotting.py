@@ -164,6 +164,8 @@ def generate_joint_trajectory_plot(joint_traj_dir: Path, individual_colors: bool
     ax.set_ylim([0, y_bound])
     ax.set_aspect('equal')
 
+    ax.grid()
+
     plot_args.apply(ax)
 
     return fig
@@ -269,11 +271,11 @@ def add_stat_learning_curve(ax: Axes, individual_trials: bool, csv_name: str, tr
 
         # Plot statistics
         if color is None:
-            ax.plot(gens, avg, label=label)
-            ax.fill_between(gens, low_err, upp_err, alpha=0.2)
+            ax.plot(gens, avg, label=label, zorder=2)
+            ax.fill_between(gens, low_err, upp_err, alpha=0.2, zorder=1)
         else:
-            ax.plot(gens, avg, label=label, color=color)
-            ax.fill_between(gens, low_err, upp_err, alpha=0.2, facecolor=color)
+            ax.plot(gens, avg, label=label, color=color, zorder=2)
+            ax.fill_between(gens, low_err, upp_err, alpha=0.2, facecolor=color, zorder=1)
 
         # Set ax ylim based on poi values in config
         config = load_config(trials_dir/'config.yaml')
