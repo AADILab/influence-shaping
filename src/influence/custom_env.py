@@ -34,6 +34,7 @@ class SmartLidar(rovers.Lidar[rovers.Density]):
             accum_type: List[str], measurement_type: List[str],
             observation_radii: List[float], default_values: List[float]
             ):
+        # print('SmartLidar.init()')
         super().__init__(resolution, composition_policy)
         self.agent_types = agent_types
         self.poi_types = poi_types
@@ -46,7 +47,21 @@ class SmartLidar(rovers.Lidar[rovers.Density]):
         self.m_resolution = resolution
         self.m_composition = composition_policy
 
+        # print('SmartLidar init parameters:')
+        # print('self.agent_types: ', self.agent_types)
+        # print('self.poi_types: ', self.poi_types)
+        # print('self.poi_subtypes: ', self.poi_subtypes)
+        # print('self.agent_observable_subtypes: ', self.agent_observable_subtypes)
+        # print('self.accum_type: ', self.accum_type)
+        # print('self.measurement_type: ', self.measurement_type)
+        # print('self.observation_radii: ', self.observation_radii)
+        # print('self.default_values: ', self.default_values)
+        # print('self.m_resolution: ', self.m_resolution)
+        # print('self.m_composition: ', self.m_composition)
+
+
     def measure(self, distance, agent_id):
+        # print('SmartLidar.measure()')
         if self.measurement_type[agent_id] == 'inverse_distance_squared':
             return 1.0 / max([0.001, distance**2])
         elif self.measurement_type[agent_id] == 'exponential_negative_distance':
