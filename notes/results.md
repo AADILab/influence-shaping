@@ -190,6 +190,12 @@ This is completing the four squares experiments that Kagan asked for Tues Jan 7,
 
 This is re-running some experiments from emu that seem to have given me some conflicting results I'm investigating. Hopefully by running these again I can get some clarity on what is going on.
 
+### shingleback
+
+#### attempt 2
+
+This is the experiment that I showed in the AAMAS 2025 DC. There are 4 rovers and 4 uavs placed at the center of the map. Each corner of the map has a POI (4 POIs total). This was to show a simple example where we need d-indirect.
+
 ### xmasbeetle
 
 Lots of debugging here
