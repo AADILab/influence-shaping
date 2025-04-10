@@ -29,7 +29,7 @@ def bound_value(value, upper, lower):
         return lower
     else:
         return value
-    
+
 def bound_velocity(velocity, max_velocity):
     """Bound the velocity to meet max velocity constraint"""
     if velocity > max_velocity:
@@ -94,32 +94,34 @@ class CooperativeCoevolutionaryAlgorithm():
         self.num_rover_pois = len(self.config["env"]["pois"]["rover_pois"])
         self.num_hidden_pois = len(self.config["env"]["pois"]["hidden_pois"])
 
-        self.n_preserve_team_elites = self.config['ccea']['selection']['n_elites_binary_tournament']['n_preserve_team_elites']
-        self.n_preserve_individual_elites = self.config['ccea']['selection']['n_elites_binary_tournament']['n_preserve_individual_elites']
-        self.n_team_elites = self.config['ccea']['selection']['n_elites_binary_tournament']['n_team_elites']
-        self.n_individual_elites = self.config['ccea']['selection']['n_elites_binary_tournament']['n_individual_elites']
-
-        self.n_preserve_elites = self.n_preserve_team_elites + self.n_preserve_individual_elites
-        self.n_current_elites = self.n_team_elites + self.n_individual_elites
-
-        self.total_elites = self.n_preserve_elites + self.n_current_elites
-
-        # self.n_elites = self.config["ccea"]["selection"]["n_elites_binary_tournament"]["n_elites"]
-        self.include_elites_in_tournament = self.config["ccea"]["selection"]["n_elites_binary_tournament"]["include_elites_in_tournament"]
-        self.num_mutants = self.subpopulation_size - self.total_elites
-        self.num_evaluations_per_team = self.config["ccea"]["evaluation"]["multi_evaluation"]["num_evaluations"]
-        self.aggregation_method = self.config["ccea"]["evaluation"]["multi_evaluation"]["aggregation_method"]
-        # self.rigid_preserve_elites = False
-        # self.elite_preservation = None
-        # if 'elite_preservation' in self.config['ccea']['selection']['n_elites_binary_tournament']:
-        #     self.elite_preservation = self.config['ccea']['selection']['n_elites_binary_tournament']['elite_preservation']
-
-        # if self.elite_preservation == 'elite_teams_and_individuals':
-        #     self.n_elite_teams = self.config['ccea']['selection']['n_elites_binary_tournament']['elite_teams_and_individuals']['n_elite_teams']
-        #     self.n_elite_individuals = self.config['ccea']['selection']['n_elites_binary_tournament']['elite_teams_and_individuals']['n_elite_individuals']
+        self.selection_mechanism = self.config['ccea']['selection']['mechanism']
         self.sort_teams_by_sum_agent_fitness = False
-        if 'sort_teams_by_sum_agent_fitness' in self.config['ccea']['selection']['n_elites_binary_tournament']:
-            self.sort_teams_by_sum_agent_fitness = self.config['ccea']['selection']['n_elites_binary_tournament']['sort_teams_by_sum_agent_fitness']
+        if self.selection_mechanism == 'mixed_n_elites_binary_tournament':
+            self.n_preserve_team_elites = self.config['ccea']['selection']['mixed_n_elites_binary_tournament']['n_preserve_team_elites']
+            self.n_preserve_individual_elites = self.config['ccea']['selection']['mixed_n_elites_binary_tournament']['n_preserve_individual_elites']
+            self.n_team_elites = self.config['ccea']['selection']['mixed_n_elites_binary_tournament']['n_team_elites']
+            self.n_individual_elites = self.config['ccea']['selection']['mixed_n_elites_binary_tournament']['n_individual_elites']
+
+            self.n_preserve_elites = self.n_preserve_team_elites + self.n_preserve_individual_elites
+            self.n_current_elites = self.n_team_elites + self.n_individual_elites
+
+            self.total_elites = self.n_preserve_elites + self.n_current_elites
+
+            self.num_mutants = self.subpopulation_size - self.total_elites
+            if 'sort_teams_by_sum_agent_fitness' in self.config['ccea']['selection']['mixed_n_elites_binary_tournament']:
+                self.sort_teams_by_sum_agent_fitness = self.config['ccea']['selection']['mixed_n_elites_binary_tournament']['sort_teams_by_sum_agent_fitness']
+
+        elif self.selection_mechanism == 'epsilon_greedy':
+            self.num_mutants = int(self.subpopulation_size / 2)
+            self.num_elites = self.subpopulation_size - self.num_mutants # Just in case subpopulation size is an odd number
+            self.total_elites = self.num_elites
+            self.epsilon = self.config['ccea']['selection']['epsilon_greedy']['epsilon']
+            self.n_preserve_elites = 0
+
+        # Evaluation settings
+        self.num_teams_per_evaluation = self.config['ccea']['evaluation']['multi_evaluation']['num_teams_per_evaluation']
+        self.num_rollouts_per_team = self.config['ccea']['evaluation']['multi_evaluation']['num_rollouts_per_team']
+        self.aggregation_method = self.config['ccea']['evaluation']['multi_evaluation']['aggregation_method']
 
         if 'save_elite_fitness' not in self.config['data']:
             self.config['data']['save_elite_fitness'] = {}
@@ -178,7 +180,7 @@ class CooperativeCoevolutionaryAlgorithm():
             if 'random_seed' in self.config['debug']:
                 if 'set_seed' in self.config['debug']['random_seed']:
                     self.random_seed_val = self.config['debug']['random_seed']['set_seed']
-        
+
         # Check if we are incrementing that seed
         self.increment_seed_every_trial = False
         if 'debug' in self.config:
@@ -238,10 +240,10 @@ class CooperativeCoevolutionaryAlgorithm():
             output_activation_function='softmax'
         # Create template nn
         return NeuralNetwork(
-            num_inputs=num_inputs, 
-            num_hidden=self.num_hidden, 
-            num_outputs=num_outputs, 
-            hidden_activation_func='tanh', 
+            num_inputs=num_inputs,
+            num_hidden=self.num_hidden,
+            num_outputs=num_outputs,
+            hidden_activation_func='tanh',
             output_activation_func=output_activation_function
         )
 
@@ -321,7 +323,7 @@ class CooperativeCoevolutionaryAlgorithm():
 
     def evaluateEvaluationTeam(self, population):
         # Create evaluation team _ times
-        eval_teams = [self.formEvaluationTeam(population) for _ in range(self.num_evaluations_per_team)]
+        eval_teams = [self.formEvaluationTeam(population) for _ in range(self.num_rollouts_per_team)]
         # Evaluate the teams
         return self.evaluateTeams(eval_teams)
 
@@ -335,7 +337,8 @@ class CooperativeCoevolutionaryAlgorithm():
             # We want to hold on to these elites and don't want a new fitness assigned to them
             team_inds = [i+self.n_preserve_elites for i in range(self.subpopulation_size-self.n_preserve_elites)]
 
-        team_inds = list(range(self.subpopulation_size))
+        else:
+            team_inds = list(range(self.subpopulation_size))
 
         # For each individual in a subpopulation
         for i in team_inds:
@@ -347,36 +350,14 @@ class CooperativeCoevolutionaryAlgorithm():
                 policies.append(subpop[i])
             # Need to save that team for however many evaluations
             # we're doing per team
-            for _ in range(self.num_evaluations_per_team):
+            for _ in range(self.num_rollouts_per_team):
                 # Save that team
                 teams.append(TeamInfo(policies, self.get_seed()))
 
         return teams
-    
+
     def buildMap(self, teams):
         return self.map(self.evaluateTeam, teams)
-        # if self.use_multiprocessing:
-        #     return self.map(
-        #         self.evaluateTeam,
-        #         zip(
-        #             teams,
-        #             [self.template_policies for _ in teams],
-        #             [self.config for _ in teams],
-        #             [self.num_rovers for _ in teams],
-        #             [self.num_uavs for _ in teams],
-        #             [self.num_steps for _ in teams]
-        #         )
-        #     )
-        # else:
-        #     return self.map(
-        #         self.evaluateTeam, 
-        #         teams,
-        #         [self.template_policies for _ in teams],
-        #         [self.config for _ in teams],
-        #         [self.num_rovers for _ in teams],
-        #         [self.num_uavs for _ in teams],
-        #         [self.num_steps for _ in teams]
-        #     )
 
     def evaluateTeams(self, teams: List[TeamInfo]):
         if self.use_multiprocessing:
@@ -385,7 +366,7 @@ class CooperativeCoevolutionaryAlgorithm():
         else:
             eval_infos = list(self.buildMap(teams))
         return eval_infos
-    
+
     def evaluateTeam(self, team: TeamInfo, compute_team_fitness=True):
         return self.evaluateTeamStatic(
             team,
@@ -399,7 +380,7 @@ class CooperativeCoevolutionaryAlgorithm():
 
     @staticmethod
     def evaluateTeamStatic(
-        team: TeamInfo, 
+        team: TeamInfo,
         template_policies: List[Union[NeuralNetwork|FollowPolicy]],
         config: dict,
         num_rovers: int,
@@ -498,7 +479,7 @@ class CooperativeCoevolutionaryAlgorithm():
                         else: # This is a uav
                             # Impose uav velocity boundaries
                             input_action_arr = bound_velocity_arr(
-                                velocity_arr=input_action_arr, 
+                                velocity_arr=input_action_arr,
                                 max_velocity=config['ccea']['network']['uav_max_velocity']
                             )
 
@@ -547,7 +528,7 @@ class CooperativeCoevolutionaryAlgorithm():
         return tools.mutGaussian(individual, mu=self.config["ccea"]["mutation"]["mean"], sigma=self.config["ccea"]["mutation"]["std_deviation"], indpb=self.config["ccea"]["mutation"]["independent_probability"])
 
     def mutate(self, population):
-        # Don't mutate the elites from n-elites
+        # Only mutate individuals we have set aside for mutation
         for num_individual in range(self.num_mutants):
             mutant_id = num_individual + self.total_elites
             for subpop in population:
@@ -562,29 +543,48 @@ class CooperativeCoevolutionaryAlgorithm():
         # small subpop is the subset of subpop that is not persistent
         # small_subpop = subpopulation[self.n_preserve_elites:]
 
-        # Set up lambda function for team sorting
-        if self.sort_teams_by_sum_agent_fitness:
-            lambda_func = lambda ind: ind.agg_team_fitness
-        else:
-            lambda_func = lambda ind: ind.team_fitness
-
-        # Get the elites based on team fitness
-        sorted_by_team = sorted(subpopulation, key=lambda_func, reverse=True)
-        # Get the elites based on individual fitness
+        # Sort elites based on shaped fitness
         sorted_by_individual = sorted(subpopulation, key=lambda ind: ind.fitness.values[0], reverse=True)
 
-        # Get persistent team elites
-        offspring = sorted_by_team[:self.n_preserve_team_elites]
-        # Get persistent individual elites
-        offspring += sorted_by_individual[:self.n_preserve_individual_elites]
-        # Get current team elites
-        offspring += sorted_by_team[self.n_preserve_team_elites:self.n_preserve_team_elites+self.n_team_elites]
-        # Get current individual_elites
-        offspring += sorted_by_individual[self.n_preserve_individual_elites:self.n_preserve_individual_elites+self.n_individual_elites]
+        if self.selection_mechanism == 'mixed_n_elites_binary_tournament':
+            # Set up lambda function for team sorting
+            if self.sort_teams_by_sum_agent_fitness:
+                lambda_func = lambda ind: ind.agg_team_fitness
+            else:
+                lambda_func = lambda ind: ind.team_fitness
 
-        # Now pick the rest based on a binary tournament. 
-        # Selection here depends on individual (not team) fitness
-        offspring += tools.selTournament(subpopulation, len(subpopulation) - self.total_elites, 2)
+            # Get the elites based on team fitness
+            sorted_by_team = sorted(subpopulation, key=lambda_func, reverse=True)
+
+            # Get persistent team elites
+            offspring = sorted_by_team[:self.n_preserve_team_elites]
+            # Get persistent individual elites
+            offspring += sorted_by_individual[:self.n_preserve_individual_elites]
+            # Get current team elites
+            offspring += sorted_by_team[self.n_preserve_team_elites:self.n_preserve_team_elites+self.n_team_elites]
+            # Get current individual_elites
+            offspring += sorted_by_individual[self.n_preserve_individual_elites:self.n_preserve_individual_elites+self.n_individual_elites]
+
+            # Now pick the rest based on a binary tournament.
+            # Selection here depends on individual (not team) fitness
+            offspring += tools.selTournament(subpopulation, len(subpopulation) - self.total_elites, 2)
+
+        elif self.selection_mechanism == 'epsilon_greedy':
+            offspring = []
+            for _ in range(self.num_elites):
+                if random.uniform(0,1) < self.epsilon:
+                    # Select a random agent for survival
+                    offspring.append(random.choice(subpopulation))
+                else:
+                    # Select highest fitness agent for survival
+                    offspring.append(sorted_by_individual[0])
+            # range(self.num_mutants) ensures we don't produce an extra mutant
+            # if the subpopulation is an odd number size, accidentally
+            # ballooning the size of the subpopulations
+            marked_for_mutation = []
+            for individual, _ in zip(offspring, range(self.num_mutants)):
+                marked_for_mutation.append(individual)
+            offspring += marked_for_mutation
 
         return [ deepcopy(individual) for individual in offspring ]
 
@@ -616,7 +616,7 @@ class CooperativeCoevolutionaryAlgorithm():
         # There may be several eval_infos for the same team
         # This is the case if there are many evaluations per team
         # In that case, we need to aggregate those many evaluations into one fitness
-        if self.num_evaluations_per_team == 1:
+        if self.num_rollouts_per_team == 1:
             for team, eval_info in zip(teams, eval_infos):
                 fitnesses = eval_info.fitnesses
                 team.fitness = eval_info.fitnesses[-1][0]
@@ -633,9 +633,9 @@ class CooperativeCoevolutionaryAlgorithm():
                 team_list.append(team)
                 eval_info_list.append(eval_info)
 
-            for team_id, team in enumerate(team_list[::self.num_evaluations_per_team]):
+            for team_id, team in enumerate(team_list[::self.num_rollouts_per_team]):
                 # Get all the eval infos for this team
-                team_eval_infos = eval_info_list[team_id*self.num_evaluations_per_team:(team_id+1)*self.num_evaluations_per_team]
+                team_eval_infos = eval_info_list[team_id*self.num_rollouts_per_team:(team_id+1)*self.num_rollouts_per_team]
                 # Aggregate the fitnesses into a big numpy array
                 all_fitnesses = [eval_info.fitnesses for eval_info in team_eval_infos]
                 average_fitnesses = [0 for _ in range(len(all_fitnesses[0]))]
@@ -643,7 +643,7 @@ class CooperativeCoevolutionaryAlgorithm():
                     for count, fit in enumerate(fitnesses):
                         average_fitnesses[count] += fit[0]
                 for ind in range(len(average_fitnesses)):
-                    average_fitnesses[ind] = average_fitnesses[ind] / self.num_evaluations_per_team
+                    average_fitnesses[ind] = average_fitnesses[ind] / self.num_rollouts_per_team
                 # And now get that back to the individuals
                 fitnesses = tuple([(f,) for f in average_fitnesses])
                 for individual, fit in zip(team.policies, fitnesses):
@@ -661,7 +661,7 @@ class CooperativeCoevolutionaryAlgorithm():
             header += ",rover_"+str(j)+"_"
         for j in range(self.num_uavs):
             header += ",uav_"+str(j)
-        for i in range(self.num_evaluations_per_team):
+        for i in range(self.num_rollouts_per_team):
             header+=",team_fitness_"+str(i)
             for j in range(self.num_rovers):
                 header+=",team_"+str(i)+"_rover_"+str(j)
@@ -686,7 +686,7 @@ class CooperativeCoevolutionaryAlgorithm():
                 team_eval_infos.append(eval_info)
             # Aggergate the fitnesses into a big numpy array
             num_ind_per_team = len(team_eval_infos[0].fitnesses)
-            all_fit = np.zeros(shape=(self.num_evaluations_per_team, num_ind_per_team))
+            all_fit = np.zeros(shape=(self.num_rollouts_per_team, num_ind_per_team))
             for num_eval, eval_info in enumerate(team_eval_infos):
                 fitnesses = eval_info.fitnesses
                 for num_ind, fit in enumerate(fitnesses):
