@@ -20,6 +20,7 @@ from pathlib import Path
 import yaml
 import pprint
 from tqdm import tqdm
+import pandas as pd
 
 def bound_value(value, upper, lower):
     """Bound the value between an upper and lower bound"""
@@ -59,23 +60,32 @@ class FollowPolicy():
             action[np.argmin(f_obs)] = 1
             return action
 
-class JointTrajectory():
-    def __init__(self, joint_state_trajectory, joint_observation_trajectory, joint_action_trajectory):
-        self.states = joint_state_trajectory
-        self.observations = joint_observation_trajectory
-        self.actions = joint_action_trajectory
+# class JointTrajectory():
+#     def __init__(self, joint_state_trajectory, joint_observation_trajectory, joint_action_trajectory):
+#         self.states = joint_state_trajectory
+#         self.observations = joint_observation_trajectory
+#         self.actions = joint_action_trajectory
 
-class EvalInfo():
+#     def to_df(self):
+#         pass
+
+class EvalOut():
     def __init__(self, fitnesses, joint_trajectory):
         self.fitnesses = fitnesses
         self.joint_trajectory = joint_trajectory
 
-class TeamInfo():
-    def __init__(self, policies, seed):
-        self.policies = policies
+class TeamEvalIn():
+    def __init__(self, individuals, seed):
+        # Each policy is an "individual"
+        # Seed is for evaluation in random environments
+        self.individuals = individuals
         self.seed = seed
-        self.fitness = None
-        self.agg_fitness = None
+
+class TeamSummary():
+    def __init__(self, individuals, seeds, eval_outs):
+        self.individuals = individuals
+        self.seeds = seeds
+        self.eval_outs = eval_outs
 
 class CooperativeCoevolutionaryAlgorithm():
     def __init__(self, config_dir):
@@ -119,9 +129,23 @@ class CooperativeCoevolutionaryAlgorithm():
             self.n_preserve_elites = 0
 
         # Evaluation settings
-        self.num_teams_per_evaluation = self.config['ccea']['evaluation']['multi_evaluation']['num_teams_per_evaluation']
         self.num_rollouts_per_team = self.config['ccea']['evaluation']['multi_evaluation']['num_rollouts_per_team']
-        self.aggregation_method = self.config['ccea']['evaluation']['multi_evaluation']['aggregation_method']
+        self.agg_across_rollouts = self.config['ccea']['evaluation']['multi_evaluation']['aggregation_across_rollouts']
+        self.num_teams_per_evaluation = self.config['ccea']['evaluation']['multi_evaluation']['num_teams_per_evaluation']
+        self.agg_across_teams = self.config['ccea']['evaluation']['multi_evaluation']['aggregation_across_teams']
+        self.choose_team_aggregation_across_rollouts = \
+            self.config['ccea']['evaluation']['resim_test_evaluation']['choose_team_aggregation_across_rollouts']
+        self.choose_shaped_aggregation_across_rollouts = \
+            self.config['ccea']['evaluation']['resim_test_evaluation']['choose_shaped_aggregation_across_rollouts']
+        self.test_aggregation_across_rollouts = \
+            self.config['ccea']['evaluation']['resim_test_evaluation']['test_aggregation_across_rollouts']
+        self.test_num_rollouts = \
+            self.config['ccea']['evaluation']['resim_test_evaluation']['test_num_rollouts']
+        self.resim_test_evaluation = \
+            self.config['ccea']['evaluation']['resim_test_evaluation']['switch']
+            # Whether or not we even resimulate for testing or just use the training rollouts
+        self.num_team_champions = \
+            self.config['ccea']['evaluation']['resim_test_evaluation']['num_team_champions']
 
         if 'save_elite_fitness' not in self.config['data']:
             self.config['data']['save_elite_fitness'] = {}
@@ -159,8 +183,8 @@ class CooperativeCoevolutionaryAlgorithm():
         self.num_threads = self.config["processing"]["num_threads"]
 
         # Data saving variables
-        self.save_trajectories = self.config["data"]["save_trajectories"]["switch"]
-        self.num_gens_between_save_traj = self.config["data"]["save_trajectories"]["num_gens_between_save"]
+        self.save_champion_trajectories = self.config["data"]["save_champion_trajectories"]["switch"]
+        self.num_gens_between_save_eval_traj = self.config["data"]["save_champion_trajectories"]["num_gens_between_save"]
         if 'checkpoints' in self.config['data'] and 'save' in self.config['data']['checkpoints']:
             self.save_checkpoint = self.config["data"]["checkpoints"]["save"]
         else:
@@ -225,12 +249,17 @@ class CooperativeCoevolutionaryAlgorithm():
     def __setstate__(self, state):
         self.__dict__.update(state)
 
-    def get_template_nn(self, agent_config: dict):
-        # Figure out number of inputs to nn from observation size
+    @staticmethod
+    def get_num_sensors(agent_config: dict, num_uavs: int):
         if agent_config['sensor']['type'] == 'SmartLidar':
             num_inputs = 3*int(360/agent_config["resolution"])
         elif agent_config['sensor']['type'] == 'UavDistanceLidar':
-            num_inputs = self.num_uavs
+            num_inputs = num_uavs
+        return num_inputs
+
+    def get_template_nn(self, agent_config: dict):
+        # Figure out number of inputs to nn from observation size
+        num_inputs = self.get_num_sensors(agent_config, self.num_uavs)
         # Figure out number of outputs from action
         if agent_config['action']['type'] == 'dxdy':
             num_outputs = 2
@@ -278,8 +307,12 @@ class CooperativeCoevolutionaryAlgorithm():
     def generateWeight(self):
         return random.uniform(self.config["ccea"]["weight_initialization"]["lower_bound"], self.config["ccea"]["weight_initialization"]["upper_bound"])
 
-    def generateIndividual(self, individual_size):
-        return tools.initRepeat(creator.Individual, self.generateWeight, n=individual_size)
+    def generateIndividual(self, individual_size, _id):
+        individual = tools.initRepeat(creator.Individual, self.generateWeight, n=individual_size)
+        individual._id = _id
+        individual.shaped_fitnesses = []
+        individual.team_fitnesses = []
+        return individual
 
     def generateRoverIndividual(self):
         return self.generateIndividual(individual_size=self.rover_nn_size)
@@ -293,15 +326,15 @@ class CooperativeCoevolutionaryAlgorithm():
     def generateUAVSubpopulation(self):
         return tools.initRepeat(list, self.generateUAVIndividual, n=self.config["ccea"]["population"]["subpopulation_size"])
 
-    def population(self):
+    def populations(self):
         pop = []
         # Generating subpopulation for each agent
         for agent_id in range(self.num_rovers+self.num_uavs):
             if type(self.template_policies[agent_id]) is NeuralNetwork:
                 # Filling subpopulation for each agent
                 subpop=[]
-                for _ in range(self.config["ccea"]["population"]["subpopulation_size"]):
-                    subpop.append(self.generateIndividual(individual_size=self.nn_sizes[agent_id]))
+                for _id in range(self.config["ccea"]["population"]["subpopulation_size"]):
+                    subpop.append(self.generateIndividual(individual_size=self.nn_sizes[agent_id], _id=_id))
             else:
                 # Subpopulation of None for fixed policies
                 subpop=[]
@@ -319,7 +352,7 @@ class CooperativeCoevolutionaryAlgorithm():
                 # Use max with a key function to get the individual with the highest fitness[0] value
                 best_ind = max(subpop, key=lambda ind: ind.fitness.values[0])
             policies.append(best_ind)
-        return TeamInfo(policies, self.get_seed())
+        return TeamEvalIn(policies, self.get_seed())
 
     def evaluateEvaluationTeam(self, population):
         # Create evaluation team _ times
@@ -327,39 +360,39 @@ class CooperativeCoevolutionaryAlgorithm():
         # Evaluate the teams
         return self.evaluateTeams(eval_teams)
 
-    # def formTeams(self, population, inds=None) -> List[TeamInfo]:
-    def formTeams(self, population) -> List[TeamInfo]:
-        # Start a list of teams
-        teams = []
+    def formTeams(self, populations, skip_preserved=True) -> List:
+        # Base case: There are only preserved elites left
+        # For each population
+        #   Pick a random policy from the population, excluding preserved elites
+        #   Put that policy onto the team
+        # Return the team, and the downsized populations with those policies removed
 
-        if self.n_preserve_elites > 0 and self.gen != 0:
-            # Skip the persistent elites for team formation
-            # We want to hold on to these elites and don't want a new fitness assigned to them
-            team_inds = [i+self.n_preserve_elites for i in range(self.subpopulation_size-self.n_preserve_elites)]
+        # Base Case. Only preserved elites are left.
+        if len(populations[0]) <= self.n_preserve_elites and skip_preserved:
+            return []
 
-        else:
-            team_inds = list(range(self.subpopulation_size))
+        # Base Case. No individuals left
+        elif len(populations[0]) <= 0:
+            return []
 
-        # For each individual in a subpopulation
-        for i in team_inds:
-            # Make a team
-            policies = []
-            # For each subpopulation in the population
-            for subpop in population:
-                # Put the i'th indiviudal on the team
-                policies.append(subpop[i])
-            # Need to save that team for however many evaluations
-            # we're doing per team
-            for _ in range(self.num_rollouts_per_team):
-                # Save that team
-                teams.append(TeamInfo(policies, self.get_seed()))
-
-        return teams
+        # Standard Case. Form a team and keep going!
+        team = []
+        reduced_populations = []
+        for pop in populations:
+            if skip_preserved:
+                # Protect preserved elites
+                index = int(random.choice(self.n_preserve_elites+np.arange(len(pop)-self.n_preserve_elites)))
+            else:
+                # Pick anyone!
+                index = int(random.choice(np.arange(len(pop))))
+            team.append(pop[index])
+            reduced_populations.append(pop[:index]+pop[index+1:])
+        return [team]+self.formTeams(reduced_populations, skip_preserved=skip_preserved)
 
     def buildMap(self, teams):
         return self.map(self.evaluateTeam, teams)
 
-    def evaluateTeams(self, teams: List[TeamInfo]):
+    def evaluateTeams(self, teams: List[TeamEvalIn]):
         if self.use_multiprocessing:
             jobs = self.buildMap(teams)
             eval_infos = jobs.get()
@@ -367,7 +400,7 @@ class CooperativeCoevolutionaryAlgorithm():
             eval_infos = list(self.buildMap(teams))
         return eval_infos
 
-    def evaluateTeam(self, team: TeamInfo, compute_team_fitness=True):
+    def evaluateTeam(self, team: TeamEvalIn, compute_team_fitness=True):
         return self.evaluateTeamStatic(
             team,
             self.template_policies,
@@ -380,7 +413,7 @@ class CooperativeCoevolutionaryAlgorithm():
 
     @staticmethod
     def evaluateTeamStatic(
-        team: TeamInfo,
+        team: TeamEvalIn,
         template_policies: List[Union[NeuralNetwork|FollowPolicy]],
         config: dict,
         num_rovers: int,
@@ -389,8 +422,8 @@ class CooperativeCoevolutionaryAlgorithm():
         compute_team_fitness=True
     ):
         # Set up random seed if one was specified
-        if not isinstance(team, TeamInfo):
-            raise Exception('team should be TeamInfo')
+        if not isinstance(team, TeamEvalIn):
+            raise Exception('team should be TeamEvalIn')
         if team.seed is not None:
             random.seed(team.seed)
             np.random.seed(team.seed)
@@ -403,7 +436,7 @@ class CooperativeCoevolutionaryAlgorithm():
         agent_policies = [deepcopy(template_policy) for template_policy in template_policies]
 
         # Load in the weights
-        for nn, individual in zip(agent_policies, team.policies):
+        for nn, individual in zip(agent_policies, team.individuals):
             if type(nn) is NeuralNetwork:
                 nn.setWeights(individual)
 
@@ -412,24 +445,51 @@ class CooperativeCoevolutionaryAlgorithm():
 
         observations, _ = env.reset()
 
-        agent_positions = [[agent.position().x, agent.position().y] for agent in env.rovers()]
-        poi_positions = [[poi.position().x, poi.position().y] for poi in env.pois()]
+        # For saving rollout information
+        num_rover_pois = len(config['env']['pois']['rover_pois'])
+        joint_trajectory = {}
+        for i, agent in enumerate(env.rovers()[:num_rovers]):
+            joint_trajectory['rover_'+str(i)+'_x'] = [agent.position().x]
+            joint_trajectory['rover_'+str(i)+'_y'] = [agent.position().y]
+            joint_trajectory['rover_'+str(i)+'_dx'] = []
+            joint_trajectory['rover_'+str(i)+'_dy'] = []
+            observation = observations[i]
+            for j in range(len(observation)):
+                joint_trajectory['rover_'+str(i)+'_obs_'+str(j)] = [observation(j)]
+        for i, agent in enumerate(env.rovers()[num_rovers:]):
+            joint_trajectory['uav_'+str(i)+'_x'] = [agent.position().y]
+            joint_trajectory['uav_'+str(i)+'_y'] = [agent.position().y]
+            joint_trajectory['uav_'+str(i)+'_dx'] = []
+            joint_trajectory['uav_'+str(i)+'_dy'] = []
+            observation = observations[num_rovers+i]
+            for j in range(len(observation)):
+                joint_trajectory['uav_'+str(i)+'_obs_'+str(j)] = [observation(j)]
+        for i, poi in enumerate(env.pois()[:num_rover_pois]):
+            joint_trajectory['rover_poi_'+str(i)+'_x'] = [poi.position().x]
+            joint_trajectory['rover_poi_'+str(i)+'_y'] = [poi.position().y]
+        for i, poi in enumerate(env.pois()[num_rover_pois:]):
+            joint_trajectory['hidden_poi_'+str(i)+'_x'] = [poi.position().x]
+            joint_trajectory['hidden_poi_'+str(i)+'_y'] = [poi.position().y]
 
-        observations_arrs = []
-        for observation in observations:
-            observation_arr = []
-            for i in range(len(observation)):
-                observation_arr.append(observation(i))
-            observation_arr = np.array(observation_arr, dtype=np.float64)
-            observations_arrs.append(observation_arr)
 
-        joint_state_trajectory = [agent_positions+poi_positions]
-        joint_observation_trajectory = [observations_arrs]
-        joint_action_trajectory = []
+        # agent_positions = [[agent.position().x, agent.position().y] for agent in env.rovers()]
+        # poi_positions = [[poi.position().x, poi.position().y] for poi in env.pois()]
+
+        # observations_arrs = []
+        # for observation in observations:
+        #     observation_arr = []
+        #     for i in range(len(observation)):
+        #         observation_arr.append(observation(i))
+        #     observation_arr = np.array(observation_arr, dtype=np.float64)
+        #     observations_arrs.append(observation_arr)
+
+        # joint_state_trajectory = [agent_positions+poi_positions]
+        # joint_observation_trajectory = [observations_arrs]
+        # joint_action_trajectory = []
 
         for _ in range(num_steps):
             # Compute the actions of all rovers
-            observation_arrs = []
+            # observation_arrs = []
             actions_arrs = []
             actions = []
             for ind, (observation, agent_nn) in enumerate(zip(observations, agent_policies)):
@@ -484,20 +544,47 @@ class CooperativeCoevolutionaryAlgorithm():
                             )
 
                 # Save this info for debugging purposes
-                observation_arrs.append(observation_arr)
+                # observation_arrs.append(observation_arr)
                 actions_arrs.append(input_action_arr)
             for action_arr in actions_arrs:
                 action = rovers.tensor(action_arr)
                 actions.append(action)
             observations = env.step_without_rewards(actions)
 
-            # Get all the states and all the actions of all agents
-            agent_positions = [[agent.position().x, agent.position().y] for agent in env.rovers()]
-            poi_positions = [[poi.position().x, poi.position().y] for poi in env.pois()]
+            # Save joint trajectory information
+            for i, (action_arr, observation, agent) in enumerate(zip(actions_arrs, observations, env.rovers())):
+                if i < num_rovers:
+                    type_ = 'rover'
+                    agent_id = i
+                else:
+                    type_ = 'uav'
+                    agent_id = i - num_rovers
+                joint_trajectory[type_+'_'+str(agent_id)+'_x'].append(agent.position().x)
+                joint_trajectory[type_+'_'+str(agent_id)+'_y'].append(agent.position().y)
+                joint_trajectory[type_+'_'+str(agent_id)+'_dx'].append(action_arr[0])
+                joint_trajectory[type_+'_'+str(agent_id)+'_dy'].append(action_arr[1])
+                for j in range(len(observation)):
+                    joint_trajectory[type_+'_'+str(agent_id)+'_obs_'+str(j)].append(observation(j))
+            for i, poi in enumerate(env.pois()):
+                if i < num_rover_pois:
+                    type_ = 'rover'
+                    poi_index = i
+                else:
+                    type_ = 'hidden'
+                    poi_index = num_rover_pois+i
+                joint_trajectory[type_+'_poi_'+str(poi_index)+'_x'].append(poi.position().x)
+                joint_trajectory[type_+'_poi_'+str(poi_index)+'_y'].append(poi.position().y)
 
-            joint_observation_trajectory.append(observation_arrs)
-            joint_action_trajectory.append(actions_arrs)
-            joint_state_trajectory.append(agent_positions+poi_positions)
+        # Pad actions
+        for i in range(len(env.rovers())):
+            if i < num_rovers:
+                type_ = 'rover'
+                agent_id = i
+            else:
+                type_ = 'uav'
+                agent_id = i - num_rovers
+            joint_trajectory[type_+'_'+str(agent_id)+'_dx'].append(None)
+            joint_trajectory[type_+'_'+str(agent_id)+'_dy'].append(None)
 
         if compute_team_fitness:
             # Create an agent pack to pass to reward function
@@ -508,20 +595,16 @@ class CooperativeCoevolutionaryAlgorithm():
             )
             team_fitness = rovers.rewards.Global().compute(agent_pack)
             rewards = env.rewards()
-            fitnesses = tuple([(r,) for r in rewards]+[(team_fitness,)])
+            fitnesses = tuple([r for r in rewards]+[team_fitness])
         else:
             # Each index corresponds to an agent's rewards
             # We only evaulate the team fitness based on the last step
             # so we only keep the last set of rewards generated by the team
-            fitnesses = tuple([(r,) for r in rewards])
+            fitnesses = tuple([r for r in rewards])
 
-        return EvalInfo(
+        return EvalOut(
             fitnesses=fitnesses,
-            joint_trajectory=JointTrajectory(
-                joint_state_trajectory,
-                joint_observation_trajectory,
-                joint_action_trajectory
-            )
+            joint_trajectory=joint_trajectory
         )
 
     def mutateIndividual(self, individual):
@@ -612,47 +695,169 @@ class CooperativeCoevolutionaryAlgorithm():
             else:
                 random.shuffle(subpop)
 
-    def assignFitnesses(self, teams, eval_infos):
+    def collectFitnesses(self, eval_team_ins, eval_outs):
         # There may be several eval_infos for the same team
         # This is the case if there are many evaluations per team
         # In that case, we need to aggregate those many evaluations into one fitness
-        if self.num_rollouts_per_team == 1:
-            for team, eval_info in zip(teams, eval_infos):
-                fitnesses = eval_info.fitnesses
-                team.fitness = eval_info.fitnesses[-1][0]
-                team.agg_fitness = sum(fit[0] for fit in fitnesses)
-                for individual, fit in zip(team.policies, fitnesses):
-                    if individual is not None:
-                        individual.fitness.values = fit
-                        individual.team_fitness = team.fitness
-                        individual.agg_team_fitness = team.agg_fitness
-        else:
-            team_list = []
-            eval_info_list = []
-            for team, eval_info in zip(teams, eval_infos):
-                team_list.append(team)
-                eval_info_list.append(eval_info)
 
-            for team_id, team in enumerate(team_list[::self.num_rollouts_per_team]):
-                # Get all the eval infos for this team
-                team_eval_infos = eval_info_list[team_id*self.num_rollouts_per_team:(team_id+1)*self.num_rollouts_per_team]
-                # Aggregate the fitnesses into a big numpy array
-                all_fitnesses = [eval_info.fitnesses for eval_info in team_eval_infos]
-                average_fitnesses = [0 for _ in range(len(all_fitnesses[0]))]
-                for fitnesses in all_fitnesses:
-                    for count, fit in enumerate(fitnesses):
-                        average_fitnesses[count] += fit[0]
-                for ind in range(len(average_fitnesses)):
-                    average_fitnesses[ind] = average_fitnesses[ind] / self.num_rollouts_per_team
-                # And now get that back to the individuals
-                fitnesses = tuple([(f,) for f in average_fitnesses])
-                for individual, fit in zip(team.policies, fitnesses):
-                    if individual is not None:
-                        individual.fitness.values = fit
+        for eval_team_in, eval_out in zip(eval_team_ins, eval_outs):
+            team_fit = eval_out.fitnesses[-1]
+            for individual, shaped_fit in zip(eval_team_in.individuals, eval_out.fitnesses):
+                individual.shaped_fitnesses.append(shaped_fit)
+                individual.team_fitnesses.append(team_fit)
+
+    def aggregateFitnesses(self, populations):
+        for population in populations:
+            for individual in population:
+                # Reshape the lists of fitnesses to make aggregation easier
+                reshape_shaped_fits = [
+                    individual.shaped_fitnesses[i * self.num_rollouts_per_team : (i+1) * self.num_rollouts_per_team]
+                    for i in range(self.num_teams_per_evaluation)
+                ]
+                reshape_team_fits = [
+                    individual.team_fitnesses[i * self.num_rollouts_per_team : (i+1) * self.num_rollouts_per_team]
+                    for i in range(self.num_teams_per_evaluation)
+                ]
+                # Now aggregate into one value each
+                # First aggregate across rollouts
+                # Then aggreagte across teams
+                agg_shaped_fits_across_rollouts = []
+                for shaped_fits_in_rollouts in reshape_shaped_fits:
+                    agg_shaped_fits_across_rollouts.append(np.average(shaped_fits_in_rollouts))
+                agg_shaped_fit_across_teams = np.average(agg_shaped_fits_across_rollouts)
+                # Now for teams
+                agg_team_fits_across_rollouts = []
+                for team_fits_in_rollouts in reshape_team_fits:
+                    agg_team_fits_across_rollouts.append(np.average(team_fits_in_rollouts))
+                agg_team_fit_across_teams = np.average(agg_team_fits_across_rollouts)
+                # Save the aggregated team and shaped fitness
+                individual.fitness.values = (agg_shaped_fit_across_teams,)
+                individual.team_fit = agg_team_fit_across_teams
+
+    def buildTeamSummaries(self, team_eval_ins, eval_outs, num_rollouts_per_team):
+        team_summaries = []
+        for i in range(int(len(eval_outs)/num_rollouts_per_team)):
+            team_summaries.append(
+                TeamSummary(
+                    individuals=team_eval_ins[i*self.num_rollouts_per_team].individuals,
+                    seeds=[team_eval_in.seed for team_eval_in in team_eval_ins[i*self.num_rollouts_per_team:(i+1)*self.num_rollouts_per_team]],
+                    eval_outs=eval_outs[i * self.num_rollouts_per_team : (i+1) * self.num_rollouts_per_team]
+                )
+            )
+        return team_summaries
+
+    def getChampionTeams(self, team_summaries, num_teams):
+        # Aggregate fitnesses across for each team
+        aggregated_fitnesses = [
+            np.average([eval_out.fitnesses[-1] for eval_out in team_summary.eval_outs])
+                for team_summary in team_summaries]
+        # Pass this to our helper
+        return self.getChampionTeamsHelper(
+            team_summaries=team_summaries,
+            num_teams=num_teams,
+            aggregated_fitnesses=aggregated_fitnesses
+        )
+
+    def getChampionTeamsHelper(self, team_summaries, num_teams, aggregated_fitnesses):
+        # Base case. No more teams
+        if num_teams <= 0:
+            return []
+        # Choose the highest fitness
+        i = np.argmax(aggregated_fitnesses)
+        # Get that team as our champion
+        champion_team_summary = team_summaries[i]
+        return [champion_team_summary] + self.getChampionTeamsHelper(
+            team_summaries=team_summaries[:i]+team_summaries[i+1:],
+            num_teams=num_teams-1,
+            aggregated_fitnesses=aggregated_fitnesses[:i]+aggregated_fitnesses[i+1:]
+        )
 
     def setPopulation(self, population, offspring):
         for subpop, subpop_offspring in zip(population, offspring):
             subpop[:] = subpop_offspring
+
+    def createFitnessCsv(self, trial_dir, filename, num_teams, num_rollouts):
+        fitness_dir = trial_dir / filename
+        # Start the header with generation and overall fits
+        header = ['generation', 'overall_fit_team']
+        for i in range(self.num_rovers):
+            header.append('overall_fit_rover_'+str(i))
+        for i in range(self.num_uavs):
+            header.append('overall_fit_uav'+str(i))
+        # Now iterate through num_teams, and rollouts within a team
+        # Each team gets fits aggregated across rollouts, and fits for individual rollouts
+        for i in range(num_teams):
+            # Aggregated fitnesses
+            header.append('agg_fit_team_'+str(i))
+            for j in range(self.num_rovers):
+                header.append('agg_fit_team_'+str(i)+'_rover_'+str(j))
+            for j in range(self.num_uavs):
+                header.append('agg_fit_team_'+str(i)+'_uav_'+str(j))
+            # Now per rollout
+            for r in range(num_rollouts):
+                header.append('team_'+str(i)+'_rollout_'+str(r))
+                for j in range(self.num_rovers):
+                    header.append('team_'+str(i)+'_rollout_'+str(r)+'_rover_'+str(j))
+                for j in range(self.num_uavs):
+                    header.append('team_'+str(i)+'_rollout_'+str(r)+'_uav_'+str(j))
+        # Create the csv
+        header_line = ','.join(header)+'\n'
+        with open(fitness_dir, 'w') as file:
+            file.write(header_line)
+
+    def writeFitnessCsv(self, trial_dir, team_summaries, filename, type):
+        # type = 'training', 'team_champion', 'individual_champions'
+        fitness_dir = trial_dir / filename
+        # We are building a list of fitnesses to append as a line to the csv
+        element_list = [self.gen] # (starting with the gen)
+
+        # Get the aggregated team fitnesses
+        aggregated_team_fits_across_rollouts = [
+            np.average([eval_out.fitnesses[-1] for eval_out in team_summary.eval_outs])
+            for team_summary in team_summaries
+        ]
+        # Get the single fitness value associated with this generation
+        aggregated_team_fit_across_teams = np.average(aggregated_team_fits_across_rollouts)
+
+        # Get the aggregated shaped fitnesses
+        # [[team_0_shaped_fit_agent_0, team_0_shaped_fit_agent_1 ...], [team_1_shaped_fit_agent_0 ...], [...]]
+        aggregated_shaped_fits_across_rollouts = [
+            np.average([eval_out.fitnesses[:-1] for eval_out in team_summary.eval_outs], axis=0)
+            for team_summary in team_summaries
+        ]
+        # Get the set of shaped fitnesses associated with this generation
+        # [shaped_fit_agent_0, shaped_fit_agent_1, ...]
+        aggregated_shaped_fits_across_teams = np.average(aggregated_shaped_fits_across_rollouts, axis=0)
+
+        # Start filling in elements. Starting with the highest-level aggregated values
+        element_list.append(aggregated_team_fit_across_teams)
+        element_list+=list(aggregated_shaped_fits_across_teams)
+
+        # Next fill in team by team
+        for team_summary in team_summaries:
+            # Start with the fitnesses aggregated across rollouts for a single team
+            element_list.append(np.average([eval_out.fitnesses[-1] for eval_out in team_summary.eval_outs]))
+            element_list+=list(np.average([eval_out.fitnesses[:-1] for eval_out in team_summary.eval_outs], axis=0))
+            # Then put in the fitnesses from rollouts
+            for eval_out in team_summary.eval_outs:
+                element_list.append(eval_out.fitnesses[-1])
+                element_list+=eval_out.fitnesses[:-1]
+
+        # Make it all into a big comma-separated string, and save it
+        csv_line = ','.join([str(i) for i in element_list])+'\n'
+        with open(fitness_dir, 'a') as file:
+            file.write(csv_line)
+
+    def writeTrajs(self, trial_dir, team_summaries, subfolder):
+        top_dir = trial_dir / subfolder
+        for i, team_summary in enumerate(team_summaries):
+            # Make a directory for this team
+            team_dir = top_dir/('team_'+str(i))
+            if not os.path.exists(team_dir):
+                os.makedirs(team_dir)
+            for j, eval_out in enumerate(team_summary.eval_outs):
+                # Save the joint trajectory
+                pd.DataFrame(eval_out.joint_trajectory).to_csv(team_dir/('rollout'+str(j)+'.csv'), index=False)
 
     def createEvalFitnessCSV(self, trial_dir, filename='fitness.csv'):
         eval_fitness_dir = trial_dir / filename
@@ -827,49 +1032,79 @@ class CooperativeCoevolutionaryAlgorithm():
             self.gen = 0
 
             # Create csv file for saving evaluation fitnesses
-            self.createEvalFitnessCSV(trial_dir)
-            if self.config['data']['save_elite_fitness']['switch']:
-                self.createEvalFitnessCSV(trial_dir, filename='elite_fitness.csv')
+            # self.createEvalFitnessCSV(trial_dir)
+            # if self.config['data']['save_elite_fitness']['switch']:
+            #     self.createEvalFitnessCSV(trial_dir, filename='elite_fitness.csv')
+            self.createFitnessCsv(
+                trial_dir,
+                'champion_team_fitness.csv',
+                num_teams=self.num_team_champions,
+                num_rollouts=self.test_num_rollouts
+            )
 
-            # Initialize the population
-            pop = self.population()
+            # Initialize the populations
+            populations = self.populations()
 
-            # Create the teams
-            teams = self.formTeams(pop)
+            # Put together TeamEvalIn objects for evaluating teams
+            # Each individual will participate in a certain number of teams
+            # Form the same teams multiple times so we can put the same team
+            #   into different random initializations of the same configuration
+
+            team_eval_ins = []
+            rollout_seeds = [self.get_seed() for _ in range(self.num_rollouts_per_team)]
+            for _ in range(self.num_teams_per_evaluation):
+                teams = self.formTeams(populations, skip_preserved=False)
+                for team in teams:
+                    for _, seed in zip(range(self.num_rollouts_per_team), rollout_seeds):
+                        team_eval_ins.append(TeamEvalIn(team, seed))
 
             # Evaluate the teams
-            eval_infos = self.evaluateTeams(teams)
+            eval_outs = self.evaluateTeams(team_eval_ins)
 
-            # Assign fitnesses to individuals
-            self.assignFitnesses(teams, eval_infos)
+            # Collect fitnesses for individuals from team evaluations
+            self.collectFitnesses(team_eval_ins, eval_outs)
 
-            # Organize subpopulations by individual with highest team fitness first
-            if self.sort_teams_by_sum_agent_fitness:
-                lambda_func = lambda ind: ind.agg_team_fitness
+            # Now aggregate the fitnesses for each individual
+            self.aggregateFitnesses(populations)
+
+            # Build up team summaries for recording data
+            team_summaries = self.buildTeamSummaries(team_eval_ins, eval_outs, self.num_rollouts_per_team)
+
+            # Get me the teams with highest performance in the rollouts
+            champion_team_summaries = self.getChampionTeams(team_summaries, self.num_team_champions)
+
+            # Resimulate if needed. Otherwise record evaluation info as-is
+            if self.resim_test_evaluation:
+                champion_team_eval_ins = []
+                test_rollout_seeds = [self.get_seed() for _ in range(self.test_num_rollouts)]
+                for champion_team_summary in champion_team_summaries:
+                    for _, seed in zip(range(self.test_num_rollouts), test_rollout_seeds):
+                        champion_team_eval_ins.append(TeamEvalIn(champion_team_summary.individuals, seed))
+                # Resim champions
+                champion_eval_outs = self.evaluateTeams(champion_team_eval_ins)
+                # Get the summaries
+                resim_champion_team_summaries = self.buildTeamSummaries(champion_team_eval_ins, champion_eval_outs, self.test_num_rollouts)
+                # Write fitnesses out to csv
+                self.writeFitnessCsv(
+                    trial_dir=trial_dir,
+                    team_summaries=resim_champion_team_summaries,
+                    filename='resim_champion_team_fitness.csv',
+                    type='champion_teams'
+                )
+                if self.save_champion_trajectories:
+                    # Save trajectories
+                    self.writeTrajs(trial_dir, resim_champion_team_summaries, subfolder='champion_team')
+
             else:
-                lambda_func = lambda ind: ind.team_fitness
-            for subpop in pop:
-                subpop.sort(key = lambda_func, reverse=True)
-
-            # Evaluate a team with the best indivdiual from each subpopulation
-            eval_infos = self.evaluateEvaluationTeam(pop)
-
-            # Save fitnesses of the evaluation team
-            self.writeEvalFitnessCSV(trial_dir, eval_infos)
-
-            if self.config['data']['save_elite_fitness']['switch']:
-                eval_infos = [self.evaluateTeam(
-                    team=TeamInfo(
-                        policies=[subpop[0] for subpop in pop],
-                        seed=None
-                    ),
-                    compute_team_fitness=True
-                )]
-                self.writeEvalFitnessCSV(trial_dir, eval_infos, filename='elite_fitness.csv')
-
-            # Save trajectories of evaluation team
-            if self.save_trajectories:
-                self.writeEvalTrajs(trial_dir, eval_infos)
+                self.writeFitnessCsv(
+                    trial_dir=trial_dir,
+                    team_summaries=champion_team_summaries,
+                    filename='champion_team_fitness.csv',
+                    type='champion_teams'
+                )
+                if self.save_champion_trajectories:
+                    # Save trajectories
+                    self.writeTrajs(trial_dir, champion_team_summaries, subfolder='champion_team')
 
         # Don't run anything if we loaded in the checkpoint and it turns out we are already done
         if self.gen >= self.config["ccea"]["num_generations"]:
@@ -906,7 +1141,7 @@ class CooperativeCoevolutionaryAlgorithm():
             eval_infos = self.evaluateTeams(teams)
 
             # Now assign fitnesses to each individual
-            self.assignFitnesses(teams, eval_infos)
+            self.collectFitnesses(teams, eval_infos)
 
             # Evaluate a team with the best indivdiual from each subpopulation
             eval_infos = self.evaluateEvaluationTeam(offspring)
@@ -916,11 +1151,11 @@ class CooperativeCoevolutionaryAlgorithm():
 
             if self.config['data']['save_elite_fitness']['switch']:
                 eval_infos = [self.evaluateTeam(
-                    team=TeamInfo(
+                    team=TeamEvalIn(
                         # TODO: Shouldn't this be subpop in offspring, not pop?
                         # Also, there are too many variables representing population here
                         # offspring, sorted_pop, pop, population... it's confusing
-                        policies=[subpop[0] for subpop in offspring],
+                        individuals=[subpop[0] for subpop in offspring],
                         seed=None
                     ),
                     compute_team_fitness=True
@@ -928,7 +1163,7 @@ class CooperativeCoevolutionaryAlgorithm():
                 self.writeEvalFitnessCSV(trial_dir, eval_infos, filename='elite_fitness.csv')
 
             # Save trajectories
-            if self.save_trajectories and self.gen % self.num_gens_between_save_traj == 0:
+            if self.save_eval_trajectories and self.gen % self.num_gens_between_save_eval_traj == 0:
                 self.writeEvalTrajs(trial_dir, eval_infos)
 
             # Now populate the population with individuals from the offspring
