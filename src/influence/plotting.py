@@ -47,7 +47,7 @@ def sort_fitness_path_list(input_list: List[Path]):
     for name in COMPARISON_NAMES:
         for path in fit_list:
             if path.name == name:
-                sorted_fit_list.append(path)           
+                sorted_fit_list.append(path)
 
     # Sort nonfit list using standard sorting
     nonfit_list.sort()
@@ -62,7 +62,7 @@ def get_num_entities(labels: List[str]):
 
     def get_agent_id(label):
         return int(label.split("_")[1])
-    
+
     def get_poi_id(label):
         return int(label.split("_")[2])
 
@@ -144,7 +144,7 @@ def generate_joint_trajectory_plot(joint_traj_dir: Path, individual_colors: bool
     df = pd.read_csv(joint_traj_dir)
 
     # Get config for map bounds
-    config_dir = joint_traj_dir.parent.parent.parent/'config.yaml'
+    config_dir = joint_traj_dir.parent.parent.parent.parent.parent/'config.yaml'
     config = load_config(config_dir)
 
     # Get the number of each entity
@@ -315,7 +315,7 @@ def generate_stat_learning_curve_tree_plots(root_dir: Path, out_dir: Path, indiv
     for root, _, files in os.walk(root_dir):
         if 'config.yaml' in files:
             experiment_dirs.add(Path(root))
-    
+
     for dir_ in experiment_dirs:
         dir_list = str(dir_).split('/')
         dir_name = '/'.join(dir_list[dir_list.index(root_dir.name)+1:])
@@ -362,12 +362,12 @@ def generate_comparison_plot(experiment_dir: Path, use_fitness_colors: bool, csv
             else:
                 # Don't use any reserved colors if we are plotting using consistent fitness colors
                 # and this stat curve is not one of the named fitness shaping methods with an assigned color
-                color = COMPARISON_COLORS[(i+len(COMPARISON_NAMES))%len(COMPARISON_COLORS)]
+                color = COMPARISON_COLORS[(1+i+len(COMPARISON_NAMES))%len(COMPARISON_COLORS)]
         gens = add_stat_learning_curve(ax, False, csv_name, trials_dir, label=trials_dir.name, line_plot_args=line_plot_args, color=color)
 
         if gens[-1] > xlim:
             xlim = gens[-1]
-    
+
     ax.set_xlabel('Generations')
     ax.set_ylabel('Performance')
 
@@ -410,7 +410,7 @@ def get_example_trial_dirs(parent_dir: Path):
 
 def generate_experiment_tree_plots(root_dir: Path, out_dir: Path, use_fitness_colors: bool, csv_name: str, batch_plot_args: BatchPlotArgs, batch_line_plot_args: BatchLinePlotArgs):
     """Generate all the plots in this experiment tree"""
-    
+
     experiment_dirs = set()
     trial_parent_dirs = set()
     for root, _, files in os.walk(root_dir):
@@ -440,14 +440,14 @@ def generate_experiment_tree_plots(root_dir: Path, out_dir: Path, use_fitness_co
 
 def sort_jt_dirs(root_dir: Path, jt_dirs: List[str]):
     # Starting place for sorting dirs for joint trajectories
-    
+
     root_len = len(str(root_dir).split('/'))
     sort_jt_dirs_helper(jt_dirs, level=root_len)
 
 def sort_jt_dirs_helper(jt_dirs: List[str], level: int):
     # Sort the specified level, then pass it on
     # Everything happens in place - this is recursive, but it's a linear operation
-    
+
     # Base cases: if we are the trials level, then use a special lambda function for that
     # If we are at the gens, level, use the same lambda function for that
     if 'trial_' in jt_dirs[0].split('/')[level]:
@@ -456,7 +456,7 @@ def sort_jt_dirs_helper(jt_dirs: List[str], level: int):
 
     elif 'gen_' in jt_dirs[0].split('/')[level]:
         jt_dirs.sort(key = lambda x: int(x.split('/')[level].split('_')[-1]))
-    
+
     # General case. Sort and keep going
     else:
         jt_dirs.sort(key = lambda x: x.split('/')[level])
@@ -469,14 +469,14 @@ def generate_joint_trajectory_tree_plots(root_dir: Path, out_dir: Path, individu
     jt_dirs = set()
     for root, _, files in os.walk(root_dir):
         for file in files:
-            if 'joint_traj.csv' in file:
+            if 'rollout' in file and 'csv' in file:
                 jt_dirs.add(Path(root)/file)
-    
+
     # Sort them
-    jt_dirs = [str(jt_dir) for jt_dir in jt_dirs]
-    sort_jt_dirs(root_dir, jt_dirs)
+    # jt_dirs = [str(jt_dir) for jt_dir in jt_dirs]
+    # sort_jt_dirs(root_dir, jt_dirs)
     jt_dirs = [Path(jt_dir) for jt_dir in jt_dirs]
-    
+
 
     # Plot each one
     for jt_dir in jt_dirs:
@@ -489,7 +489,7 @@ def generate_joint_trajectory_tree_plots(root_dir: Path, out_dir: Path, individu
             individual_colors=individual_colors,
             no_shading=no_shading,
             plot_args=batch_plot_args.build_plot_args(
-                title=jt_dir.name, 
+                title=jt_dir.name,
                 output=out_dir/dir_name/file_name
             )
         )
@@ -523,7 +523,7 @@ def generate_config_plot(config_dir: Path, individual_colors: bool, no_shading: 
     for i, poi_config in enumerate(config['env']['pois']['rover_pois']):
         poi_position = poi_config['position']['fixed']
         plot_poi(ax, poi_config, x=poi_position[0], y=poi_position[1], color='tab:green', radius_shading=not no_shading)
-    
+
     # plot hidden pois
     for i, poi_config in enumerate(config['env']['pois']['hidden_pois']):
         poi_position = poi_config['position']['fixed']
