@@ -908,10 +908,10 @@ class CooperativeCoevolutionaryAlgorithm():
                 # Save the joint trajectory
                 pd.DataFrame(eval_out.joint_trajectory).to_csv(gen_dir/('rollout_'+str(j)+'.csv'), index=False)
 
-    def saveCheckpoint(self, trial_dir, pop):
+    def saveCheckpoint(self, trial_dir, population, team_summaries):
         checkpoint_dir = trial_dir/('checkpoint_'+str(self.gen)+'.pkl')
         with open(checkpoint_dir, 'wb') as f:
-            pickle.dump(pop, f)
+            pickle.dump((population, team_summaries), f)
         if self.delete_previous_checkpoint:
             checkpoint_dirs = [dir for dir in os.listdir(trial_dir) if "checkpoint_" in dir]
             if len(checkpoint_dirs) > 1:
@@ -925,9 +925,9 @@ class CooperativeCoevolutionaryAlgorithm():
     def loadCheckpoint(self, checkpoint_dirs):
         checkpoint_dirs.sort(key=lambda x: int(str(x).split('_')[-1].split('.')[0]))
         with open(checkpoint_dirs[-1], 'rb') as f:
-            pop = pickle.load(f)
+            population, team_summaries = pickle.load(f)
         gen = int(str(checkpoint_dirs[-1]).split('_')[-1].split('.')[0])
-        return pop, gen
+        return population, team_summaries, gen
 
     def evaluatePopulations(self, populations, trial_dir, gen, preserved_team_summaries=[]):
         if gen == 0:
@@ -1003,7 +1003,7 @@ class CooperativeCoevolutionaryAlgorithm():
 
         # Check if we're loading from a checkpoint
         if load_checkpoint and len(checkpoint_dirs := self.getCheckpointDirs(trial_dir)) > 0:
-            pop, self.gen = self.loadCheckpoint(checkpoint_dirs)
+            populations, team_summaries, self.gen = self.loadCheckpoint(checkpoint_dirs)
         else:
             # Check if we are starting with a random seed
             if self.random_seed_val is not None:
@@ -1035,6 +1035,10 @@ class CooperativeCoevolutionaryAlgorithm():
             # Evaluate populations
             team_summaries = self.evaluatePopulations(populations, trial_dir, self.gen)
 
+            # Save checkpoint
+            if self.save_checkpoint:
+                self.saveCheckpoint(trial_dir, populations, team_summaries)
+
         # Don't run anything if we loaded in the checkpoint and it turns out we are already done
         if self.gen >= self.config["ccea"]["num_generations"]:
             return None
@@ -1064,10 +1068,10 @@ class CooperativeCoevolutionaryAlgorithm():
             # Evaluate the new population
             team_summaries[:] = self.evaluatePopulations(populations, trial_dir, self.gen, preserved_champion_team_summaries)
 
-            # # Save checkpoint for generation if now is the time
-            # if self.gen == self.config["ccea"]["num_generations"] or \
-            #     (self.save_checkpoint and self.gen % self.num_gens_between_checkpoint == 0):
-            #     self.saveCheckpoint(trial_dir, populations)
+            # Save checkpoint for generation if now is the time
+            if self.gen == self.config["ccea"]["num_generations"] or \
+                (self.save_checkpoint and self.gen % self.num_gens_between_checkpoint == 0):
+                self.saveCheckpoint(trial_dir, populations, team_summaries)
 
     def run(self, num_trial, load_checkpoint):
         if num_trial is None:
