@@ -9,6 +9,7 @@ import pickle
 from typing import List, Union, Optional
 
 from influence.evo_network import NeuralNetwork
+from influence.rnn_network import RNNPolicy
 
 from influence.librovers import rovers
 from influence.custom_env import createEnv
@@ -44,11 +45,6 @@ def bound_velocity_arr(velocity_arr, max_velocity):
     """Bound the velocities in a 1D array to meet the max velocity constraint"""
     return np.array([bound_velocity(velocity, max_velocity) for velocity in velocity_arr])
 
-# class CustomIndividual(creator.Individual):
-#     def __init__(self):
-#         super().__init__()
-#         self.team_fitness = None
-
 class FollowPolicy():
     @staticmethod
     def forward(observation: np.ndarray) -> int:
@@ -59,15 +55,6 @@ class FollowPolicy():
             action = [0.0 for _ in observation]
             action[np.argmin(f_obs)] = 1
             return action
-
-# class JointTrajectory():
-#     def __init__(self, joint_state_trajectory, joint_observation_trajectory, joint_action_trajectory):
-#         self.states = joint_state_trajectory
-#         self.observations = joint_observation_trajectory
-#         self.actions = joint_action_trajectory
-
-#     def to_df(self):
-#         pass
 
 class EvalOut():
     def __init__(self, fitnesses, joint_trajectory):
@@ -94,6 +81,11 @@ class CooperativeCoevolutionaryAlgorithm():
 
         with open(str(self.config_dir), 'r') as file:
             self.config = yaml.safe_load(file)
+
+        # Hack for playing around with RNNs
+        self.use_rnn = False
+        if 'use_rnn' in self.config['ccea'] and self.config['ccea']['use_rnn']:
+            self.use_rnn = True
 
         # Start by setting up variables for different agents
         self.num_rovers = len(self.config["env"]["agents"]["rovers"])
@@ -158,7 +150,7 @@ class CooperativeCoevolutionaryAlgorithm():
 
         self.template_policies = self.get_template_policies('rovers')+self.get_template_policies('uavs')
         # self.template_nns = self.get_template_nns('rovers')+self.get_template_nns('uavs')
-        self.nn_sizes = [template_nn.num_weights if type(template_nn) is NeuralNetwork else None for template_nn in self.template_policies]
+        self.nn_sizes = [template_nn.num_weights if type(template_nn) is NeuralNetwork or type(template_nn) is RNNPolicy else None for template_nn in self.template_policies]
 
         # Make sure each agent has a sensor type config set
         for agent_config in self.config['env']['agents']['rovers']+self.config['env']['agents']['uavs']:
@@ -285,6 +277,11 @@ class CooperativeCoevolutionaryAlgorithm():
     def get_template_policies(self, agent_type: str):
         template_policies = []
         for i in range(len(self.config['env']['agents'][agent_type])):
+            # Shortcut for rnn hack
+            if self.use_rnn:
+                template_policy = RNNPolicy()
+                template_policies.append(template_policy)
+                continue
             # Fill defaults for sensor, action, policy
             if 'sensor' not in self.config['env']['agents'][agent_type][i]:
                 self.config['env']['agents'][agent_type][i]['sensor'] = {'type' : 'SmartLidar'}
@@ -336,7 +333,7 @@ class CooperativeCoevolutionaryAlgorithm():
         pop = []
         # Generating subpopulation for each agent
         for agent_id in range(self.num_rovers+self.num_uavs):
-            if type(self.template_policies[agent_id]) is NeuralNetwork:
+            if type(self.template_policies[agent_id]) is NeuralNetwork or type(self.template_policies[agent_id]) is RNNPolicy:
                 # Filling subpopulation for each agent
                 subpop=[]
                 for _id in range(self.config["ccea"]["population"]["subpopulation_size"]):
@@ -443,8 +440,11 @@ class CooperativeCoevolutionaryAlgorithm():
 
         # Load in the weights
         for nn, individual in zip(agent_policies, team.individuals):
-            if type(nn) is NeuralNetwork:
+            if type(nn) is NeuralNetwork or type(nn) is RNNPolicy:
                 nn.setWeights(individual)
+                if type(nn) is RNNPolicy:
+                    nn.hidden = None
+                    nn.observations = []
 
         # Set up the enviornment
         env = createEnv(config)
@@ -890,7 +890,7 @@ class CooperativeCoevolutionaryAlgorithm():
                 os.makedirs(gen_dir)
             for j, eval_out in enumerate(team_summary.eval_outs):
                 # Save the joint trajectory
-                pd.DataFrame(eval_out.joint_trajectory).to_csv(gen_dir/('rollout'+str(j)+'.csv'), index=False)
+                pd.DataFrame(eval_out.joint_trajectory).to_csv(gen_dir/('rollout_'+str(j)+'.csv'), index=False)
 
     def saveCheckpoint(self, trial_dir, pop):
         checkpoint_dir = trial_dir/('checkpoint_'+str(self.gen)+'.pkl')
