@@ -109,6 +109,8 @@ class CooperativeCoevolutionaryAlgorithm():
 
             self.total_elites = self.n_preserve_elites + self.n_current_elites
 
+            self.n_binary_teams = \
+                self.config['ccea']['selection']['mixed_n_elites_binary_tournament']['n_binary_teams']
             self.num_mutants = self.subpopulation_size - self.total_elites
             if 'sort_teams_by_sum_agent_fitness' in self.config['ccea']['selection']['mixed_n_elites_binary_tournament']:
                 self.sort_teams_by_sum_agent_fitness = self.config['ccea']['selection']['mixed_n_elites_binary_tournament']['sort_teams_by_sum_agent_fitness']
@@ -701,9 +703,23 @@ class CooperativeCoevolutionaryAlgorithm():
         for i, population in enumerate(populations):
             offspring[i] += champion_individuals[self.n_preserve_individual_elites:]
 
+        # Populate with team mutants from a binary tournament across teams
+        for j in range(self.n_binary_teams):
+            two_teams = random.sample(team_summaries, 2)
+            if np.average([eval_out.fitnesses[-1] for eval_out in two_teams[0].eval_outs]) >= \
+                np.average([eval_out.fitnesses[-1] for eval_out in two_teams[1].eval_outs]):
+                winning_team_summary = two_teams[0]
+            else:
+                winning_team_summary = two_teams[1]
+            for i, population in enumerate(populations):
+                mutant = deepcopy(winning_team_summary.individuals[i])
+                self.mutateIndividual(mutant)
+                del mutant.fitness.values
+                offspring[i].append(mutant)
+
         # Populate with mutants from a binary tournament
         for i, population in enumerate(populations):
-            mutant_individuals = tools.selTournament(population, len(population)-self.total_elites, 2)
+            mutant_individuals = tools.selTournament(population, len(population)-self.total_elites-self.n_binary_teams, 2)
             for individual in mutant_individuals:
                 mutant=deepcopy(individual)
                 self.mutateIndividual(mutant)
