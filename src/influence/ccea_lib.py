@@ -146,6 +146,8 @@ class CooperativeCoevolutionaryAlgorithm():
             # Whether or not we even resimulate for testing or just use the training rollouts
         self.num_team_champions = \
             self.config['ccea']['evaluation']['resim_test_evaluation']['num_team_champions']
+        self.num_gens_between_save_champions = \
+            self.config['data']['save_champion_trajectories']['num_gens_between_save']
 
         if 'save_elite_fitness' not in self.config['data']:
             self.config['data']['save_elite_fitness'] = {}
@@ -228,6 +230,10 @@ class CooperativeCoevolutionaryAlgorithm():
     def reset_seed(self):
         """Resets the random seed to what was specified in config"""
         self.random_seed_val = self.config['debug']['random_seed']['set_seed']
+
+    def increment_seed(self, i: int):
+        """Manually increment the seed"""
+        self.random_seed_val += i
 
     def get_seed(self):
         if self.random_seed_val is None:
@@ -631,10 +637,7 @@ class CooperativeCoevolutionaryAlgorithm():
 
         if self.selection_mechanism == 'mixed_n_elites_binary_tournament':
             # Set up lambda function for team sorting
-            if self.sort_teams_by_sum_agent_fitness:
-                lambda_func = lambda ind: ind.agg_team_fitness
-            else:
-                lambda_func = lambda ind: ind.team_fitness
+            lambda_func = lambda ind: ind.team_fitness
 
             # Get the elites based on team fitness
             sorted_by_team = sorted(subpopulation, key=lambda_func, reverse=True)
@@ -671,6 +674,44 @@ class CooperativeCoevolutionaryAlgorithm():
 
         return [ deepcopy(individual) for individual in offspring ]
 
+    def selectAndMutate(self, populations, team_summaries):
+        # Get the correct number of populations first
+        offspring = [[] for _ in range(self.num_rovers+self.num_uavs)]
+
+        # Let's get the highest performing teams and individuals
+        champion_team_summaries = self.getChampionTeams(team_summaries, self.n_preserve_team_elites+self.n_team_elites)
+        for population in populations:
+            champion_individuals = tools.selBest(population, self.n_preserve_individual_elites+self.n_individual_elites)
+
+        # Now let's populate offspring with the preserved elites
+        preserved_champion_team_summaries = champion_team_summaries[:self.n_preserve_team_elites]
+        for team_summary in preserved_champion_team_summaries:
+            for i, individual in enumerate(team_summary.individuals):
+                offspring[i].append(individual)
+
+        for i, population in enumerate(populations):
+            offspring[i] += champion_individuals[:self.n_preserve_individual_elites]
+
+        # Populate with non-preserved elites
+        non_preserved_champion_teams = champion_team_summaries[self.n_preserve_team_elites:]
+        for team_summary in non_preserved_champion_teams:
+            for i, individual in enumerate(team_summary.individuals):
+                offspring[i].append(individual)
+
+        for i, population in enumerate(populations):
+            offspring[i] += champion_individuals[self.n_preserve_individual_elites:]
+
+        # Populate with mutants from a binary tournament
+        for i, population in enumerate(populations):
+            mutant_individuals = tools.selTournament(population, len(population)-self.total_elites, 2)
+            for individual in mutant_individuals:
+                mutant=deepcopy(individual)
+                self.mutateIndividual(mutant)
+                del mutant.fitness.values
+                offspring[i].append(mutant)
+
+        return offspring, preserved_champion_team_summaries
+
     def select(self, population):
         # Offspring is a list of subpopulation
         offspring = []
@@ -682,18 +723,6 @@ class CooperativeCoevolutionaryAlgorithm():
             else:
                 offspring.append(subpop)
         return offspring
-
-    def shuffle(self, population):
-        for subpop in population:
-            # If we're preserving elites, then shuffle everyone else
-            if self.n_preserve_elites:
-                non_elites = subpop[self.n_preserve_elites:]
-                random.shuffle(non_elites)
-                # Replace the entire subpop with elites and shuffled non-elites
-                subpop[:] = subpop[:self.n_preserve_elites] + non_elites
-            # Otherwise, shuffle everyone, including elites
-            else:
-                random.shuffle(subpop)
 
     def collectFitnesses(self, eval_team_ins, eval_outs):
         # There may be several eval_infos for the same team
@@ -848,142 +877,20 @@ class CooperativeCoevolutionaryAlgorithm():
         with open(fitness_dir, 'a') as file:
             file.write(csv_line)
 
-    def writeTrajs(self, trial_dir, team_summaries, subfolder):
+    def writeTrajs(self, trial_dir, team_summaries, subfolder, gen):
         top_dir = trial_dir / subfolder
         for i, team_summary in enumerate(team_summaries):
             # Make a directory for this team
             team_dir = top_dir/('team_'+str(i))
             if not os.path.exists(team_dir):
                 os.makedirs(team_dir)
+            # Make a directory for this gen
+            gen_dir = team_dir/('gen_'+str(gen))
+            if not os.path.exists(gen_dir):
+                os.makedirs(gen_dir)
             for j, eval_out in enumerate(team_summary.eval_outs):
                 # Save the joint trajectory
-                pd.DataFrame(eval_out.joint_trajectory).to_csv(team_dir/('rollout'+str(j)+'.csv'), index=False)
-
-    def createEvalFitnessCSV(self, trial_dir, filename='fitness.csv'):
-        eval_fitness_dir = trial_dir / filename
-        header = "generation,team_fitness_aggregated"
-        for j in range(self.num_rovers):
-            header += ",rover_"+str(j)+"_"
-        for j in range(self.num_uavs):
-            header += ",uav_"+str(j)
-        for i in range(self.num_rollouts_per_team):
-            header+=",team_fitness_"+str(i)
-            for j in range(self.num_rovers):
-                header+=",team_"+str(i)+"_rover_"+str(j)
-            for j in range(self.num_uavs):
-                header+=",team_"+str(i)+"_uav_"+str(j)
-        header += "\n"
-        with open(eval_fitness_dir, 'w') as file:
-            file.write(header)
-
-    def writeEvalFitnessCSV(self, trial_dir, eval_infos, filename='fitness.csv'):
-        eval_fitness_dir = trial_dir / filename
-        gen = str(self.gen)
-        if len(eval_infos) == 1:
-            eval_info = eval_infos[0]
-            team_fit = str(eval_info.fitnesses[-1][0])
-            agent_fits = [str(fit[0]) for fit in eval_info.fitnesses[:-1]]
-            fit_list = [gen, team_fit]+agent_fits
-            fit_str = ','.join(fit_list)+'\n'
-        else:
-            team_eval_infos = []
-            for eval_info in eval_infos:
-                team_eval_infos.append(eval_info)
-            # Aggergate the fitnesses into a big numpy array
-            num_ind_per_team = len(team_eval_infos[0].fitnesses)
-            all_fit = np.zeros(shape=(self.num_rollouts_per_team, num_ind_per_team))
-            for num_eval, eval_info in enumerate(team_eval_infos):
-                fitnesses = eval_info.fitnesses
-                for num_ind, fit in enumerate(fitnesses):
-                    all_fit[num_eval, num_ind] = fit[0]
-                all_fit[num_eval, -1] = fitnesses[-1][0]
-            # Now compute a sum/average/min/etc dependending on what config specifies
-            agg_fit = np.average(all_fit, axis=0)
-            # And now record it all, starting with the aggregated one
-            agg_team_fit = str(agg_fit[-1])
-            agg_agent_fits = [str(fit) for fit in agg_fit[:-1]]
-            fit_str = gen+','+','.join([agg_team_fit]+agg_agent_fits)+','
-            # And now add all the fitnesses from individual trials
-            # Each row should have the fitnesses for an evaluation
-            for row in all_fit:
-                team_fit = str(row[-1])
-                agent_fits = [str(fit) for fit in row[:-1]]
-                fit_str += ','.join([team_fit]+agent_fits) + ','
-            fit_str+='\n'
-        # Now save it all to the csv
-        with open(eval_fitness_dir, 'a') as file:
-                file.write(fit_str)
-
-    def writeEvalTrajs(self, trial_dir, eval_infos):
-        # Set up directory
-        gen_folder_name = "gen_"+str(self.gen)
-        gen_dir = trial_dir / gen_folder_name
-        if not os.path.isdir(gen_dir):
-            os.makedirs(gen_dir)
-        # Iterate through each file we are writing
-        for eval_id, eval_info in enumerate(eval_infos):
-            eval_filename = "eval_team_"+str(eval_id)+"_joint_traj.csv"
-            eval_dir = gen_dir / eval_filename
-            with open(eval_dir, 'w') as file:
-                # Build up the header (labels at the top of the csv)
-                header = ""
-                # First the states (agents and POIs)
-                for i in range(self.num_rovers):
-                    header += "rover_"+str(i)+"_x,rover_"+str(i)+"_y,"
-                for i in range(self.num_uavs):
-                    header += "uav_"+str(i)+"_x,uav_"+str(i)+"_y,"
-                for i in range(self.num_rover_pois):
-                    header += "rover_poi_"+str(i)+"_x,rover_poi_"+str(i)+"_y,"
-                for i in range(self.num_hidden_pois):
-                    header += "hidden_poi_"+str(i)+"_x,hidden_poi_"+str(i)+"_y,"
-                # Observations
-                for i in range(self.num_rovers):
-                    for j in range(self.num_sensors_rovers[i]):
-                    # for j in range(self.num_rover_sectors*3):
-                        header += "rover_"+str(i)+"_obs_"+str(j)+","
-                for i in range(self.num_uavs):
-                    for j in range(self.num_sensors_uavs[i]):
-                    # for j in range(self.num_uav_sectors*3):
-                        header += "uav_"+str(i)+"_obs_"+str(j)+","
-                # Actions
-                for i in range(self.num_rovers):
-                    header += "rover_"+str(i)+"_dx,rover_"+str(i)+"_dy,"
-                for i in range(self.num_uavs):
-                    header += "uav_"+str(i)+"_dx,uav_"+str(i)+"_dy,"
-                # There will always be a floating comma at the end. Replace it with newline
-                header = header[:-1] + '\n'
-                # Write out the header at the top of the csv
-                file.write(header)
-                # Now fill in the csv with the data
-                # One line at a time
-                joint_traj = eval_info.joint_trajectory
-                # We're going to pad the actions with None because
-                # the agents cannot take actions at the last timestep, but
-                # there is a final joint state/observations
-                action_padding = []
-                for action in joint_traj.actions[0]:
-                    action_padding.append([None for _ in action])
-                joint_traj.actions.append(action_padding)
-                for joint_state, joint_observation, joint_action in zip(joint_traj.states, joint_traj.observations, joint_traj.actions):
-                    # Aggregate state info
-                    state_list = []
-                    for state in joint_state:
-                        state_list+=[str(state_var) for state_var in state]
-                    state_str = ','.join(state_list)
-                    # Aggregate observation info
-                    observation_list = []
-                    for observation in joint_observation:
-                        observation_list+=[str(obs_val) for obs_val in observation]
-                    observation_str = ','.join(observation_list)
-                    # Aggregate action info
-                    action_list = []
-                    for action in joint_action:
-                        action_list+=[str(act_val) for act_val in action]
-                    action_str = ','.join(action_list)
-                    # Put it all together
-                    csv_line = state_str+','+observation_str+','+action_str+'\n'
-                    # Write it out
-                    file.write(csv_line)
+                pd.DataFrame(eval_out.joint_trajectory).to_csv(gen_dir/('rollout'+str(j)+'.csv'), index=False)
 
     def saveCheckpoint(self, trial_dir, pop):
         checkpoint_dir = trial_dir/('checkpoint_'+str(self.gen)+'.pkl')
@@ -1005,6 +912,70 @@ class CooperativeCoevolutionaryAlgorithm():
             pop = pickle.load(f)
         gen = int(str(checkpoint_dirs[-1]).split('_')[-1].split('.')[0])
         return pop, gen
+
+    def evaluatePopulations(self, populations, trial_dir, gen, preserved_team_summaries=[]):
+        if gen == 0:
+            skip_preserved = False
+        else:
+            skip_preserved = True
+
+        team_eval_ins = []
+        rollout_seeds = [self.get_seed() for _ in range(self.num_rollouts_per_team)]
+        for _ in range(self.num_teams_per_evaluation):
+            teams = self.formTeams(populations, skip_preserved=skip_preserved)
+            for team in teams:
+                for _, seed in zip(range(self.num_rollouts_per_team), rollout_seeds):
+                    team_eval_ins.append(TeamEvalIn(team, seed))
+
+        # Evaluate the teams
+        eval_outs = self.evaluateTeams(team_eval_ins)
+
+        # Collect fitnesses for individuals from team evaluations
+        self.collectFitnesses(team_eval_ins, eval_outs)
+
+        # Now aggregate the fitnesses for each individual
+        self.aggregateFitnesses(populations)
+
+        # Build up team summaries for recording data
+        team_summaries = preserved_team_summaries + self.buildTeamSummaries(team_eval_ins, eval_outs, self.num_rollouts_per_team)
+
+        # Get me the teams with highest performance in the rollouts
+        champion_team_summaries = self.getChampionTeams(team_summaries, self.num_team_champions)
+
+        # Resimulate if needed. Otherwise record evaluation info as-is
+        if self.resim_test_evaluation:
+            champion_team_eval_ins = []
+            test_rollout_seeds = [self.get_seed() for _ in range(self.test_num_rollouts)]
+            for champion_team_summary in champion_team_summaries:
+                for _, seed in zip(range(self.test_num_rollouts), test_rollout_seeds):
+                    champion_team_eval_ins.append(TeamEvalIn(champion_team_summary.individuals, seed))
+            # Resim champions
+            champion_eval_outs = self.evaluateTeams(champion_team_eval_ins)
+            # Get the summaries
+            resim_champion_team_summaries = self.buildTeamSummaries(champion_team_eval_ins, champion_eval_outs, self.test_num_rollouts)
+            # Write fitnesses out to csv
+            self.writeFitnessCsv(
+                trial_dir=trial_dir,
+                team_summaries=resim_champion_team_summaries,
+                filename='resim_champion_team_fitness.csv',
+                type='champion_teams'
+            )
+            if self.save_champion_trajectories and self.gen % self.num_gens_between_save_champions == 0:
+                # Save trajectories
+                self.writeTrajs(trial_dir, resim_champion_team_summaries, subfolder='champion_team')
+
+        else:
+            self.writeFitnessCsv(
+                trial_dir=trial_dir,
+                team_summaries=champion_team_summaries,
+                filename='champion_team_fitness.csv',
+                type='champion_teams'
+            )
+            if self.save_champion_trajectories and self.gen % self.num_gens_between_save_champions == 0:
+                # Save trajectories
+                self.writeTrajs(trial_dir, champion_team_summaries, subfolder='champion_teams', gen=self.gen)
+
+        return team_summaries
 
     def runTrial(self, num_trial, load_checkpoint):
         # Get trial directory
@@ -1045,134 +1016,42 @@ class CooperativeCoevolutionaryAlgorithm():
             # Initialize the populations
             populations = self.populations()
 
-            # Put together TeamEvalIn objects for evaluating teams
-            # Each individual will participate in a certain number of teams
-            # Form the same teams multiple times so we can put the same team
-            #   into different random initializations of the same configuration
-
-            team_eval_ins = []
-            rollout_seeds = [self.get_seed() for _ in range(self.num_rollouts_per_team)]
-            for _ in range(self.num_teams_per_evaluation):
-                teams = self.formTeams(populations, skip_preserved=False)
-                for team in teams:
-                    for _, seed in zip(range(self.num_rollouts_per_team), rollout_seeds):
-                        team_eval_ins.append(TeamEvalIn(team, seed))
-
-            # Evaluate the teams
-            eval_outs = self.evaluateTeams(team_eval_ins)
-
-            # Collect fitnesses for individuals from team evaluations
-            self.collectFitnesses(team_eval_ins, eval_outs)
-
-            # Now aggregate the fitnesses for each individual
-            self.aggregateFitnesses(populations)
-
-            # Build up team summaries for recording data
-            team_summaries = self.buildTeamSummaries(team_eval_ins, eval_outs, self.num_rollouts_per_team)
-
-            # Get me the teams with highest performance in the rollouts
-            champion_team_summaries = self.getChampionTeams(team_summaries, self.num_team_champions)
-
-            # Resimulate if needed. Otherwise record evaluation info as-is
-            if self.resim_test_evaluation:
-                champion_team_eval_ins = []
-                test_rollout_seeds = [self.get_seed() for _ in range(self.test_num_rollouts)]
-                for champion_team_summary in champion_team_summaries:
-                    for _, seed in zip(range(self.test_num_rollouts), test_rollout_seeds):
-                        champion_team_eval_ins.append(TeamEvalIn(champion_team_summary.individuals, seed))
-                # Resim champions
-                champion_eval_outs = self.evaluateTeams(champion_team_eval_ins)
-                # Get the summaries
-                resim_champion_team_summaries = self.buildTeamSummaries(champion_team_eval_ins, champion_eval_outs, self.test_num_rollouts)
-                # Write fitnesses out to csv
-                self.writeFitnessCsv(
-                    trial_dir=trial_dir,
-                    team_summaries=resim_champion_team_summaries,
-                    filename='resim_champion_team_fitness.csv',
-                    type='champion_teams'
-                )
-                if self.save_champion_trajectories:
-                    # Save trajectories
-                    self.writeTrajs(trial_dir, resim_champion_team_summaries, subfolder='champion_team')
-
-            else:
-                self.writeFitnessCsv(
-                    trial_dir=trial_dir,
-                    team_summaries=champion_team_summaries,
-                    filename='champion_team_fitness.csv',
-                    type='champion_teams'
-                )
-                if self.save_champion_trajectories:
-                    # Save trajectories
-                    self.writeTrajs(trial_dir, champion_team_summaries, subfolder='champion_team')
+            # Evaluate populations
+            team_summaries = self.evaluatePopulations(populations, trial_dir, self.gen)
 
         # Don't run anything if we loaded in the checkpoint and it turns out we are already done
         if self.gen >= self.config["ccea"]["num_generations"]:
             return None
 
         for _ in tqdm(range(self.config["ccea"]["num_generations"]-self.gen)):
+            # Update gen counter
+            self.gen = self.gen+1
+
             # Set the seed if one was specified at the start of the generation
             if self.random_seed_val is not None:
                 # Reset the seed so seed is consistent across trials
                 self.reset_seed()
                 # unless we specified we want to increment based on the trial number
                 if self.increment_seed_every_trial:
-                    self.random_seed_val += num_trial
+                    self.increment_seed(num_trial)
+                # Also increment by generation
+                self.increment_seed(self.gen)
                 random.seed(self.get_seed())
                 np.random.seed(self.get_seed())
 
-            # Update gen counter
-            self.gen = self.gen+1
-
-            # Perform selection
-            offspring = self.select(pop)
-
-            # Perform mutation
-            self.mutate(offspring)
-
-            # Shuffle subpopulations in offspring
-            # to make teams random
-            self.shuffle(offspring)
-
-            # Form teams for evaluation
-            teams = self.formTeams(offspring)
-
-            # Evaluate each team
-            eval_infos = self.evaluateTeams(teams)
-
-            # Now assign fitnesses to each individual
-            self.collectFitnesses(teams, eval_infos)
-
-            # Evaluate a team with the best indivdiual from each subpopulation
-            eval_infos = self.evaluateEvaluationTeam(offspring)
-
-            # Save fitnesses
-            self.writeEvalFitnessCSV(trial_dir, eval_infos)
-
-            if self.config['data']['save_elite_fitness']['switch']:
-                eval_infos = [self.evaluateTeam(
-                    team=TeamEvalIn(
-                        # TODO: Shouldn't this be subpop in offspring, not pop?
-                        # Also, there are too many variables representing population here
-                        # offspring, sorted_pop, pop, population... it's confusing
-                        individuals=[subpop[0] for subpop in offspring],
-                        seed=None
-                    ),
-                    compute_team_fitness=True
-                )]
-                self.writeEvalFitnessCSV(trial_dir, eval_infos, filename='elite_fitness.csv')
-
-            # Save trajectories
-            if self.save_eval_trajectories and self.gen % self.num_gens_between_save_eval_traj == 0:
-                self.writeEvalTrajs(trial_dir, eval_infos)
+            # Perform selection and mutation
+            offspring, preserved_champion_team_summaries = self.selectAndMutate(populations, team_summaries)
 
             # Now populate the population with individuals from the offspring
-            self.setPopulation(pop, offspring)
+            self.setPopulation(populations, offspring)
 
-            # Save checkpoint for generation if now is the time
-            if self.gen == self.config["ccea"]["num_generations"] or \
-                (self.save_checkpoint and self.gen % self.num_gens_between_checkpoint == 0):
-                self.saveCheckpoint(trial_dir, pop)
+            # Evaluate the new population
+            team_summaries[:] = self.evaluatePopulations(populations, trial_dir, self.gen, preserved_champion_team_summaries)
+
+            # # Save checkpoint for generation if now is the time
+            # if self.gen == self.config["ccea"]["num_generations"] or \
+            #     (self.save_checkpoint and self.gen % self.num_gens_between_checkpoint == 0):
+            #     self.saveCheckpoint(trial_dir, populations)
 
     def run(self, num_trial, load_checkpoint):
         if num_trial is None:
