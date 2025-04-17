@@ -241,7 +241,7 @@ def createRover(obs_radius, reward_type, resolution, agent_types, poi_types):
     Reward = rovers.rewards.Global
     type_ = 'rover'
     # TODO: Add another parameter here so that you can specify different parameters for indirect difference rewards?
-    # Maybe even a set of parameters? Just throw in a hashmap directly in there (of all D-Indirec related parameters)? 
+    # Maybe even a set of parameters? Just throw in a hashmap directly in there (of all D-Indirec related parameters)?
     # Rather than putting each D-Indirect parameter in individually?
     rover = rovers.Rover[SmartLidar, Discrete, Reward](reward_type, type_, obs_radius, SmartLidar(resolution=resolution, composition_policy=rovers.Density(), agent_types=agent_types, poi_types=poi_types), Reward())
     return rover
@@ -284,7 +284,7 @@ def createAgent(agent_config, agent_types, poi_types, poi_subtypes, agent_observ
             ),
             add_G = indirect_difference_config['add_G'] if 'add_G' in indirect_difference_config else False
         )
-        
+
     else:
         # Use default if none are specified
         indirect_difference_parameters = IndirectDifferenceParameters(
@@ -371,7 +371,7 @@ class AbstractRoverConstraint(rovers.IConstraint):
             return True
         else:
             return False
-    
+
     def _step_is_satisfied(self, entity_pack, t):
         count = 0
         dists = []
@@ -423,13 +423,34 @@ class RoverSequenceConstraint(AbstractRoverConstraint):
                 steps.append(self._step_is_satisfied(entity_pack, t))
             return max(steps)
 
+class RoverDenseConstraint(AbstractRoverConstraint):
+    """Constraint based on closest rover right now"""
+    def is_satisfied(self, entity_pack):
+        if entity_pack.agents.size() == 0:
+            return 0.0
+        else:
+            steps = []
+            for t in range(entity_pack.agents[0].path().size()):
+                steps.append(self._step_is_satisfied(entity_pack, t))
+            return sum(steps)
+
 def createRoverPOI(value, obs_rad, capture_radius, coupling, is_rover_list, constraint):
     if constraint == 'sequential':
+        # Closest rover in joint trajecotry
         roverConstraint = RoverSequenceConstraint(coupling, is_rover_list)
         poi = rovers.POI[RoverSequenceConstraint](value, obs_rad, capture_radius, roverConstraint)
     elif constraint == 'final':
+        # Closest rover in final timestep
         roverConstraint = RoverConstraint(coupling, is_rover_list)
         poi = rovers.POI[RoverConstraint](value, obs_rad, capture_radius, roverConstraint)
+    elif constraint == 'dense':
+        # Points each timestep based on closest rover
+        roverConstraint = RoverDenseConstraint(coupling, is_rover_list)
+        poi = rovers.POI[RoverDenseConstraint](value, obs_rad, capture_radius, roverConstraint)
+    elif constraint == 'dense_sequential':
+        # Points each timestep based on closest rover so far
+        # IE: A rover can leave, and points keep going up based on how close it had gotten
+        pass
     return poi
 
 # This is just to help me track which POIs are nominally hidden from rovers
@@ -519,9 +540,9 @@ def createEnv(config):
             measurement_type.append(agent_config['sensor']['measurement_type'])
         else:
             measurement_type.append('inverse_distance_squared')
-    
+
     observation_radii = [agent_config['observation_radius'] for agent_config in config['env']['agents']['rovers']+config['env']['agents']['uavs']]
-    
+
     default_values = []
     for agent_config in config['env']['agents']['rovers']+config['env']['agents']['uavs']:
         if 'sensor' in agent_config and 'default_value' in agent_config['sensor']:
@@ -531,7 +552,7 @@ def createEnv(config):
 
     rovers_ = [
         createAgent(
-            agent_config=rover_config, 
+            agent_config=rover_config,
             agent_types=agent_types,
             poi_types=poi_types,
             poi_subtypes=poi_subtypes,

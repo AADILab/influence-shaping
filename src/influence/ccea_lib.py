@@ -689,19 +689,33 @@ class CooperativeCoevolutionaryAlgorithm():
         preserved_champion_team_summaries = champion_team_summaries[:self.n_preserve_team_elites]
         for team_summary in preserved_champion_team_summaries:
             for i, individual in enumerate(team_summary.individuals):
-                offspring[i].append(individual)
+                new_individual = deepcopy(individual)
+                new_individual.shaped_fitnesses = []
+                new_individual.team_fitnesses = []
+                offspring[i].append(deepcopy(new_individual))
 
         for i, population in enumerate(populations):
-            offspring[i] += champion_individuals[:self.n_preserve_individual_elites]
+            for individual in champion_individuals[:self.n_preserve_individual_elites]:
+                new_individual = deepcopy(individual)
+                new_individual.shaped_fitnesses = []
+                new_individual.team_fitnesses = []
+                offspring[i].append(deepcopy(new_individual))
 
         # Populate with non-preserved elites
         non_preserved_champion_teams = champion_team_summaries[self.n_preserve_team_elites:]
         for team_summary in non_preserved_champion_teams:
             for i, individual in enumerate(team_summary.individuals):
-                offspring[i].append(individual)
+                new_individual = deepcopy(individual)
+                new_individual.shaped_fitnesses = []
+                new_individual.team_fitnesses = []
+                offspring[i].append(deepcopy(new_individual))
 
         for i, population in enumerate(populations):
-            offspring[i] += champion_individuals[self.n_preserve_individual_elites:]
+            for individual in champion_individuals[self.n_preserve_individual_elites:]:
+                new_individual = deepcopy(individual)
+                new_individual.shaped_fitnesses = []
+                new_individual.team_fitnesses = []
+                offspring[i].append(deepcopy(new_individual))
 
         # Populate with team mutants from a binary tournament across teams
         for j in range(self.n_binary_teams):
@@ -715,6 +729,9 @@ class CooperativeCoevolutionaryAlgorithm():
                 mutant = deepcopy(winning_team_summary.individuals[i])
                 self.mutateIndividual(mutant)
                 del mutant.fitness.values
+                mutant.shaped_fitnesses = []
+                mutant.team_fit = None
+                mutant.team_fitnesses = []
                 offspring[i].append(mutant)
 
         # Populate with mutants from a binary tournament
@@ -724,6 +741,9 @@ class CooperativeCoevolutionaryAlgorithm():
                 mutant=deepcopy(individual)
                 self.mutateIndividual(mutant)
                 del mutant.fitness.values
+                mutant.shaped_fitnesses = []
+                mutant.team_fit = None
+                mutant.team_fitnesses = []
                 offspring[i].append(mutant)
 
         return offspring, preserved_champion_team_summaries
@@ -930,6 +950,9 @@ class CooperativeCoevolutionaryAlgorithm():
         return population, team_summaries, gen
 
     def evaluatePopulations(self, populations, trial_dir, gen, preserved_team_summaries=[]):
+        if gen == 2:
+            pass
+
         if gen == 0:
             skip_preserved = False
         else:
