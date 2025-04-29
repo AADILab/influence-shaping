@@ -92,11 +92,11 @@ for line, collection, color, marker in zip(ax.lines, ax.collections, colors, mar
     line.set_color(color)
     collection.set_color(color)
     ax.plot(
-        line.get_xdata()[::200], 
-        line.get_ydata()[::200], 
-        marker=marker, 
-        color=color, 
-        linestyle='', 
+        line.get_xdata()[::200],
+        line.get_ydata()[::200],
+        marker=marker,
+        color=color,
+        linestyle='',
         markersize=markersize_map[marker]
     )
 

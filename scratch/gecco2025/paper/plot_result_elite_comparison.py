@@ -102,7 +102,8 @@ label_map = {
 }
 reverse_label_map = {label_map[k]: k for k in label_map}
 
-legend_lines = []
+legend_dict = {}
+# legend_lines = []
 for line in ax.lines:
     color = colors_dict[line.get_label()]
     marker = markers_dict[line.get_label()]
@@ -112,7 +113,20 @@ for line in ax.lines:
     legend_line.set_markersize(markersize_map[marker])
     legend_line.set_label(label_map[line.get_label()])
     # legend_line.set_linewidth(1)
-    legend_lines.append(legend_line)
+    legend_dict[legend_line.get_label()] = legend_line
+
+    # legend_lines.append(legend_line)
+
+ordered_list = [
+    'Dynamic Influence + Mixed Elites',
+    'Static Influence + Mixed Elites',
+    'Dynamic Influence + Standard Elites',
+    'Static Influence + Standard Elites'
+]
+
+legend_lines = []
+for label in ordered_list:
+    legend_lines.append(legend_dict[label])
 
 # # Sort the legend line
 # new_legend_lines = []
@@ -121,11 +135,11 @@ for line in ax.lines:
 for line, collection in zip(ax.lines, ax.collections):
     color = colors_dict[line.get_label()]
     ax.plot(
-        line.get_xdata()[::200], 
-        line.get_ydata()[::200], 
-        marker=markers_dict[line.get_label()], 
-        color=color, 
-        linestyle='', 
+        line.get_xdata()[::200],
+        line.get_ydata()[::200],
+        marker=markers_dict[line.get_label()],
+        color=color,
+        linestyle='',
         markersize=markersize_map[markers_dict[line.get_label()]]
     )
     line.set_label(label_map[line.get_label()])
@@ -140,11 +154,11 @@ for line, collection in zip(ax.lines, ax.collections):
 # for line, collection in zip(ax.lines, ax.collections):
 #     color = colors_dict[line.get_label()]
 #     ax.plot(
-#         line.get_xdata()[::200], 
-#         line.get_ydata()[::200], 
-#         marker=markers_dict[line.get_label()], 
-#         color=color, 
-#         linestyle='', 
+#         line.get_xdata()[::200],
+#         line.get_ydata()[::200],
+#         marker=markers_dict[line.get_label()],
+#         color=color,
+#         linestyle='',
 #         markersize=markersize_map[markers_dict[line.get_label()]]
 #     )
 #     line.set_label(label_map[line.get_label()])
@@ -174,7 +188,7 @@ ax.set_ylabel(ax.get_ylabel(), fontproperties=font_properties)
 
 fig.tight_layout()
 
-fig.savefig(os.path.expanduser('~/influence-shaping/outfigs/gecco2025/experiment_elite_comparison.png'))
+fig.savefig(os.path.expanduser('~/influence-shaping/outfigs/gecco2025/experiment_elite_comparison.png'), dpi=300)
 fig.savefig(os.path.expanduser('~/influence-shaping/outfigs/gecco2025/experiment_elite_comparison.svg'))
 
 plt.show()
