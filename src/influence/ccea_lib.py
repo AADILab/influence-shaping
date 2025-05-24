@@ -151,7 +151,6 @@ class CooperativeCoevolutionaryAlgorithm():
         self.num_steps = self.config["ccea"]["num_steps"]
 
         self.template_policies = self.get_template_policies('rovers')+self.get_template_policies('uavs')
-        # self.template_nns = self.get_template_nns('rovers')+self.get_template_nns('uavs')
         self.nn_sizes = [template_nn.num_weights if type(template_nn) is NeuralNetwork or type(template_nn) is RNNPolicy else None for template_nn in self.template_policies]
 
         # Make sure each agent has a sensor type config set
@@ -437,7 +436,6 @@ class CooperativeCoevolutionaryAlgorithm():
         # TODO: Make it so that each agent can have a different size NN?
         #       (This lets us give rovers one size and uavs a different size when we change their
         #        observations and actions)
-        # agent_nns = [deepcopy(template_nn) for template_nn in self.template_nns]
         agent_policies = [deepcopy(template_policy) for template_policy in template_policies]
 
         # Load in the weights
@@ -479,37 +477,15 @@ class CooperativeCoevolutionaryAlgorithm():
             joint_trajectory['hidden_poi_'+str(i)+'_x'] = [poi.position().x]
             joint_trajectory['hidden_poi_'+str(i)+'_y'] = [poi.position().y]
 
-
-        # agent_positions = [[agent.position().x, agent.position().y] for agent in env.rovers()]
-        # poi_positions = [[poi.position().x, poi.position().y] for poi in env.pois()]
-
-        # observations_arrs = []
-        # for observation in observations:
-        #     observation_arr = []
-        #     for i in range(len(observation)):
-        #         observation_arr.append(observation(i))
-        #     observation_arr = np.array(observation_arr, dtype=np.float64)
-        #     observations_arrs.append(observation_arr)
-
-        # joint_state_trajectory = [agent_positions+poi_positions]
-        # joint_observation_trajectory = [observations_arrs]
-        # joint_action_trajectory = []
-
         for _ in range(num_steps):
-            # Compute the actions of all rovers
-            # observation_arrs = []
+            # Compute the actions of all rovers\
             actions_arrs = []
             actions = []
             for ind, (observation, agent_nn) in enumerate(zip(observations, agent_policies)):
-                # observation_arr = []
-                # for i in range(len(observation)):
-                #     observation_arr.append(observation(i))
-                # observation_arr = np.array(observation_arr, dtype=np.float64)
                 slist = str(observation.transpose()).split(" ")
                 flist = list(filter(None, slist))
                 nlist = [float(s) for s in flist]
                 observation_arr = np.array(nlist, dtype=np.float64)
-                # print("observation_arr:", observation_arr)
                 action_arr = agent_nn.forward(observation_arr)
                 if (config['env']['agents']['rovers']+config['env']['agents']['uavs'])[ind]['action']['type'] == 'dxdy':
                 # Multiply by agent velocity
@@ -552,7 +528,6 @@ class CooperativeCoevolutionaryAlgorithm():
                             )
 
                 # Save this info for debugging purposes
-                # observation_arrs.append(observation_arr)
                 actions_arrs.append(input_action_arr)
             for action_arr in actions_arrs:
                 action = rovers.tensor(action_arr)
@@ -627,55 +602,6 @@ class CooperativeCoevolutionaryAlgorithm():
                     self.mutateIndividual(subpop[mutant_id])
                     del subpop[mutant_id].fitness.values
 
-    def selectSubPopulation(self, subpopulation):
-        # Assume the persistent elites are best of all time. Leave them alone (for now)
-        # new subpop is the offspring of this subpop
-        # offspring = subpopulation[:self.n_preserve_elites]
-        # small subpop is the subset of subpop that is not persistent
-        # small_subpop = subpopulation[self.n_preserve_elites:]
-
-        # Sort elites based on shaped fitness
-        sorted_by_individual = sorted(subpopulation, key=lambda ind: ind.fitness.values[0], reverse=True)
-
-        if self.selection_mechanism == 'mixed_n_elites_binary_tournament':
-            # Set up lambda function for team sorting
-            lambda_func = lambda ind: ind.team_fitness
-
-            # Get the elites based on team fitness
-            sorted_by_team = sorted(subpopulation, key=lambda_func, reverse=True)
-
-            # Get persistent team elites
-            offspring = sorted_by_team[:self.n_preserve_team_elites]
-            # Get persistent individual elites
-            offspring += sorted_by_individual[:self.n_preserve_individual_elites]
-            # Get current team elites
-            offspring += sorted_by_team[self.n_preserve_team_elites:self.n_preserve_team_elites+self.n_team_elites]
-            # Get current individual_elites
-            offspring += sorted_by_individual[self.n_preserve_individual_elites:self.n_preserve_individual_elites+self.n_individual_elites]
-
-            # Now pick the rest based on a binary tournament.
-            # Selection here depends on individual (not team) fitness
-            offspring += tools.selTournament(subpopulation, len(subpopulation) - self.total_elites, 2)
-
-        elif self.selection_mechanism == 'epsilon_greedy':
-            offspring = []
-            for _ in range(self.num_elites):
-                if random.uniform(0,1) < self.epsilon:
-                    # Select a random agent for survival
-                    offspring.append(random.choice(subpopulation))
-                else:
-                    # Select highest fitness agent for survival
-                    offspring.append(sorted_by_individual[0])
-            # range(self.num_mutants) ensures we don't produce an extra mutant
-            # if the subpopulation is an odd number size, accidentally
-            # ballooning the size of the subpopulations
-            marked_for_mutation = []
-            for individual, _ in zip(offspring, range(self.num_mutants)):
-                marked_for_mutation.append(individual)
-            offspring += marked_for_mutation
-
-        return [ deepcopy(individual) for individual in offspring ]
-
     def selectAndMutate(self, populations, team_summaries):
         # Get the correct number of populations first
         offspring = [[] for _ in range(self.num_rovers+self.num_uavs)]
@@ -747,18 +673,6 @@ class CooperativeCoevolutionaryAlgorithm():
                 offspring[i].append(mutant)
 
         return offspring, preserved_champion_team_summaries
-
-    def select(self, population):
-        # Offspring is a list of subpopulation
-        offspring = []
-        # For each subpopulation in the population
-        for subpop in population:
-            if subpop[0] is not None:
-                # Perform a selection on that subpopulation and add it to the offspring population
-                offspring.append(self.selectSubPopulation(subpop))
-            else:
-                offspring.append(subpop)
-        return offspring
 
     def collectFitnesses(self, eval_team_ins, eval_outs):
         # There may be several eval_infos for the same team
@@ -1042,9 +956,6 @@ class CooperativeCoevolutionaryAlgorithm():
             self.gen = 0
 
             # Create csv file for saving evaluation fitnesses
-            # self.createEvalFitnessCSV(trial_dir)
-            # if self.config['data']['save_elite_fitness']['switch']:
-            #     self.createEvalFitnessCSV(trial_dir, filename='elite_fitness.csv')
             self.createFitnessCsv(
                 trial_dir,
                 'champion_team_fitness.csv',
