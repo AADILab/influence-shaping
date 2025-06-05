@@ -3,7 +3,9 @@
         "**/__pycache__": true,
         "**/**.egg-info": true,
         "**/.vscode": false,
-        "**/.ipynb_checkpoints": true,
+        "**/.ipynb_checkpoints": true
+    },
+    "files.watcherExclude": {
         "results": true
     },
     "files.associations": {
