@@ -56,6 +56,11 @@ class FollowPolicy():
             action[np.argmin(f_obs)] = 1
             return action
 
+class FrozenPolicy():
+    @staticmethod
+    def forward(observation: np.ndarray) -> int:
+        return np.array([0,0])
+
 class EvalOut():
     def __init__(self, fitnesses, joint_trajectory):
         self.fitnesses = fitnesses
@@ -403,6 +408,83 @@ class CooperativeCoevolutionaryAlgorithm():
         else:
             eval_infos = list(self.buildMap(teams))
         return eval_infos
+    
+    def computeInfluence(self,
+            agent_id: int,
+            team: TeamEvalIn,
+            eval_out: EvalOut,
+            template_policies: List[Union[NeuralNetwork|FollowPolicy|FrozenPolicy]],
+            config: dict,
+            num_rovers: int,
+            num_uavs: int,
+            num_steps: int,
+            compute_team_fitness=True,
+            resolution: Optional[int] = None
+        ):
+        """This functions computes which teammates should be partnered with the specified individual
+        based on social influence
+
+        agent_id: index of agent we are computing influence for
+        resolution (not yet implemented): number of timesteps to include in influence measurement, None includes entire trajectory
+
+        1) Compute team rollout and reward normally (Take this as input)
+        """
+        fitnesses, joint_trajectory = eval_out.fitnesses, eval_out.joint_trajectory
+
+        """
+        2) Replace one agent with a frozen policy
+        """
+        counterfactual_team = TeamEvalIn(
+            individuals=team.individuals[:agent_id]+[FrozenPolicy]+team.individuals[agent_id+1:],
+            seed=team.seed
+        )
+        counterfactual_template_policies = template_policies[:agent_id]+[FrozenPolicy]+template_policies[agent_id+1:]
+        
+        """
+        3) Resimulate the new team
+        Measure the distance between each agent's actions in their prior joint trajectory vs the new one
+        """
+        counterfactual_out = self.evaluateTeamStatic(
+            counterfactual_team,
+            counterfactual_template_policies,
+            self.config,
+            self.num_rovers,
+            self.num_uavs,
+            self.num_steps,
+            compute_team_fitness=True
+        )
+        c_fitnesses, c_joint_trajectory = counterfactual_out.fitnesses, counterfactual_out.joint_trajectory
+
+        # For each agent other than the influencing agent, let's compute the distance between its actual actions and counterfactual actions
+        if agent_id < num_rovers:
+            exclude_column = 'rover_'+str(agent_id)
+        else:
+            exclude_column = 'uav_'+str(agent_id-num_rovers)
+
+        include_columns = []
+        for column_name in joint_trajectory.columns:
+            if 'dx' in column_name or 'dy' in column_name:
+                if exclude_column not in column_name:
+                    include_columns.append(column_name)
+        
+        actions_df = c_joint_trajectory[include_columns]
+        c_actions_df = c_joint_trajectory[include_columns]
+
+        actions_np = actions_df.to_numpy()
+        c_actions_np = c_actions_df.to_numpy()
+
+        # Take the absolute distance between dxs and dys
+
+        
+
+        # Turn the numpy array of dx, dy actions into 
+
+        """
+        4) Compare the distance against a threshold distance (how far do the actions deviate before we consider it as influence)
+        5) Determine which teammates were influenced by this agent based on that distance
+        6) Now compute counterfactual team reward (no rolling out again) removing agent and influenced teammates
+        """
+        pass
 
     def evaluateTeam(self, team: TeamEvalIn, compute_team_fitness=True):
         return self.evaluateTeamStatic(
