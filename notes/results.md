@@ -189,3 +189,11 @@ This is completing the four squares experiments that Kagan asked for Tues Jan 7,
 ### irukandji
 
 This is re-running some experiments from emu that seem to have given me some conflicting results I'm investigating. Hopefully by running these again I can get some clarity on what is going on.
+
+## 10_01_2025
+
+### alpha
+
+I have been working on replicating the GECCO experiments here. That is n_replicate_gecco. 1_replicate_gecco was with the updated code (hash 703dcf41f11156e95fbd271342d3401d6f56197a). 2_replicate_gecco starts using the older code (hash bf91b9a58570b6c3b139a94ba278375647f52c0c).
+     
+3_replicate_gecco is a successful reproduction of the 1x1 results published in GECCO 2025 using hash bf91b9a58570b6c3b139a94ba278375647f52c0c.
