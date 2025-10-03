@@ -8,16 +8,18 @@ from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
 
 def moving_average_filter(arr, window_size: int):
-    pad_len = window_size - 1
-    new_arr = np.concatenate([
-        np.ones(pad_len)*arr[0],
-        arr
-    ])
-    return np.convolve(
-        new_arr,
-        np.ones(window_size)/window_size,
-        mode='valid'
-    )
+    result = np.copy(arr).astype(float)
+    half_window = window_size // 2
+    
+    for i in range(len(arr)):
+        # Try to center the window around point i
+        start_idx = max(0, i - half_window)
+        end_idx = min(len(arr), i + half_window + 1)
+        
+        # If we can't get the full window, use what's available
+        result[i] = np.mean(arr[start_idx:end_idx])
+    
+    return result
 
 class PlotArgs():
     def __init__(self, 
