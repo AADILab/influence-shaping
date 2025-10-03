@@ -540,3 +540,35 @@ def generate_config_plot(config_dir: Path, individual_colors: bool, no_shading: 
 def plot_config(config_dir: Path, individual_colors: bool, no_shading: bool, plot_args: PlotArgs):
     fig = generate_config_plot(config_dir, individual_colors, no_shading, plot_args)
     plot_args.finish_figure(fig)
+
+def generate_learning_curve_tree_plots(root_dir: Path, out_dir: Path, individual_agents: bool, batch_plot_args: BatchPlotArgs, batch_line_plot_args: BatchLinePlotArgs):
+    """Generate all the learning curve plots in this experiment tree"""
+    
+    fitness_files = set()
+    for root, _, files in os.walk(root_dir):
+        if 'fitness.csv' in files:
+            fitness_files.add(Path(root)/'fitness.csv')
+    
+    for fitness_file in fitness_files:
+        dir_list = str(fitness_file.parent).split('/')
+        dir_name = '/'.join(dir_list[dir_list.index(root_dir.name)+1:])
+
+        file_append = ''
+        if individual_agents:
+            file_append+='.ind'
+        if batch_line_plot_args.window_size is not None:
+            file_append+='.w'+str(batch_line_plot_args.window_size)
+
+        plot_learning_curve(
+            fitness_dir=fitness_file,
+            individual_agents=individual_agents,
+            line_plot_args=batch_line_plot_args.build_line_plot_args(),
+            plot_args=batch_plot_args.build_plot_args(
+                title=dir_name, output=out_dir/dir_name/('learning_curve'+file_append+'.png')
+            )
+        )
+
+def plot_learning_curve_tree(root_dir: Path, out_dir: Path, individual_agents: bool, batch_plot_args: BatchPlotArgs, batch_line_plot_args: BatchLinePlotArgs):
+    """Plot learning curves for all fitness.csv files in the directory tree"""
+    generate_learning_curve_tree_plots(root_dir, out_dir, individual_agents, batch_plot_args, batch_line_plot_args)
+
