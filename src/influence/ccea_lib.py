@@ -335,7 +335,8 @@ class CooperativeCoevolutionaryAlgorithm():
             # We want to hold on to these elites and don't want a new fitness assigned to them
             team_inds = [i+self.n_preserve_elites for i in range(self.subpopulation_size-self.n_preserve_elites)]
 
-        team_inds = list(range(self.subpopulation_size))
+        else:
+            team_inds = list(range(self.subpopulation_size))
 
         # For each individual in a subpopulation
         for i in team_inds:
