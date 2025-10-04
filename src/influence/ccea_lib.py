@@ -159,6 +159,15 @@ class CooperativeCoevolutionaryAlgorithm():
         # Data saving variables
         self.save_trajectories = self.config["data"]["save_trajectories"]["switch"]
         self.num_gens_between_save_traj = self.config["data"]["save_trajectories"]["num_gens_between_save"]
+        
+        # Handle train trajectories config
+        if 'save_train_trajectories' in self.config["data"]:
+            self.save_train_trajectories = self.config["data"]["save_train_trajectories"]["switch"]
+            self.num_gens_between_save_train_traj = self.config["data"]["save_train_trajectories"]["num_gens_between_save"]
+        else:
+            self.save_train_trajectories = False
+            self.num_gens_between_save_train_traj = 0
+
         if 'checkpoints' in self.config['data'] and 'save' in self.config['data']['checkpoints']:
             self.save_checkpoint = self.config["data"]["checkpoints"]["save"]
         else:
@@ -710,7 +719,8 @@ class CooperativeCoevolutionaryAlgorithm():
         with open(eval_fitness_dir, 'a') as file:
                 file.write(fit_str)
 
-    def writeEvalTrajs(self, trial_dir, eval_infos):
+    def writeTrajectories(self, trial_dir, eval_infos, prefix="eval_"):
+        """Generic function to write trajectories with specified prefix"""
         # Set up directory
         gen_folder_name = "gen_"+str(self.gen)
         gen_dir = trial_dir / gen_folder_name
@@ -718,7 +728,7 @@ class CooperativeCoevolutionaryAlgorithm():
             os.makedirs(gen_dir)
         # Iterate through each file we are writing
         for eval_id, eval_info in enumerate(eval_infos):
-            eval_filename = "eval_team_"+str(eval_id)+"_joint_traj.csv"
+            eval_filename = prefix + "team_"+str(eval_id)+"_joint_traj.csv"
             eval_dir = gen_dir / eval_filename
             with open(eval_dir, 'w') as file:
                 # Build up the header (labels at the top of the csv)
@@ -735,11 +745,9 @@ class CooperativeCoevolutionaryAlgorithm():
                 # Observations
                 for i in range(self.num_rovers):
                     for j in range(self.num_sensors_rovers[i]):
-                    # for j in range(self.num_rover_sectors*3):
                         header += "rover_"+str(i)+"_obs_"+str(j)+","
                 for i in range(self.num_uavs):
                     for j in range(self.num_sensors_uavs[i]):
-                    # for j in range(self.num_uav_sectors*3):
                         header += "uav_"+str(i)+"_obs_"+str(j)+","
                 # Actions
                 for i in range(self.num_rovers):
@@ -780,6 +788,10 @@ class CooperativeCoevolutionaryAlgorithm():
                     csv_line = state_str+','+observation_str+','+action_str+'\n'
                     # Write it out
                     file.write(csv_line)
+
+    def writeEvalTrajs(self, trial_dir, eval_infos):
+        """Write evaluation trajectories using the generic writeTrajectories function"""
+        self.writeTrajectories(trial_dir, eval_infos, prefix="eval_")
 
     def saveCheckpoint(self, trial_dir, pop):
         checkpoint_dir = trial_dir/('checkpoint_'+str(self.gen)+'.pkl')
@@ -843,6 +855,10 @@ class CooperativeCoevolutionaryAlgorithm():
 
             # Assign fitnesses to individuals
             self.assignFitnesses(teams, eval_infos)
+
+            # Save training trajectories if enabled
+            if self.save_train_trajectories:
+                self.writeTrajectories(trial_dir, eval_infos, prefix="train_")
 
             # Organize subpopulations by individual with highest team fitness first
             if self.sort_teams_by_sum_agent_fitness:
@@ -908,6 +924,10 @@ class CooperativeCoevolutionaryAlgorithm():
 
             # Now assign fitnesses to each individual
             self.assignFitnesses(teams, eval_infos)
+
+            # Save training trajectories if enabled and it's time
+            if self.save_train_trajectories and self.gen % self.num_gens_between_save_train_traj == 0:
+                self.writeTrajectories(trial_dir, eval_infos, prefix="train_")
 
             # Evaluate a team with the best indivdiual from each subpopulation
             eval_infos = self.evaluateEvaluationTeam(offspring)
