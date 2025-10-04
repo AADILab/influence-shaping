@@ -6,7 +6,7 @@ from tqdm import tqdm
 import multiprocessing
 import random
 import pickle
-from typing import List, Union, Optional
+from typing import List, Union, Optional, Tuple
 
 from influence.evo_network import NeuralNetwork
 
@@ -335,7 +335,7 @@ class CooperativeCoevolutionaryAlgorithm():
         return self.evaluateTeams(eval_teams)
 
     # def formTeams(self, population, inds=None) -> List[TeamInfo]:
-    def formTeams(self, population) -> List[TeamInfo]:
+    def formTeams(self, population) -> Tuple[List[TeamInfo], List[int]]:
         # Start a list of teams
         teams = []
 
@@ -347,10 +347,11 @@ class CooperativeCoevolutionaryAlgorithm():
         else:
             team_inds = list(range(self.subpopulation_size))
 
-        # For each individual in a subpopulation
         seed = self.get_seed()
-        if seed is None:
-            seed = int.from_bytes(os.urandom(4), 'big')
+        if seed is not None:
+            seeds = [self.get_seed() for _ in range(self.num_evaluations_per_team)]
+        else:
+            seeds = [int.from_bytes(os.urandom(4), 'big') for _ in range(self.num_evaluations_per_team)]
 
         for i in team_inds:
             # Make a team
@@ -361,11 +362,11 @@ class CooperativeCoevolutionaryAlgorithm():
                 policies.append(subpop[i])
             # Need to save that team for however many evaluations
             # we're doing per team
-            for _ in range(self.num_evaluations_per_team):
+            for s in seeds:
                 # Save that team
-                teams.append(TeamInfo(policies, seed))
+                teams.append(TeamInfo(policies, s))
 
-        return teams
+        return teams, seeds
     
     def buildMap(self, teams):
         return self.map(self.evaluateTeam, teams)
@@ -852,7 +853,7 @@ class CooperativeCoevolutionaryAlgorithm():
             pop = self.population()
 
             # Create the teams
-            teams = self.formTeams(pop)
+            teams, seeds = self.formTeams(pop)
 
             # Evaluate the teams
             eval_infos = self.evaluateTeams(teams)
@@ -882,7 +883,7 @@ class CooperativeCoevolutionaryAlgorithm():
                 eval_infos = [self.evaluateTeam(
                     team=TeamInfo(
                         policies=[subpop[0] for subpop in pop],
-                        seed=None
+                        seed=seeds[0]
                     ),
                     compute_team_fitness=True
                 )]
@@ -921,7 +922,7 @@ class CooperativeCoevolutionaryAlgorithm():
             self.shuffle(offspring)
 
             # Form teams for evaluation
-            teams = self.formTeams(offspring)
+            teams, seeds = self.formTeams(offspring)
 
             # Evaluate each team
             eval_infos = self.evaluateTeams(teams)
@@ -946,7 +947,7 @@ class CooperativeCoevolutionaryAlgorithm():
                         # Also, there are too many variables representing population here
                         # offspring, sorted_pop, pop, population... it's confusing
                         policies=[subpop[0] for subpop in offspring],
-                        seed=None
+                        seed=seeds[0]
                     ),
                     compute_team_fitness=True
                 )]
