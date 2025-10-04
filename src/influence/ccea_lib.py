@@ -348,6 +348,10 @@ class CooperativeCoevolutionaryAlgorithm():
             team_inds = list(range(self.subpopulation_size))
 
         # For each individual in a subpopulation
+        seed = self.get_seed()
+        if seed is None:
+            seed = int.from_bytes(os.urandom(4), 'big')
+
         for i in team_inds:
             # Make a team
             policies = []
@@ -359,7 +363,7 @@ class CooperativeCoevolutionaryAlgorithm():
             # we're doing per team
             for _ in range(self.num_evaluations_per_team):
                 # Save that team
-                teams.append(TeamInfo(policies, self.get_seed()))
+                teams.append(TeamInfo(policies, seed))
 
         return teams
     
