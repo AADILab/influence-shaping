@@ -20,7 +20,7 @@ class NeuralNetwork:
             self.hidden_activation = np.tanh
         elif hidden_activation_func == 'relu':
             self.hidden_activation = self.relu
-        
+
         if output_activation_func == 'tanh':
             self.output_activation = np.tanh
         elif output_activation_func == 'softmax':

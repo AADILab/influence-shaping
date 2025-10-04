@@ -22,7 +22,7 @@ class TestUavDistanceLidar(TestEnv):
             poi_config['position']['fixed'] = position
             config['env']['pois']['hidden_pois'].append(poi_config)
         # Put 3 rovers
-        # First two rovers are close to each other, 
+        # First two rovers are close to each other,
         # third rover is far away
         rover_positions = [
             [25., 25.],
@@ -49,14 +49,14 @@ class TestUavDistanceLidar(TestEnv):
             uav_config['position']['fixed'] = position
             config['env']['agents']['uavs'].append(uav_config)
         return config
-    
+
     def get_config_b(self):
         # Same as config_a but with a smaller observation radius for rovers
         config = self.get_config_a()
         for rover_config in config['env']['agents']['rovers']:
             rover_config['observation_radius'] = 25.0
         return config
-    
+
     def compute_expected_rover_observations(self, config):
         expected_rover_observations = []
         # Iterate through rovers and build out our expected observation for that rover
@@ -75,14 +75,14 @@ class TestUavDistanceLidar(TestEnv):
                     rover_observation.append(-1)
             expected_rover_observations.append(rover_observation)
         return expected_rover_observations
-    
+
     def test_a(self):
         """Test that distances are computed properly"""
         # Initialize environment
         config = self.get_config_a()
         env = createEnv(config)
 
-        # Get the observations 
+        # Get the observations
         observations, _ = env.reset()
 
         # Create our expected observations for rovers

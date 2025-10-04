@@ -1,4 +1,4 @@
-"""There are going to be different types for hidden pois. 
+"""There are going to be different types for hidden pois.
 Each poi type requires a uav with the corresponding sensor to be able to sense that poi.
 """
 
@@ -47,7 +47,7 @@ class TestPoiTypeSensor(TestEnv):
         # Initialize environment with uavs and pois
         config = self.get_config_a()
         env = createEnv(config)
-        
+
         # Get the observations
         observations, _ = env.reset()
 

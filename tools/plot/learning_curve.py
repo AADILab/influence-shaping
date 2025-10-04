@@ -12,7 +12,7 @@ if __name__ == '__main__':
     )
     parser.add_plot_args()
     parser.add_argument(
-        'fitness_dir', 
+        'fitness_dir',
         help='directory of csv file containing fitnesses',
         type=str
     )

@@ -12,7 +12,7 @@ if __name__ == '__main__':
     )
     parser.add_plot_args()
     parser.add_argument(
-        'joint_traj_dir', 
+        'joint_traj_dir',
         help='directory of csv file containing joint trajectory',
         type=str
     )

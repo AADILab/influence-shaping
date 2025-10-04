@@ -34,7 +34,7 @@ class TestResults(TestEnv):
         agent_paths = []
         for rover_x, rover_y, uav_x, uav_y in zip(joint_traj['rover_0_x'][1:], joint_traj['rover_0_y'][1:], joint_traj['uav_0_x'][1:], joint_traj['uav_0_y'][1:]):
             agent_paths.append([ [rover_x, rover_y], [uav_x, uav_y] ])
-        
+
         # Get the expected final rewards from the fitness csv file
         fitness_df = pd.read_csv(Path(top_dir)/'trial_0'/'fitness.csv')
         expected_final_rewards = [fitness_df['team_6_rover_0'][0], fitness_df['team_6_uav_0'][0]]

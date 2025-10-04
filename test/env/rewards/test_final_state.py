@@ -11,7 +11,7 @@ class TestFinalState(TestEnv):
         self.default_poi_config['observation_radius'] = 5.0
         self.default_rover_config['position']['fixed'] = [25.0, 25.0]
         self.default_uav_config['position']['fixed'] = [25.0, 25.0]
-    
+
     def get_default_config(self):
         config = self.get_env_template_config()
         config['env']['agents']['rovers'].append(self.get_default_rover_config())
@@ -34,7 +34,7 @@ class TestFinalState(TestEnv):
         config['env']['pois']['hidden_pois'].append(deepcopy(config['env']['pois']['hidden_pois'][0]))
         config['env']['pois']['hidden_pois'][1]['position']['fixed'] = [40.0, 40.0]
         return config
-    
+
     def get_two_rovers_two_uavs_two_pois_path_config(self):
         config = self.get_two_rovers_two_uavs_two_pois_config()
         # Move rovers to a spawn point near the center of the map
@@ -129,23 +129,23 @@ class TestOneRoverOneUavOnePoi(TestFinalState):
         config = self.get_default_config()
         # Test with G
         self.assert_correct_rewards(config, expected_rewards=[1.0, 1.0])
-    
+
     def test_a_Difference(self):
         config = self.get_default_config()
         # Switch both agents to D. Check rewards
         config['env']['agents']['rovers'][0]['reward_type'] = 'Difference'
         config['env']['agents']['uavs'][0]['reward_type'] = 'Difference'
         self.assert_correct_rewards(config, expected_rewards=[1.0, 0.0])
-    
+
     def test_a_IndirectDifference(self):
         config = self.get_default_config()
         # Switch both agents to D-Indirect. Check rewards.
-        # Should be 1.0 for rover and 1.0 for uav. 
+        # Should be 1.0 for rover and 1.0 for uav.
         # Rover gets credit for itself and uav gets credit for itself and the rover
         config['env']['agents']['rovers'][0]['reward_type'] = 'IndirectDifference'
         config['env']['agents']['uavs'][0]['reward_type'] = 'IndirectDifference'
         self.assert_correct_rewards(config, expected_rewards=[1.0, 1.0])
-        
+
     def test_a_IndirectDifference_manual_empty(self):
         """Manually assign no rovers to the uav"""
         config = self.get_default_config()
@@ -230,7 +230,7 @@ class TestOneRoverOneUavOnePoi(TestFinalState):
         self.assert_correct_rewards(config, expected_rewards=[0.0, 0.0])
 
     def test_d(self):
-        '''Neither the rover nor the uav are on the poi. 
+        '''Neither the rover nor the uav are on the poi.
         They are too far to receive a reward
         '''
         config = self.get_default_config()
@@ -273,7 +273,7 @@ class TestOneRoverOneUavOnePoi(TestFinalState):
         # Switch just rover back to D and check
         config['env']['agents']['rovers'][0]['reward_type'] = 'Difference'
         self.assert_correct_rewards(config, expected_rewards=[G, G])
-    
+
     def test_f(self):
         '''The rover is just barely within the POI observation radius, and just barely
         within the uav's influence radius
@@ -352,5 +352,5 @@ class TestTwoRoversTwoPois(TestFinalState):
             rover_config['reward_type'] = 'IndirectDifference'
         self.assert_correct_rewards(config, expected_rewards=[1.0, 1.0])
 
-if __name__ == '__main__':    
+if __name__ == '__main__':
     unittest.main()

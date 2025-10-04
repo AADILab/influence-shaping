@@ -7,14 +7,14 @@ from influence.custom_env import createEnv
 class TestSequence(TestEnv):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-    
+
     def get_one_rover_one_poi_config_a(self):
         # Set some defaults for the remainder of config
         self.default_poi_config['observation_radius'] = 5.0
         self.default_poi_config['constraint'] = 'sequential'
         self.default_poi_config['position']['fixed'] = [10.0, 10.0]
         self.default_rover_config['position']['fixed'] = [40.0, 10.0]
-    
+
         # Get env template and fill it
         config = self.get_env_template_config()
         config['env']['map_size'] = [50., 50.]
@@ -23,7 +23,7 @@ class TestSequence(TestEnv):
         # Throw in a poi
         config['env']['pois']['rover_pois'] = [self.get_default_poi_config()]
         return config
-    
+
     def get_one_rover_one_poi_config_b(self):
         # Change defaults for the remainder of config building
         self.default_rover_config['position']['fixed'] = [45.0, 25.0]
@@ -68,7 +68,7 @@ class TestSequence(TestEnv):
             poi_config['capture_radius'] = 1000.0
             poi_config['position']['fixed'] = position
             config['env']['pois']['hidden_pois'].append(poi_config)
-        
+
         return config
 
     def get_one_rover_two_pois_config_a(self):
@@ -86,7 +86,7 @@ class TestSequence(TestEnv):
         # Add a rover to config
         config['env']['agents']['rovers'].append(self.get_default_rover_config())
         return config
-    
+
     def get_two_rovers_one_poi_config_b(self):
         config = self.get_one_rover_one_poi_config_b()
         config['env']['agents']['rovers'].append(self.get_default_rover_config())
@@ -167,7 +167,7 @@ class TestSequence(TestEnv):
 class TestOneRoverOnePoi(TestSequence):
     def get_config_a(self):
         return self.get_one_rover_one_poi_config_a()
-    
+
     def get_config_b(self):
         return self.get_one_rover_one_poi_config_b()
 
@@ -200,7 +200,7 @@ class TestOneRoverOnePoi(TestSequence):
             [1.0]  # Rover moves out of observation radius, but POI is still counted
         ]
         self.assert_path_rewards(env, agent_paths, expected_rewards_at_each_step)
-    
+
     def test_config_a_path_a_Difference(self):
         # -- 1 rover, 1 POI. Rover goes to POI then leaves. D is the same as G.
         config = self.get_config_a()
@@ -226,13 +226,13 @@ class TestOneRoverOnePoi(TestSequence):
             [partial_reward], # Rover moves away outside the observation radius. Reward should not change
             [1.0], # Rover moves directly on top of the poi. Reward should be 1.0
             [1.0] # Rover moves away from poi again. Reward should remain at 1.0
-        ]   
+        ]
         self.assert_path_rewards(env, self.get_path_b(), expected_rewards_at_each_step)
 
 class TestOneRoverOneUavFivePois(TestSequence):
     def get_config_a(self):
         return self.get_one_rover_one_uav_five_pois_config_a()
-    
+
     def get_path_a(self):
         # Rover and uav seperate and rover captures pois by itself
         return [
@@ -269,12 +269,12 @@ class TestOneRoverOneUavFivePois(TestSequence):
                 G_at_this_step += self.compute_poi_reward_using_positions(rover_position, poi_position)
             # Each agent gets the G at this step
             expected_rewards_at_each_step.append([G_at_this_step, G_at_this_step])
-        
+
         # Now check it
         self.assert_path_rewards(env, agent_paths, expected_rewards_at_each_step)
 
     def test_config_a_path_a_IndirectDifference(self):
-        # This should be the same as G. 
+        # This should be the same as G.
         # Rover and uav start next to each other, so uav should get credit for the rover
         # using the default D-Indirect reward
         config = self.get_config_a()
@@ -301,14 +301,14 @@ class TestOneRoverOneUavFivePois(TestSequence):
                 G_at_this_step += self.compute_poi_reward_using_positions(rover_position, poi_position)
             # Each agent gets the G at this step
             expected_rewards_at_each_step.append([G_at_this_step, G_at_this_step])
-        
+
         # Now check it
         self.assert_path_rewards(env, agent_paths, expected_rewards_at_each_step)
 
 class TestOneRoverTwoPois(TestSequence):
     def get_config_a(self):
         return self.get_one_rover_two_pois_config_a()
-    
+
     def get_path_a(self):
         return [
             [[28.0, 25.0]], # Rover moves nearby first poi
@@ -336,10 +336,10 @@ class TestOneRoverTwoPois(TestSequence):
 class TestTwoRoversOnePoi(TestSequence):
     def get_config_a(self):
         return self.get_two_rovers_one_poi_config_a()
-    
+
     def get_config_b(self):
         return self.get_two_rovers_one_poi_config_b()
-    
+
     def get_path_a(self):
         # Used with config a
         return  [
@@ -352,7 +352,7 @@ class TestTwoRoversOnePoi(TestSequence):
             # Rover A stays still. Rover B returns to start
             [[40.0, 10.0], [40.0, 10.0]]
         ]
-    
+
     def get_path_b(self):
         # Used with config b
         return [
@@ -365,7 +365,7 @@ class TestTwoRoversOnePoi(TestSequence):
             # Rover A stays still. Rover B leaves the POI
             [[45.0, 25.0], [45.0, 25.0]]
         ]
-    
+
     def test_config_a_path_a_Global(self):
         # -- 2 rovers, 1 POI. Rover A goes to POI then leaves. Rover B goes to POI at a later time.
         config = self.get_config_a()
@@ -423,7 +423,7 @@ class TestTwoRoversOnePoi(TestSequence):
             [partial_reward_2, partial_reward_2]
         ]
         self.assert_path_rewards(env, self.get_path_b(), expected_rewards_at_each_step)
-    
+
 class TestTwoRoversTwoPois(TestSequence):
     def get_config_a(self):
         return self.get_two_rovers_two_pois_config_a()
@@ -457,7 +457,7 @@ class TestTwoRoversTwoPois(TestSequence):
             # Rover A stays home. Rover B goes back home
             [[40.0, 10.0], [40.0, 10.0]]
         ]
-    
+
     def test_config_a_path_a_Global(self):
         # -- 2 rovers, 2 POIs. Each rover visits its respective POI.
         config = self.get_config_a()
@@ -475,7 +475,7 @@ class TestTwoRoversTwoPois(TestSequence):
             [2.0, 2.0]
         ]
         self.assert_path_rewards(env, self.get_path_a(), expected_rewards_at_each_step)
-    
+
     def test_config_a_path_a_Difference(self):
         # -- 2 rovers, 2 POIs. Each rover visits its respective POI.
         config = self.get_config_a()
@@ -566,7 +566,7 @@ class TestTwoRoversTwoPois(TestSequence):
             # If you remove either rover, the POIs are still observed by the other rover.
             [0.0, 0.0]
         ]
-        self.assert_path_rewards(env, self.get_path_b(), expected_rewards_at_each_step, 
+        self.assert_path_rewards(env, self.get_path_b(), expected_rewards_at_each_step,
             start_msg=f'Path rewards incorrect with 2 rovers and 2 POIs using D\n')
 
 class TestTwoRoversTwoUavsSixPois(TestSequence):
@@ -575,7 +575,7 @@ class TestTwoRoversTwoUavsSixPois(TestSequence):
     """
     def get_config_a(self):
         return self.get_two_rovers_two_uavs_six_pois_config_a()
-    
+
     def get_path_a1(self):
         """This is an ideal path where each rover-uav pair observe the set of POIs on their side"""
         return [
@@ -603,7 +603,7 @@ class TestTwoRoversTwoUavsSixPois(TestSequence):
         ]
         env = createEnv(config)
         self.assert_path_rewards(env, agent_paths, expected_rewards_at_each_step)
-    
+
     def test_config_a_path_a_Global_final(self):
         """Make sure the final G rewards match when we don't compute rewards at each step"""
         config = self.get_config_a()
@@ -627,14 +627,14 @@ class TestTwoRoversTwoUavsSixPois(TestSequence):
         ]
         env = createEnv(config)
         self.assert_path_rewards(env, agent_paths, expected_rewards_at_each_step)
-    
+
     def test_config_a_path_a_Difference_final(self):
         """Make sure the final D rewards match when we don't compute rewards at each step"""
         config = self.get_config_a()
         for agent_config in config['env']['agents']['rovers']+config['env']['agents']['uavs']:
             agent_config['reward_type'] = 'Difference'
         self.assert_final_rewards(createEnv(config), self.get_path_a1(), expected_final_rewards=[3.0, 3.0, 0.0, 0.0])
-    
+
     def test_config_a_path_a1_Mixed(self):
         """Switch rovers to D. Keep uavs using G"""
         config = self.get_config_a()
@@ -653,14 +653,14 @@ class TestTwoRoversTwoUavsSixPois(TestSequence):
         ]
         env = createEnv(config)
         self.assert_path_rewards(env, agent_paths, expected_rewards_at_each_step)
-    
+
     def test_config_a_path_a1_Mixed_final(self):
         """Make sure final mixed G,D rewards match when we don't compute rewards each step"""
         config = self.get_config_a()
         for rover_config in config['env']['agents']['rovers']:
             rover_config['reward_type'] = 'Difference'
         self.assert_final_rewards(createEnv(config), self.get_path_a1(), expected_final_rewards=[3.0, 3.0, 6.0, 6.0])
-    
+
     def test_config_a_path_a1_IndirectDifferenceAutomatic(self):
         """Using Default D-Indirect. Trajectory based, all or nothing credit, remove agents you get credit for"""
         config = self.get_config_a()
@@ -679,7 +679,7 @@ class TestTwoRoversTwoUavsSixPois(TestSequence):
         ]
         env = createEnv(config)
         self.assert_path_rewards(env, agent_paths, expected_rewards_at_each_step)
-    
+
     def test_config_a_path_a1_IndirectDifferenceAutomatic_final(self):
         config = self.get_config_a()
         for agent_config in config['env']['agents']['rovers']+config['env']['agents']['uavs']:
@@ -713,7 +713,7 @@ class TestTwoRoversTwoUavsSixPois(TestSequence):
         ]
         env = createEnv(config)
         self.assert_path_rewards(env, agent_paths, expected_rewards_at_each_step)
-    
+
     def test_config_a_path_a1_IndirectDifferenceAutomaticTimestep(self):
         config = self.get_config_a()
         for agent_config in config['env']['agents']['rovers']+config['env']['agents']['uavs']:
@@ -801,8 +801,8 @@ class TestTwoRoversTwoUavsSixPois(TestSequence):
         expected_rewards_at_each_step = [
             # Initial setup. No rewards
             [0.0, 0.0, 0.0, 0.0],
-            # First two pois visited. 
-            # Still a 1:1 mapping of rovers to uavs, 
+            # First two pois visited.
+            # Still a 1:1 mapping of rovers to uavs,
             # just that each uav gets credit for the OTHER rover now
             [1.0, 1.0, 1.0, 1.0],
             # Middle pois
@@ -882,7 +882,7 @@ class TestTwoRoversTwoUavsSixPois(TestSequence):
         ]
         env = createEnv(config)
         self.assert_path_rewards(env, agent_paths, expected_rewards_at_each_step)
-    
+
     def get_path_a2(self):
         """Rover A observes all of the POIs with support from both uavs at different points in time"""
         return [
@@ -900,7 +900,7 @@ class TestTwoRoversTwoUavsSixPois(TestSequence):
             # Rover A visits bottom right POI. Joined by uav B
             [[90.0, 10.0], [60.0, 50.0], [10.0, 10.0], [90.0, 10.0]]
         ]
-    
+
     def test_config_a_path_a2_Global(self):
         """Global rewards"""
         config = self.get_config_a()
@@ -981,7 +981,7 @@ class TestTwoRoversTwoUavsSixPois(TestSequence):
         self.assert_path_rewards(env, agent_paths, expected_rewards_at_each_step)
 
     def test_config_a_path_a2_IndirectDifferenceAutomaticTimestepLocal(self):
-        """Granular credit assignment, this time with local-based credit for influence"""        
+        """Granular credit assignment, this time with local-based credit for influence"""
         config = self.get_config_a()
         # Switch all agents to D-Indirect (with timestep based credit assignment with local influence)
         for agent_config in config['env']['agents']['rovers']+config['env']['agents']['uavs']:

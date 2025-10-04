@@ -19,7 +19,7 @@ class TestDifference(TestEnv):
         config = self.get_env_template_config()
         config['env']['map_size'] = [50., 50.]
         return config
-    
+
     def get_one_rover_one_poi_config(self):
         config = self.get_default_config()
         rover_config = self.get_default_rover_config()
@@ -37,14 +37,14 @@ class TestDifference(TestEnv):
         config['env']['agents']['uavs'].append(deepcopy(config['env']['agents']['uavs'][0]))
         config['env']['pois']['rover_pois'].append(deepcopy(config['env']['pois']['rover_pois'][0]))
         return config
-    
+
     def get_one_rover_one_uav_one_poi_config(self):
         config = self.get_one_rover_one_poi_config()
         uav_config = self.get_default_uav_config()
         uav_config['position']['fixed'] = [10.0, 10.0]
         config['env']['agents']['uavs'].append(deepcopy(uav_config))
         return config
-    
+
     def get_two_rovers_one_poi_config(self):
         config = self.get_one_rover_one_poi_config()
         # Add a rover
@@ -60,7 +60,7 @@ class TestDifference(TestEnv):
         poi_config['position']['fixed'] = [40.0, 40.0]
         config['env']['pois']['rover_pois'].append(deepcopy(poi_config))
         return config
-    
+
     def get_four_rovers_four_pois_config(self):
         config = self.get_two_rovers_two_pois_config()
         # Add in 2 more rovers and 2 more pois for those rovers
@@ -95,7 +95,7 @@ class TestDifference(TestEnv):
         for rover_config in config['env']['agents']['rovers']:
             rover_config['reward_type'] = 'Difference'
         self.assert_correct_rewards(config, expected_rewards=[1.0, 0.0])
-    
+
     def test_two_rovers_two_pois(self):
         # -- 2 rovers, 2 POIs. Each rover gets rewarded for its POI
         config = self.get_two_rovers_two_pois_config()
@@ -105,7 +105,7 @@ class TestDifference(TestEnv):
         for rover_config in config['env']['agents']['rovers']:
             rover_config['reward_type'] = 'Difference'
         self.assert_correct_rewards(config, expected_rewards=[1.0, 1.0])
-    
+
     def test_four_rovers_four_pois(self):
         # -- 4 rovers, 4 POIs. Each rover gets rewarded for its POI
         config = self.get_four_rovers_four_pois_config()
@@ -137,7 +137,7 @@ class TestDifference(TestEnv):
         for uav_config in config['env']['agents']['uavs']:
             uav_config['reward_type'] = 'Difference'
         self.assert_correct_rewards(config, expected_rewards=[0.0, 0.0, 0.0, 0.0])
-    
+
     def test_two_rovers_two_uavs_two_pois_b(self):
         # Both rovers at one poi. Both uavs at another poi
         config = self.get_two_rovers_two_uavs_two_pois_config()
@@ -156,7 +156,7 @@ class TestDifference(TestEnv):
         for uav_config in config['env']['agents']['uavs']:
             uav_config['reward_type'] = 'Difference'
         self.assert_correct_rewards(config, expected_rewards=[0.0, 0.0, 0.0, 0.0])
-    
+
     def test_two_rovers_two_uavs_two_pois_c(self):
         # One rover/uav pair at each poi
         config = self.get_two_rovers_two_uavs_two_pois_config()

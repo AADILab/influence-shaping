@@ -29,7 +29,7 @@ def bound_value(value, upper, lower):
         return lower
     else:
         return value
-    
+
 def bound_velocity(velocity, max_velocity):
     """Bound the velocity to meet max velocity constraint"""
     if velocity > max_velocity:
@@ -159,7 +159,7 @@ class CooperativeCoevolutionaryAlgorithm():
         # Data saving variables
         self.save_trajectories = self.config["data"]["save_trajectories"]["switch"]
         self.num_gens_between_save_traj = self.config["data"]["save_trajectories"]["num_gens_between_save"]
-        
+
         # Handle train trajectories config
         if 'save_train_trajectories' in self.config["data"]:
             self.save_train_trajectories = self.config["data"]["save_train_trajectories"]["switch"]
@@ -187,7 +187,7 @@ class CooperativeCoevolutionaryAlgorithm():
             if 'random_seed' in self.config['debug']:
                 if 'set_seed' in self.config['debug']['random_seed']:
                     self.random_seed_val = self.config['debug']['random_seed']['set_seed']
-        
+
         # Check if we are incrementing that seed
         self.increment_seed_every_trial = False
         if 'debug' in self.config:
@@ -247,10 +247,10 @@ class CooperativeCoevolutionaryAlgorithm():
             output_activation_function='softmax'
         # Create template nn
         return NeuralNetwork(
-            num_inputs=num_inputs, 
-            num_hidden=self.num_hidden, 
-            num_outputs=num_outputs, 
-            hidden_activation_func='tanh', 
+            num_inputs=num_inputs,
+            num_hidden=self.num_hidden,
+            num_outputs=num_outputs,
+            hidden_activation_func='tanh',
             output_activation_func=output_activation_function
         )
 
@@ -367,7 +367,7 @@ class CooperativeCoevolutionaryAlgorithm():
                 teams.append(TeamInfo(policies, s))
 
         return teams, seeds
-    
+
     def buildMap(self, teams):
         return self.map(self.evaluateTeam, teams)
         # if self.use_multiprocessing:
@@ -384,7 +384,7 @@ class CooperativeCoevolutionaryAlgorithm():
         #     )
         # else:
         #     return self.map(
-        #         self.evaluateTeam, 
+        #         self.evaluateTeam,
         #         teams,
         #         [self.template_policies for _ in teams],
         #         [self.config for _ in teams],
@@ -400,7 +400,7 @@ class CooperativeCoevolutionaryAlgorithm():
         else:
             eval_infos = list(self.buildMap(teams))
         return eval_infos
-    
+
     def evaluateTeam(self, team: TeamInfo, compute_team_fitness=True):
         return self.evaluateTeamStatic(
             team,
@@ -414,7 +414,7 @@ class CooperativeCoevolutionaryAlgorithm():
 
     @staticmethod
     def evaluateTeamStatic(
-        team: TeamInfo, 
+        team: TeamInfo,
         template_policies: List[Union[NeuralNetwork|FollowPolicy]],
         config: dict,
         num_rovers: int,
@@ -513,7 +513,7 @@ class CooperativeCoevolutionaryAlgorithm():
                         else: # This is a uav
                             # Impose uav velocity boundaries
                             input_action_arr = bound_velocity_arr(
-                                velocity_arr=input_action_arr, 
+                                velocity_arr=input_action_arr,
                                 max_velocity=config['ccea']['network']['uav_max_velocity']
                             )
 
@@ -597,7 +597,7 @@ class CooperativeCoevolutionaryAlgorithm():
         # Get current individual_elites
         offspring += sorted_by_individual[self.n_preserve_individual_elites:self.n_preserve_individual_elites+self.n_individual_elites]
 
-        # Now pick the rest based on a binary tournament. 
+        # Now pick the rest based on a binary tournament.
         # Selection here depends on individual (not team) fitness
         offspring += tools.selTournament(subpopulation, len(subpopulation) - self.total_elites, 2)
 

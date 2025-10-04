@@ -36,7 +36,7 @@ def fix_csv(csv_dir: Path, out_dir: Path):
             new_line_list = []
             list_line = line.split(',')
             for num in list_line:
-                # If this number has an appropriate amount of 
+                # If this number has an appropriate amount of
                 # '.' characters, leave it.
                 if num.count('.') <= 1:
                     new_line_list.append(num)
@@ -48,7 +48,7 @@ def fix_csv(csv_dir: Path, out_dir: Path):
                     new_line_list+=new_nums
             new_line = ','.join(new_line_list)
             new_lines.append(new_line)
-        
+
     # Write it all out
     with open(out_dir, 'w') as file:
         for new_line in new_lines:
@@ -75,7 +75,7 @@ if __name__ == '__main__':
     for dirpath, dirnames, filenames in os.walk(root_dir):
         if 'fitness.csv' in filenames:
             csv_dirs.add(Path(dirpath) / 'fitness.csv')
-    
+
     # Fix em!
     for csv_dir in csv_dirs:
         fix_csv(csv_dir=csv_dir, out_dir=csv_dir)

@@ -135,8 +135,8 @@ class TestComplete(InfluenceTestCase):
         agent_2_sense_poi_1 = sensor_value(agents[2], pois[1])
         expected_observations = [
             # Agent 0 is a rover that senses the other rover, the uav, and the rover_poi
-            [-1, -1, agent_0_sense_agent_1, -1, 
-             -1, -1, -1, agent_0_sense_agent_2, 
+            [-1, -1, agent_0_sense_agent_1, -1,
+             -1, -1, -1, agent_0_sense_agent_2,
              agent_0_sense_poi_0, -1, -1, -1],
             # Agent 1 is a rover that senses the first rover, the uav, and the rover_poi
             [agent_1_sense_agent_0, -1, -1, -1,

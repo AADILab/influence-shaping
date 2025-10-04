@@ -1,4 +1,4 @@
-'''Give this python script a comparison directory (parent of multiple parents of trial directories) 
+'''Give this python script a comparison directory (parent of multiple parents of trial directories)
 and it will plot the statistics of each parameter combination against each other
 '''
 

@@ -51,7 +51,7 @@ if __name__ == '__main__':
             new_line_list = []
             list_line = line.split(',')
             for num in list_line:
-                # If this number has an appropriate amount of 
+                # If this number has an appropriate amount of
                 # '.' characters, leave it.
                 if num.count('.') <= 1:
                     new_line_list.append(num)
@@ -63,7 +63,7 @@ if __name__ == '__main__':
                     new_line_list+=new_nums
             new_line = ','.join(new_line_list)
             new_lines.append(new_line)
-        
+
     # Write it all out
     with open(out_dir, 'w') as file:
         for new_line in new_lines:

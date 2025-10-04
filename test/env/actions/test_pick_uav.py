@@ -47,7 +47,7 @@ class TestPickUav(TestEnv):
                 'uav_max_velocity': 1.0
             }
         }
-        
+
         # Build team policies
         # Rover always picks 0, uav does nothing
         policies = [PickZeroPolicy, DoNothingPolicy]
@@ -55,7 +55,7 @@ class TestPickUav(TestEnv):
             policies=policies,
             seed=None
         )
-        
+
         # Run sim
         eval_info = CooperativeCoevolutionaryAlgorithm.evaluateTeamStatic(
             team=team,
@@ -111,7 +111,7 @@ class TestPickUav(TestEnv):
             policies=policies,
             seed=None
         )
-        
+
         # Run sim
         eval_info = CooperativeCoevolutionaryAlgorithm.evaluateTeamStatic(
             team=team,
@@ -155,7 +155,7 @@ class TestPickUav(TestEnv):
                 'uav_max_velocity': 1.0
             }
         }
-        
+
         # Build team policies
         # Rover always picks 0, uav does nothing
         policies = [FollowPolicy, DoNothingPolicy]
@@ -163,7 +163,7 @@ class TestPickUav(TestEnv):
             policies=policies,
             seed=None
         )
-        
+
         # Run sim
         eval_info = CooperativeCoevolutionaryAlgorithm.evaluateTeamStatic(
             team=team,
@@ -219,7 +219,7 @@ class TestPickUav(TestEnv):
                 'uav_max_velocity': 1.0
             }
         }
-        
+
         # Build team policies
         # Rover always picks 0, uav does nothing
         policies = [FollowPolicy, DoNothingPolicy, DoNothingPolicy]
@@ -227,7 +227,7 @@ class TestPickUav(TestEnv):
             policies=policies,
             seed=None
         )
-        
+
         # Run sim
         eval_info = CooperativeCoevolutionaryAlgorithm.evaluateTeamStatic(
             team=team,
@@ -287,7 +287,7 @@ class TestPickUav(TestEnv):
                 'uav_max_velocity': 1.0
             }
         }
-        
+
         # Build team policies
         # Rover always picks 0, uav does nothing
         policies = [FollowPolicy, DoNothingPolicy, DoNothingPolicy]
@@ -295,7 +295,7 @@ class TestPickUav(TestEnv):
             policies=policies,
             seed=None
         )
-        
+
         # Run sim
         eval_info = CooperativeCoevolutionaryAlgorithm.evaluateTeamStatic(
             team=team,

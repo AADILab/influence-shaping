@@ -26,7 +26,7 @@ def get_value(dict_: dict, keys: list[str]):
         return dict_[keys[0]]
     else:
         return get_value(dict_, keys=keys[1:])
-    
+
 def get_replace_unique_keys_items(dict_: dict):
     # NOTE: This only works when each nested dictionary has only one key
     if isinstance(dict_, dict):
@@ -124,7 +124,7 @@ def consolidate_parameters(parameter_dicts, addtl_list=[]):
 
 # Now turn this into a list of directories with the corresponding config we are going to save there
 def create_directory_dict(consolidated_dict, path_len, path_list=[], directory_dict = {}):
-    """Create a dictionary where the key is the path to the config, 
+    """Create a dictionary where the key is the path to the config,
     and the value is the dictionary of unique parameters that will be saved in that config
     """
     for key in consolidated_dict:
@@ -209,7 +209,7 @@ def overwrite_configs(configs_directory, overwrite_directory):
     # config_dirs = get_config_dirs(ctop_dir = configs_directory)
     # configs = [load_config(dir_) for dir_ in config_dirs]
     # overwrite_config = expand_keys(load_config(overwrite_directory))
-    
+
     # new_configs = []
     # for config, dir_ in zip(configs, config_dirs):
     #     new_config = merge_dicts()

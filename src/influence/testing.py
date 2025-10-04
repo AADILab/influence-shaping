@@ -15,7 +15,7 @@ class InfluenceTestCase(unittest.TestCase):
     @staticmethod
     def distance(entity_0, entity_1):
         return np.sqrt((entity_0.position().x - entity_1.position().x)**2 + (entity_0.position().y - entity_1.position().y)**2)
-    
+
     @staticmethod
     def inverse_distance_squared(entity_0, entity_1):
         return 1. / InfluenceTestCase.distance(entity_0, entity_1)**2
@@ -23,11 +23,11 @@ class InfluenceTestCase(unittest.TestCase):
     @staticmethod
     def compute_poi_reward(poi, agent):
         return 1.0 / max(InfluenceTestCase.distance(poi, agent), 1.0)
-    
+
     @staticmethod
     def compute_poi_reward_using_positions(position0, position1):
         return 1.0 / max(np.linalg.norm(np.array(position0)-np.array(position1)), 1.0)
-    
+
     @staticmethod
     def compute_G(env):
         return env.rovers()[0].reward(rovers.AgentPack(0, env.rovers(), env.pois()))
@@ -35,7 +35,7 @@ class InfluenceTestCase(unittest.TestCase):
     @staticmethod
     def compute_agent_reward(env, agent_id):
         return env.rovers()[agent_id].reward(rovers.AgentPack(agent_id, env.rovers(), env.pois()))
-    
+
     @staticmethod
     def extract_observation(cppyy_observation):
         return [cppyy_observation(i,0) for i in range(cppyy_observation.size())]
@@ -70,16 +70,16 @@ class TestEnv(InfluenceTestCase):
             },
             'value': 1.0
         }
-    
+
     def get_default_rover_config(self):
         return deepcopy(self.default_rover_config)
-    
+
     def get_default_uav_config(self):
         return deepcopy(self.default_uav_config)
-    
+
     def get_default_poi_config(self):
         return deepcopy(self.default_poi_config)
-    
+
     def get_env_template_config(self):
         return {
             'env': {
@@ -116,9 +116,9 @@ class TestEnv(InfluenceTestCase):
 
     def rewards_from_env(self, env):
         # return [self.compute_agent_reward(env, agent_id=i) for i in range(len(env.rovers()))]
-        # Need to ensure that rewards are now handled by the rewards computer 
+        # Need to ensure that rewards are now handled by the rewards computer
         return env.status()[1]
-    
+
     def get_agent_paths_from_env(self, env):
         raw_rover_paths = [rover.path() for rover in env.rovers()]
         paths = [[] for _ in range(env.rovers()[0].path().size())]
@@ -130,7 +130,7 @@ class TestEnv(InfluenceTestCase):
 
     def get_agent_positions_from_env(self, env):
         return [self.get_position_from_entity(agent) for agent in env.rovers()]
-    
+
     def get_poi_positions_from_env(self, env):
         return [self.get_position_from_entity(poi) for poi in env.pois()]
 
@@ -154,7 +154,7 @@ class TestEnv(InfluenceTestCase):
                 env.rovers()[agent_id].set_position(x, y)
             # Check all agent rewards
             rewards = self.rewards_from_env(env)
-            self.assert_close_lists(rewards, expected_rewards, 
+            self.assert_close_lists(rewards, expected_rewards,
                 msg=str(start_msg)+f'Rewards computed incorrectly at t={t}\n' + \
                     f'Expected rewards: {expected_rewards}\n' + \
                     f'Env rewards: {rewards}\n' + \

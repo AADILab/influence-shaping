@@ -22,13 +22,13 @@ class TestGlobal(TestEnv):
         config['env']['pois']['rover_pois'].append(self.get_default_poi_config())
         config['env']['map_size'] = [50., 50.]
         return config
-    
+
     def get_two_rovers_config(self):
         config = self.get_default_config()
         config['env']['agents']['rovers'][0]['position']['fixed'] = [26.0, 24.0]
         config['env']['agents']['rovers'].append(self.get_default_rover_config())
         return config
-    
+
     def get_one_rover_three_pois_config(self):
         config = self.get_default_config()
         more_poi_positions = [
@@ -40,7 +40,7 @@ class TestGlobal(TestEnv):
             poi_config['position']['fixed'] = position
             config['env']['pois']['rover_pois'].append(poi_config)
         return config
-    
+
     def get_one_rover_two_uavs_three_pois_config(self):
         config = self.get_one_rover_three_pois_config()
         uav_config = self.get_default_uav_config()
@@ -71,7 +71,7 @@ class TestGlobal(TestEnv):
         config['env']['agents']['rovers'][0]['position']['fixed'] = [26.0, 24.0]
         self.assert_correct_rewards(config, expected_rewards=[0.5])
 
-        # Make the rover follow a path. 
+        # Make the rover follow a path.
         # Reward should be 0.5 based on final position in path to poi
         rover_path = [
             [24.5, 24.0],
@@ -85,7 +85,7 @@ class TestGlobal(TestEnv):
         reward = self.compute_G(env)
         expected_reward = 0.5
         self.assert_np_close(reward, expected_reward)
-    
+
     def test_two_rovers_one_poi(self):
         # Now let's add another copy of our rover to make sure we are not double counting
         config = self.get_two_rovers_config()
@@ -107,7 +107,7 @@ class TestGlobal(TestEnv):
         _, (reward) = env.reset()
         expected_reward = 1.0
         self.assert_np_close(reward, expected_reward)
-        
+
         # But if the rover moves away, G should go down
         env.rovers()[0].set_position(27.0, 24.0)
         reward = self.compute_G(env)
@@ -119,7 +119,7 @@ class TestGlobal(TestEnv):
         reward = self.compute_G(env)
         expected_reward = 0.0
         self.assert_np_close(reward, expected_reward)
-    
+
     def test_one_rover_three_uavs_one_poi(self):
         # Let's set the default config and throw in some uavs. Should not change G
         config = self.get_default_config()
@@ -130,7 +130,7 @@ class TestGlobal(TestEnv):
             _, rewards = env.reset()
             reward = rewards[0]
             self.assert_np_close(reward, expected_reward)
-    
+
     def test_one_rover_three_pois(self):
         # Let's set the default config and add more pois.
         config = self.get_one_rover_three_pois_config()
@@ -145,7 +145,7 @@ class TestGlobal(TestEnv):
 
     def test_one_rover_two_uavs_three_pois(self):
         config = self.get_one_rover_two_uavs_three_pois_config()
-        # Let's add uavs to observe the remaining pois 
+        # Let's add uavs to observe the remaining pois
         # (reward should not change because uavs can't observe pois)
         env = createEnv(config)
         _, _ = env.reset()
@@ -187,7 +187,7 @@ class TestCaptureRadius(TestEnv):
         poi_config['position']['fixed'] = [20., 20.]
         poi_config['capture_radius'] = 10.0
         config['env']['pois']['hidden_pois'].append(poi_config)
-    
+
         # Return the filled out config
         return config
 
@@ -198,7 +198,7 @@ class TestCaptureRadius(TestEnv):
 
         # Check G. Should be 0.1 (for rover and uav) for capturing poi valued at 1.0 from 10 units away (1.0 / 10 is 0.1)
         self.assert_correct_rewards(config, expected_rewards=[0.1, 0.1])
-    
+
     def test_a_rover_observation_of_poi(self):
         """Test that rover cannot sense poi"""
         # Get our config

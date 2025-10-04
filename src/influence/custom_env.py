@@ -226,7 +226,7 @@ def createRover(obs_radius, reward_type, resolution, agent_types, poi_types):
     Reward = rovers.rewards.Global
     type_ = 'rover'
     # TODO: Add another parameter here so that you can specify different parameters for indirect difference rewards?
-    # Maybe even a set of parameters? Just throw in a hashmap directly in there (of all D-Indirec related parameters)? 
+    # Maybe even a set of parameters? Just throw in a hashmap directly in there (of all D-Indirec related parameters)?
     # Rather than putting each D-Indirect parameter in individually?
     rover = rovers.Rover[SmartLidar, Discrete, Reward](reward_type, type_, obs_radius, SmartLidar(resolution=resolution, composition_policy=rovers.Density(), agent_types=agent_types, poi_types=poi_types), Reward())
     return rover
@@ -269,7 +269,7 @@ def createAgent(agent_config, agent_types, poi_types, poi_subtypes, agent_observ
             ),
             add_G = indirect_difference_config['add_G'] if 'add_G' in indirect_difference_config else False
         )
-        
+
     else:
         # Use default if none are specified
         indirect_difference_parameters = IndirectDifferenceParameters(
@@ -356,7 +356,7 @@ class AbstractRoverConstraint(rovers.IConstraint):
             return True
         else:
             return False
-    
+
     def _step_is_satisfied(self, entity_pack, t):
         count = 0
         dists = []
@@ -504,9 +504,9 @@ def createEnv(config):
             measurement_type.append(agent_config['sensor']['measurement_type'])
         else:
             measurement_type.append('inverse_distance_squared')
-    
+
     observation_radii = [agent_config['observation_radius'] for agent_config in config['env']['agents']['rovers']+config['env']['agents']['uavs']]
-    
+
     default_values = []
     for agent_config in config['env']['agents']['rovers']+config['env']['agents']['uavs']:
         if 'sensor' in agent_config and 'default_value' in agent_config['sensor']:
@@ -516,7 +516,7 @@ def createEnv(config):
 
     rovers_ = [
         createAgent(
-            agent_config=rover_config, 
+            agent_config=rover_config,
             agent_types=agent_types,
             poi_types=poi_types,
             poi_subtypes=poi_subtypes,
