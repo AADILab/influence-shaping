@@ -1,3 +1,0 @@
-[submodule "submodules/rovers"]
-	path = submodules/rovers
-	url = git@github.com:EverardoG/rovers.git
