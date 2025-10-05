@@ -997,7 +997,7 @@ class CooperativeCoevolutionaryAlgorithm():
             )
             if self.save_champion_trajectories and self.gen % self.num_gens_between_save_champions == 0:
                 # Save trajectories
-                self.writeTrajs(trial_dir, resim_champion_team_summaries, subfolder='champion_team')
+                self.writeTrajs(trial_dir, resim_champion_team_summaries, subfolder='champion_team', gen=self.gen)
 
         else:
             self.writeFitnessCsv(
