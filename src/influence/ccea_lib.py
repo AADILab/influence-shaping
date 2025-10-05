@@ -361,28 +361,6 @@ class CooperativeCoevolutionaryAlgorithm():
 
     def buildMap(self, teams):
         return self.map(self.evaluateTeam, teams)
-        # if self.use_multiprocessing:
-        #     return self.map(
-        #         self.evaluateTeam,
-        #         zip(
-        #             teams,
-        #             [self.template_policies for _ in teams],
-        #             [self.config for _ in teams],
-        #             [self.num_rovers for _ in teams],
-        #             [self.num_uavs for _ in teams],
-        #             [self.num_steps for _ in teams]
-        #         )
-        #     )
-        # else:
-        #     return self.map(
-        #         self.evaluateTeam,
-        #         teams,
-        #         [self.template_policies for _ in teams],
-        #         [self.config for _ in teams],
-        #         [self.num_rovers for _ in teams],
-        #         [self.num_uavs for _ in teams],
-        #         [self.num_steps for _ in teams]
-        #     )
 
     def evaluateTeams(self, teams: List[TeamInfo]):
         if self.use_multiprocessing:
@@ -419,10 +397,6 @@ class CooperativeCoevolutionaryAlgorithm():
             np.random.seed(team.seed)
 
         # Set up networks
-        # TODO: Make it so that each agent can have a different size NN?
-        #       (This lets us give rovers one size and uavs a different size when we change their
-        #        observations and actions)
-        # agent_nns = [deepcopy(template_nn) for template_nn in self.template_nns]
         agent_policies = [deepcopy(template_policy) for template_policy in template_policies]
 
         # Load in the weights
@@ -467,11 +441,6 @@ class CooperativeCoevolutionaryAlgorithm():
                 # print("observation_arr:", observation_arr)
                 action_arr = agent_nn.forward(observation_arr)
                 if (config['env']['agents']['rovers']+config['env']['agents']['uavs'])[ind]['action']['type'] == 'dxdy':
-                # Multiply by agent velocity
-                # Multiply by agent velocity
-                # TODO: Only multiply by velocity if we know that the action is a dx,dy
-                    # Multiply by agent velocity
-                # TODO: Only multiply by velocity if we know that the action is a dx,dy
                     if ind <= num_rovers:
                         input_action_arr=action_arr*config["ccea"]["network"]["rover_max_velocity"]
                     else:
@@ -479,16 +448,13 @@ class CooperativeCoevolutionaryAlgorithm():
                 elif (config['env']['agents']['rovers']+config['env']['agents']['uavs'])[ind]['action']['type'] == 'pick_uav':
                     # The action arr is the same size as however many uavs there are
                     # We need to get the argmax of this array to tell us which uav to follow
-                    # print('action_arr:', action_arr)
                     uav_ind = np.argmax(action_arr)
-                    # print('uav_ind:', uav_ind)
                     if uav_ind == num_uavs:
                         # Rover chose the null uav, which means stay still. Don't follow anyone
                         input_action_arr = np.array([0.0, 0.0])
                     else:
                         # Rover chose a uav, so compute a dx,dy where agent makes the biggest step possible towards its chosen uav
                         uav_ind_in_env = int(num_rovers+uav_ind)
-                        # print("uav_ind_in_env: ", uav_ind_in_env)
                         uav_position = np.array([env.rovers()[uav_ind_in_env].position().x, env.rovers()[uav_ind_in_env].position().y])
                         agent_position = np.array([env.rovers()[ind].position().x, env.rovers()[ind].position().y])
                         input_action_arr = uav_position - agent_position
