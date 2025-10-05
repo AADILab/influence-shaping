@@ -906,6 +906,8 @@ class CooperativeCoevolutionaryAlgorithm():
                 # unless we specified we want to increment based on the trial number
                 if self.increment_seed_every_trial:
                     self.random_seed_val += num_trial
+                # Also increment by generation
+                self.random_seed_val += self.gen
                 random.seed(self.get_seed())
                 np.random.seed(self.get_seed())
 
