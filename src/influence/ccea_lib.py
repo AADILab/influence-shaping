@@ -56,8 +56,16 @@ class CooperativeCoevolutionaryAlgorithm():
             self.config['data']['save_elite_fitness'] = {}
         if 'switch' not in self.config['data']['save_elite_fitness']:
             self.config['data']['save_elite_fitness']['switch'] = False
+        self.save_elite_fitness_switch = self.config['data']['save_elite_fitness']['switch']
 
         self.num_steps = self.config["ccea"]["num_steps"]
+        self.lower_bound = self.config["ccea"]["weight_initialization"]["lower_bound"]
+        self.upper_bound = self.config["ccea"]["weight_initialization"]["upper_bound"]
+        self.mutation_ind_pb = self.config["ccea"]["mutation"]["independent_probability"]
+        self.mutation_mean = self.config["ccea"]["mutation"]["mean"]
+        self.mutation_std_dev = self.config["ccea"]["mutation"]["std_deviation"]
+        self.num_generations = self.config['ccea']['num_generations']
+        self.num_trials = self.config["experiment"]["num_trials"]
 
         self.template_policies = self.get_template_policies('rovers')+self.get_template_policies('uavs')
         self.nn_sizes = [template_nn.num_weights if type(template_nn) is NeuralNetwork else None for template_nn in self.template_policies]
@@ -206,7 +214,7 @@ class CooperativeCoevolutionaryAlgorithm():
         return agent_nn
 
     def generateWeight(self):
-        return random.uniform(self.config["ccea"]["weight_initialization"]["lower_bound"], self.config["ccea"]["weight_initialization"]["upper_bound"])
+        return random.uniform(self.lower_bound, self.upper_bound)
 
     def generateIndividual(self, individual_size, temp_id):
         return Individual(getRandomWeights(individual_size), temp_id)
@@ -224,12 +232,12 @@ class CooperativeCoevolutionaryAlgorithm():
             if type(self.template_policies[agent_id]) is NeuralNetwork:
                 # Filling subpopulation for each agent
                 subpop=[]
-                for ind, _ in enumerate(range(self.config["ccea"]["population"]["subpopulation_size"])):
+                for ind, _ in enumerate(range(self.subpopulation_size)):
                     subpop.append(self.generateIndividual(individual_size=self.nn_sizes[agent_id], temp_id=ind))
             else:
                 # Subpopulation of None for fixed policies
                 subpop=[]
-                for _ in range(self.config["ccea"]["population"]["subpopulation_size"]):
+                for _ in range(self.subpopulation_size):
                     subpop.append(None)
             pop.append(subpop)
         return pop
@@ -444,10 +452,10 @@ class CooperativeCoevolutionaryAlgorithm():
     def mutateIndividual(self, individual):
         """Apply Gaussian mutation to an individual"""
         for i in range(len(individual.weights)):
-            if random.random() < self.config["ccea"]["mutation"]["independent_probability"]:
+            if random.random() < self.mutation_ind_pb:
                 individual.weights[i] += random.gauss(
-                    self.config["ccea"]["mutation"]["mean"],
-                    self.config["ccea"]["mutation"]["std_deviation"]
+                    self.mutation_mean,
+                    self.mutation_std_dev
                 )
             individual.shaped_fitness = None
             individual.team_fitness = None
@@ -740,7 +748,7 @@ class CooperativeCoevolutionaryAlgorithm():
 
             # Create csv file for saving evaluation fitnesses
             self.createEvalFitnessCSV(trial_dir)
-            if self.config['data']['save_elite_fitness']['switch']:
+            if self.save_elite_fitness_switch:
                 self.createEvalFitnessCSV(trial_dir, filename='elite_fitness.csv')
 
             # Initialize the population
@@ -773,7 +781,7 @@ class CooperativeCoevolutionaryAlgorithm():
             # Save fitnesses of the evaluation team
             self.writeEvalFitnessCSV(trial_dir, eval_infos)
 
-            if self.config['data']['save_elite_fitness']['switch']:
+            if self.save_elite_fitness_switch:
                 eval_infos = [self.evaluateTeam(
                     team=TeamInfo(
                         policies=[subpop[0] for subpop in pop],
@@ -787,10 +795,10 @@ class CooperativeCoevolutionaryAlgorithm():
                 self.writeEvalTrajs(trial_dir, eval_infos)
 
         # Don't run anything if we loaded in the checkpoint and it turns out we are already done
-        if self.gen >= self.config["ccea"]["num_generations"]:
+        if self.gen >= self.num_generations:
             return None
 
-        for _ in tqdm(range(self.config["ccea"]["num_generations"]-self.gen)):
+        for _ in tqdm(range(self.num_generations-self.gen)):
             # Set the seed if one was specified at the start of the generation
             if self.random_seed_val is not None:
                 # Reset the seed so seed is consistent across trials
@@ -835,7 +843,7 @@ class CooperativeCoevolutionaryAlgorithm():
             # Save fitnesses
             self.writeEvalFitnessCSV(trial_dir, eval_infos)
 
-            if self.config['data']['save_elite_fitness']['switch']:
+            if self.save_elite_fitness_switch:
                 eval_infos = [self.evaluateTeam(
                     team=TeamInfo(
                         # TODO: Shouldn't this be subpop in offspring, not pop?
@@ -855,14 +863,14 @@ class CooperativeCoevolutionaryAlgorithm():
             self.setPopulation(pop, offspring)
 
             # Save checkpoint for generation if now is the time
-            if self.gen == self.config["ccea"]["num_generations"] or \
+            if self.gen == self.num_generations or \
                 (self.save_checkpoint and self.gen % self.num_gens_between_checkpoint == 0):
                 self.saveCheckpoint(trial_dir, pop)
 
     def run(self, num_trial, load_checkpoint):
         if num_trial is None:
             # Run all trials if no number is specified
-            for num_trial in range(self.config["experiment"]["num_trials"]):
+            for num_trial in range(self.num_trials):
                 self.runTrial(num_trial, load_checkpoint)
         else:
             # Run only the trial specified
