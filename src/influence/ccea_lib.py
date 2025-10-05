@@ -1,85 +1,21 @@
-from tqdm import tqdm
-
+from typing import List, Union, Optional, Tuple
+from pathlib import Path
+from copy import deepcopy
 import multiprocessing
 import random
 import pickle
-from typing import List, Union, Optional, Tuple
-
-from influence.evo_network import NeuralNetwork
-
-from influence.librovers import rovers
-from influence.custom_env import createEnv
-from copy import deepcopy
-import numpy as np
 import random
 import os
-from pathlib import Path
-import yaml
-import pprint
+
 from tqdm import tqdm
+import numpy as np
+import yaml
 
-def bound_value(value, upper, lower):
-    """Bound the value between an upper and lower bound"""
-    if value > upper:
-        return upper
-    elif value < lower:
-        return lower
-    else:
-        return value
-
-def bound_velocity(velocity, max_velocity):
-    """Bound the velocity to meet max velocity constraint"""
-    if velocity > max_velocity:
-        return max_velocity
-    elif velocity < -max_velocity:
-        return -max_velocity
-    else:
-        return velocity
-
-def bound_velocity_arr(velocity_arr, max_velocity):
-    """Bound the velocities in a 1D array to meet the max velocity constraint"""
-    return np.array([bound_velocity(velocity, max_velocity) for velocity in velocity_arr])
-
-def getRandomWeights(num_weights: int) -> List[float]:
-    return [2*random.random()-1 for _ in range(num_weights)]
-
-class FollowPolicy():
-    @staticmethod
-    def forward(observation: np.ndarray) -> int:
-        if all(observation==-1):
-            return [0.0 for _ in observation]+[1]
-        else:
-            f_obs = [o if o !=-1 else np.inf for o in observation]
-            action = [0.0 for _ in observation]
-            action[np.argmin(f_obs)] = 1
-            return action
-
-class JointTrajectory():
-    def __init__(self, joint_state_trajectory, joint_observation_trajectory, joint_action_trajectory):
-        self.states = joint_state_trajectory
-        self.observations = joint_observation_trajectory
-        self.actions = joint_action_trajectory
-
-class EvalInfo():
-    def __init__(self, fitnesses, joint_trajectory):
-        self.fitnesses = fitnesses
-        self.joint_trajectory = joint_trajectory
-
-class TeamInfo():
-    def __init__(self, policies, seed):
-        self.policies = policies
-        self.seed = seed
-        self.fitness = None
-        self.agg_fitness = None
-
-class Individual:
-    def __init__(self, weights, temp_id):
-        self.weights = weights
-        self.temp_id = temp_id
-        self.rollout_team_fitnesses = []
-        self.rollout_shaped_fitnesses = []
-        self.team_fitness = None
-        self.shaped_fitness = None
+from influence.evo_network import NeuralNetwork
+from influence.librovers import rovers
+from influence.custom_env import createEnv
+from influence.ccea_utils import  bound_velocity_arr, getRandomWeights
+from influence.ccea_utils import FollowPolicy, JointTrajectory, EvalInfo, TeamInfo, Individual
 
 class CooperativeCoevolutionaryAlgorithm():
     def __init__(self, config_dir):
@@ -108,19 +44,10 @@ class CooperativeCoevolutionaryAlgorithm():
 
         self.total_elites = self.n_preserve_elites + self.n_current_elites
 
-        # self.n_elites = self.config["ccea"]["selection"]["n_elites_binary_tournament"]["n_elites"]
         self.include_elites_in_tournament = self.config["ccea"]["selection"]["n_elites_binary_tournament"]["include_elites_in_tournament"]
         self.num_mutants = self.subpopulation_size - self.total_elites
         self.num_evaluations_per_team = self.config["ccea"]["evaluation"]["multi_evaluation"]["num_evaluations"]
         self.aggregation_method = self.config["ccea"]["evaluation"]["multi_evaluation"]["aggregation_method"]
-        # self.rigid_preserve_elites = False
-        # self.elite_preservation = None
-        # if 'elite_preservation' in self.config['ccea']['selection']['n_elites_binary_tournament']:
-        #     self.elite_preservation = self.config['ccea']['selection']['n_elites_binary_tournament']['elite_preservation']
-
-        # if self.elite_preservation == 'elite_teams_and_individuals':
-        #     self.n_elite_teams = self.config['ccea']['selection']['n_elites_binary_tournament']['elite_teams_and_individuals']['n_elite_teams']
-        #     self.n_elite_individuals = self.config['ccea']['selection']['n_elites_binary_tournament']['elite_teams_and_individuals']['n_elite_individuals']
         self.sort_teams_by_sum_agent_fitness = False
         if 'sort_teams_by_sum_agent_fitness' in self.config['ccea']['selection']['n_elites_binary_tournament']:
             self.sort_teams_by_sum_agent_fitness = self.config['ccea']['selection']['n_elites_binary_tournament']['sort_teams_by_sum_agent_fitness']
@@ -133,7 +60,6 @@ class CooperativeCoevolutionaryAlgorithm():
         self.num_steps = self.config["ccea"]["num_steps"]
 
         self.template_policies = self.get_template_policies('rovers')+self.get_template_policies('uavs')
-        # self.template_nns = self.get_template_nns('rovers')+self.get_template_nns('uavs')
         self.nn_sizes = [template_nn.num_weights if type(template_nn) is NeuralNetwork else None for template_nn in self.template_policies]
 
         # Make sure each agent has a sensor type config set
