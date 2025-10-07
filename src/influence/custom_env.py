@@ -83,6 +83,11 @@ class SmartLidar(rovers.Lidar[rovers.Density]):
             if self.poi_types[poi_ind] == "hidden":
                 if my_type == "rover":
                     # Rovers cannot observe these
+                    # But they can capture them. So here we will mark POIs as captured if
+                    # the rover gets close enough. Of course, the language is confusing here
+                    # but "set_observed" actually means "set as captured"
+                    if distance <= 1:
+                        sensed_poi.set_observed(True)
                     continue
                 elif my_type == "uav":
                     # Uav may be able to observe this poi
@@ -109,7 +114,9 @@ class SmartLidar(rovers.Lidar[rovers.Density]):
                 sector = 0
             # print("sector: ", sector, type(sector))
             # print('poi value:' , sensed_poi.value() / max([0.001, distance**2]))
-            poi_values[sector].append(sensed_poi.value() * self.measure(distance, agent_pack.agent_index))
+            if not sensed_poi.observed():
+                poi_values[sector].append(sensed_poi.value() * self.measure(distance, agent_pack.agent_index))
+
             # print('poi_values[sector]: ', poi_values[sector])
         # print("Finished POI sensing")
 
