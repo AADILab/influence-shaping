@@ -29,7 +29,7 @@ class SmartLidar(rovers.Lidar[rovers.Density]):
     (different sectors for rovers and uavs)
     """
     def __init__(self, resolution, composition_policy, \
-            agent_types, poi_types, \
+            agent_types, poi_types, disappear_bools: List[bool], \
             poi_subtypes: List[str], agent_observable_subtypes: List[List[str]],
             accum_type: List[str], measurement_type: List[str],
             observation_radii: List[float], default_values: List[float]
@@ -37,6 +37,7 @@ class SmartLidar(rovers.Lidar[rovers.Density]):
         super().__init__(resolution, composition_policy)
         self.agent_types = agent_types
         self.poi_types = poi_types
+        self.disappear_bools = disappear_bools
         self.poi_subtypes = poi_subtypes
         self.agent_observable_subtypes = agent_observable_subtypes
         self.accum_type = accum_type
@@ -57,8 +58,6 @@ class SmartLidar(rovers.Lidar[rovers.Density]):
             raise Exception(f'Measurement type for agent {agent_id} is not defined!')
 
     def scan(self, agent_pack):
-        # print("SmartLidar.scan()")
-        # print("Agent: ", agent_pack.agent_index)
         num_sectors = int(360. / self.m_resolution)
         poi_values = [[] for _ in range(num_sectors)]
         rover_values = [[] for _ in range(num_sectors)]
@@ -86,7 +85,7 @@ class SmartLidar(rovers.Lidar[rovers.Density]):
                     # But they can capture them. So here we will mark POIs as captured if
                     # the rover gets close enough. Of course, the language is confusing here
                     # but "set_observed" actually means "set as captured"
-                    if distance <= 1:
+                    if distance <= 1 and self.disappear_bools[poi_ind]:
                         sensed_poi.set_observed(True)
                     continue
                 elif my_type == "uav":
@@ -114,6 +113,10 @@ class SmartLidar(rovers.Lidar[rovers.Density]):
                 sector = 0
             # print("sector: ", sector, type(sector))
             # print('poi value:' , sensed_poi.value() / max([0.001, distance**2]))
+            # This if statement only evaluates to False if this
+            # poi was made to dissapear. Otherwise, it will never be 'observed'
+            # and this statement will always evaluate to True
+            # (If pois don't dissapear, then 'not sensed_poi.observed()' is always True)
             if not sensed_poi.observed():
                 poi_values[sector].append(sensed_poi.value() * self.measure(distance, agent_pack.agent_index))
 
@@ -227,26 +230,7 @@ class UavDistanceLidar(rovers.ISensor):
 
         return rovers.tensor(distances)
 
-# First we're going to create a simple rover
-def createRover(obs_radius, reward_type, resolution, agent_types, poi_types):
-    Discrete = thyme.spaces.Discrete
-    Reward = rovers.rewards.Global
-    type_ = 'rover'
-    # TODO: Add another parameter here so that you can specify different parameters for indirect difference rewards?
-    # Maybe even a set of parameters? Just throw in a hashmap directly in there (of all D-Indirec related parameters)?
-    # Rather than putting each D-Indirect parameter in individually?
-    rover = rovers.Rover[SmartLidar, Discrete, Reward](reward_type, type_, obs_radius, SmartLidar(resolution=resolution, composition_policy=rovers.Density(), agent_types=agent_types, poi_types=poi_types), Reward())
-    return rover
-
-# Now create a UAV
-def createUAV(obs_radius, reward_type, resolution, agent_types, poi_types):
-    Discrete = thyme.spaces.Discrete
-    Reward = rovers.rewards.Global
-    type_ = 'uav'
-    uav = rovers.Rover[SmartLidar, Discrete, Reward](reward_type, type_, obs_radius, SmartLidar(resolution=resolution, composition_policy=rovers.Density(), agent_types=agent_types, poi_types=poi_types), Reward())
-    return uav
-
-def createAgent(agent_config, agent_types, poi_types, poi_subtypes, agent_observable_subtypes, accum_type, measurement_type, type_, observation_radii, default_values, map_size):
+def createAgent(agent_config, agent_types, poi_types, disappear_bools, poi_subtypes, agent_observable_subtypes, accum_type, measurement_type, type_, observation_radii, default_values, map_size):
     """Create an agent using the agent's config and type"""
     # unpack config
     reward_type = agent_config['reward_type']
@@ -321,6 +305,7 @@ def createAgent(agent_config, agent_types, poi_types, poi_subtypes, agent_observ
                 composition_policy=rovers.Density(),
                 agent_types=agent_types,
                 poi_types=poi_types,
+                disappear_bools=disappear_bools,
                 poi_subtypes=poi_subtypes,
                 agent_observable_subtypes=agent_observable_subtypes,
                 accum_type=accum_type,
@@ -484,6 +469,13 @@ def createEnv(config):
     agent_types = ["rover"]*NUM_ROVERS + ["uav"]*NUM_UAVS
     poi_types = ["rover"]*NUM_ROVER_POIS+["hidden"]*NUM_HIDDEN_POIS
 
+    disappear_bools = []
+    for poi_config in config['env']['pois']['rover_pois']+config['env']['pois']['hidden_pois']:
+        if 'disappear_bool' in poi_config:
+            disappear_bools.append(poi_config['disappear_bool'])
+        else:
+            disappear_bools.append(False)
+
     poi_subtypes = []
     for poi_config in config['env']['pois']['rover_pois']+config['env']['pois']['hidden_pois']:
         if 'subtype' in poi_config:
@@ -526,6 +518,7 @@ def createEnv(config):
             agent_config=rover_config,
             agent_types=agent_types,
             poi_types=poi_types,
+            disappear_bools=disappear_bools,
             poi_subtypes=poi_subtypes,
             agent_observable_subtypes=agent_observable_subtypes,
             accum_type=accum_type,
@@ -552,6 +545,7 @@ def createEnv(config):
             agent_config=uav_config,
             agent_types=agent_types,
             poi_types=poi_types,
+            disappear_bools=disappear_bools,
             poi_subtypes=poi_subtypes,
             agent_observable_subtypes=agent_observable_subtypes,
             accum_type=accum_type,
