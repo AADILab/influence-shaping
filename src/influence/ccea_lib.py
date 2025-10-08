@@ -721,16 +721,57 @@ class CooperativeCoevolutionaryAlgorithm():
         gen = int(str(checkpoint_dirs[-1]).split('_')[-1].split('.')[0])
         return pop, gen
 
+    def evaluatePopulations(self, pop):
+        # Create the teams
+        teams, seeds = self.formTeams(pop)
+
+        # Evaluate the teams
+        eval_infos = self.evaluateTeams(teams)
+
+        # Assign fitnesses to individuals
+        self.assignFitnesses(teams, eval_infos)
+
+        # Save training trajectories if enabled
+        if self.save_train_trajectories and self.gen % self.num_gens_between_save_train_traj == 0:
+            self.writeTrajectories(self.trial_dir, eval_infos, prefix="train_")
+
+        # Organize subpopulations by individual with highest team fitness first
+        if self.sort_teams_by_sum_agent_fitness:
+            lambda_func = lambda ind: ind.agg_team_fitness
+        else:
+            lambda_func = lambda ind: ind.team_fitness
+        for subpop in pop:
+            subpop.sort(key = lambda_func, reverse=True)
+
+        # Evaluate a team with the best indivdiual from each subpopulation
+        eval_infos = self.evaluateEvaluationTeam(pop)
+
+        # Save fitnesses of the evaluation team
+        self.writeEvalFitnessCSV(self.trial_dir, eval_infos)
+
+        if self.save_elite_fitness_switch:
+            eval_infos = [self.evaluateTeam(
+                team=TeamInfo(
+                    policies=[subpop[0] for subpop in pop],
+                    seed=seeds[0]
+                )
+            )]
+            self.writeEvalFitnessCSV(self.trial_dir, eval_infos, filename='elite_fitness.csv')
+
+        # Save trajectories of evaluation team
+        if self.save_trajectories and self.gen % self.num_gens_between_save_traj == 0:
+            self.writeEvalTrajs(self.trial_dir, eval_infos)
+
     def runTrial(self, num_trial, load_checkpoint):
         # Get trial directory
-        trial_dir = self.trials_dir / ("trial_"+str(num_trial))
+        self.trial_dir = self.trials_dir / ("trial_"+str(num_trial))
 
         # Create directory for saving data
-        if not os.path.isdir(trial_dir):
-            os.makedirs(trial_dir)
+        if not os.path.isdir(self.trial_dir):
+            os.makedirs(self.trial_dir)
 
         # Check if we're loading from a checkpoint
-        if load_checkpoint and len(checkpoint_dirs := self.getCheckpointDirs(trial_dir)) > 0:
+        if load_checkpoint and len(checkpoint_dirs := self.getCheckpointDirs(self.trial_dir)) > 0:
             pop, self.gen = self.loadCheckpoint(checkpoint_dirs)
         else:
             # Check if we are starting with a random seed
@@ -747,52 +788,14 @@ class CooperativeCoevolutionaryAlgorithm():
             self.gen = 0
 
             # Create csv file for saving evaluation fitnesses
-            self.createEvalFitnessCSV(trial_dir)
+            self.createEvalFitnessCSV(self.trial_dir)
             if self.save_elite_fitness_switch:
-                self.createEvalFitnessCSV(trial_dir, filename='elite_fitness.csv')
+                self.createEvalFitnessCSV(self.trial_dir, filename='elite_fitness.csv')
 
             # Initialize the population
             pop = self.population()
 
-            # Create the teams
-            teams, seeds = self.formTeams(pop)
-
-            # Evaluate the teams
-            eval_infos = self.evaluateTeams(teams)
-
-            # Assign fitnesses to individuals
-            self.assignFitnesses(teams, eval_infos)
-
-            # Save training trajectories if enabled
-            if self.save_train_trajectories:
-                self.writeTrajectories(trial_dir, eval_infos, prefix="train_")
-
-            # Organize subpopulations by individual with highest team fitness first
-            if self.sort_teams_by_sum_agent_fitness:
-                lambda_func = lambda ind: ind.agg_team_fitness
-            else:
-                lambda_func = lambda ind: ind.team_fitness
-            for subpop in pop:
-                subpop.sort(key = lambda_func, reverse=True)
-
-            # Evaluate a team with the best indivdiual from each subpopulation
-            eval_infos = self.evaluateEvaluationTeam(pop)
-
-            # Save fitnesses of the evaluation team
-            self.writeEvalFitnessCSV(trial_dir, eval_infos)
-
-            if self.save_elite_fitness_switch:
-                eval_infos = [self.evaluateTeam(
-                    team=TeamInfo(
-                        policies=[subpop[0] for subpop in pop],
-                        seed=seeds[0]
-                    )
-                )]
-                self.writeEvalFitnessCSV(trial_dir, eval_infos, filename='elite_fitness.csv')
-
-            # Save trajectories of evaluation team
-            if self.save_trajectories:
-                self.writeEvalTrajs(trial_dir, eval_infos)
+            self.evaluatePopulations(pop)
 
         # Don't run anything if we loaded in the checkpoint and it turns out we are already done
         if self.gen >= self.num_generations:
@@ -824,40 +827,8 @@ class CooperativeCoevolutionaryAlgorithm():
             # to make teams random
             self.shuffle(offspring)
 
-            # Form teams for evaluation
-            teams, seeds = self.formTeams(offspring)
-
-            # Evaluate each team
-            eval_infos = self.evaluateTeams(teams)
-
-            # Now assign fitnesses to each individual
-            self.assignFitnesses(teams, eval_infos)
-
-            # Save training trajectories if enabled and it's time
-            if self.save_train_trajectories and self.gen % self.num_gens_between_save_train_traj == 0:
-                self.writeTrajectories(trial_dir, eval_infos, prefix="train_")
-
-            # Evaluate a team with the best indivdiual from each subpopulation
-            eval_infos = self.evaluateEvaluationTeam(offspring)
-
-            # Save fitnesses
-            self.writeEvalFitnessCSV(trial_dir, eval_infos)
-
-            if self.save_elite_fitness_switch:
-                eval_infos = [self.evaluateTeam(
-                    team=TeamInfo(
-                        # TODO: Shouldn't this be subpop in offspring, not pop?
-                        # Also, there are too many variables representing population here
-                        # offspring, sorted_pop, pop, population... it's confusing
-                        policies=[subpop[0] for subpop in offspring],
-                        seed=seeds[0]
-                    )
-                )]
-                self.writeEvalFitnessCSV(trial_dir, eval_infos, filename='elite_fitness.csv')
-
-            # Save trajectories
-            if self.save_trajectories and self.gen % self.num_gens_between_save_traj == 0:
-                self.writeEvalTrajs(trial_dir, eval_infos)
+            # Run evaluation
+            self.evaluatePopulations(offspring)
 
             # Now populate the population with individuals from the offspring
             self.setPopulation(pop, offspring)
@@ -865,7 +836,7 @@ class CooperativeCoevolutionaryAlgorithm():
             # Save checkpoint for generation if now is the time
             if self.gen == self.num_generations or \
                 (self.save_checkpoint and self.gen % self.num_gens_between_checkpoint == 0):
-                self.saveCheckpoint(trial_dir, pop)
+                self.saveCheckpoint(self.trial_dir, pop)
 
     def run(self, num_trial, load_checkpoint):
         if num_trial is None:
