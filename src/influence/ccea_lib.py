@@ -721,7 +721,7 @@ class CooperativeCoevolutionaryAlgorithm():
         gen = int(str(checkpoint_dirs[-1]).split('_')[-1].split('.')[0])
         return pop, gen
 
-    def evaluatePopulations(self, pop):
+    def evaluatePopulations(self, pop, sort_teams=True):
         # Create the teams
         teams, seeds = self.formTeams(pop)
 
@@ -735,13 +735,14 @@ class CooperativeCoevolutionaryAlgorithm():
         if self.save_train_trajectories and self.gen % self.num_gens_between_save_train_traj == 0:
             self.writeTrajectories(self.trial_dir, eval_infos, prefix="train_")
 
-        # Organize subpopulations by individual with highest team fitness first
-        if self.sort_teams_by_sum_agent_fitness:
-            lambda_func = lambda ind: ind.agg_team_fitness
-        else:
-            lambda_func = lambda ind: ind.team_fitness
-        for subpop in pop:
-            subpop.sort(key = lambda_func, reverse=True)
+        if sort_teams:
+            # Organize subpopulations by individual with highest team fitness first
+            if self.sort_teams_by_sum_agent_fitness:
+                lambda_func = lambda ind: ind.agg_team_fitness
+            else:
+                lambda_func = lambda ind: ind.team_fitness
+            for subpop in pop:
+                subpop.sort(key = lambda_func, reverse=True)
 
         # Evaluate a team with the best indivdiual from each subpopulation
         eval_infos = self.evaluateEvaluationTeam(pop)
@@ -828,7 +829,7 @@ class CooperativeCoevolutionaryAlgorithm():
             self.shuffle(offspring)
 
             # Run evaluation
-            self.evaluatePopulations(offspring)
+            self.evaluatePopulations(offspring, sort_teams=False)
 
             # Now populate the population with individuals from the offspring
             self.setPopulation(pop, offspring)
