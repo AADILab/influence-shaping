@@ -829,7 +829,7 @@ class CooperativeCoevolutionaryAlgorithm():
             self.shuffle(offspring)
 
             # Run evaluation
-            self.evaluatePopulations(offspring, sort_teams=False)
+            self.evaluatePopulations(offspring)
 
             # Now populate the population with individuals from the offspring
             self.setPopulation(pop, offspring)
