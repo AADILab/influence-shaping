@@ -44,12 +44,12 @@ class JointTrajectory():
         self.observations = joint_observation_trajectory
         self.actions = joint_action_trajectory
 
-class EvalInfo():
+class RolloutPackOut():
     def __init__(self, fitnesses, joint_trajectory):
         self.fitnesses = fitnesses
         self.joint_trajectory = joint_trajectory
 
-class TeamInfo():
+class RolloutPackIn():
     def __init__(self, policies, seed):
         self.policies = policies
         self.seed = seed

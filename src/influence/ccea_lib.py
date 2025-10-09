@@ -15,7 +15,7 @@ from influence.evo_network import NeuralNetwork
 from influence.librovers import rovers
 from influence.custom_env import createEnv
 from influence.ccea_utils import  bound_velocity_arr, getRandomWeights
-from influence.ccea_utils import FollowPolicy, JointTrajectory, EvalInfo, TeamInfo, Individual
+from influence.ccea_utils import FollowPolicy, JointTrajectory, RolloutPackOut, RolloutPackIn, Individual
 
 class CooperativeCoevolutionaryAlgorithm():
     def __init__(self, config_dir):
@@ -251,7 +251,7 @@ class CooperativeCoevolutionaryAlgorithm():
                 # Use max with a key function to get the individual with the highest shaped fitness
                 best_ind = max(subpop, key=lambda ind: ind.shaped_fitness)
             policies.append(best_ind)
-        return TeamInfo(policies, self.get_seed())
+        return RolloutPackIn(policies, self.get_seed())
 
     def evaluateEvaluationTeam(self, population):
         # Create evaluation team _ times
@@ -259,8 +259,8 @@ class CooperativeCoevolutionaryAlgorithm():
         # Evaluate the teams
         return self.evaluateTeams(eval_teams)
 
-    # def formTeams(self, population, inds=None) -> List[TeamInfo]:
-    def formTeams(self, population) -> Tuple[List[TeamInfo], List[int]]:
+    # def formTeams(self, population, inds=None) -> List[RolloutPackIn]:
+    def formTeams(self, population) -> Tuple[List[RolloutPackIn], List[int]]:
         # Start a list of teams
         teams = []
 
@@ -289,14 +289,14 @@ class CooperativeCoevolutionaryAlgorithm():
             # we're doing per team
             for s in seeds:
                 # Save that team
-                teams.append(TeamInfo(policies, s))
+                teams.append(RolloutPackIn(policies, s))
 
         return teams, seeds
 
     def buildMap(self, teams):
         return self.map(self.evaluateTeam, teams)
 
-    def evaluateTeams(self, teams: List[TeamInfo]):
+    def evaluateTeams(self, teams: List[RolloutPackIn]):
         if self.use_multiprocessing:
             jobs = self.buildMap(teams)
             eval_infos = jobs.get()
@@ -304,7 +304,7 @@ class CooperativeCoevolutionaryAlgorithm():
             eval_infos = list(self.buildMap(teams))
         return eval_infos
 
-    def evaluateTeam(self, team: TeamInfo):
+    def evaluateTeam(self, team: RolloutPackIn):
         return self.evaluateTeamStatic(
             team,
             self.template_policies,
@@ -316,7 +316,7 @@ class CooperativeCoevolutionaryAlgorithm():
 
     @staticmethod
     def evaluateTeamStatic(
-        team: TeamInfo,
+        team: RolloutPackIn,
         template_policies: List[Union[NeuralNetwork|FollowPolicy]],
         config: dict,
         num_rovers: int,
@@ -324,8 +324,8 @@ class CooperativeCoevolutionaryAlgorithm():
         num_steps: int
     ):
         # Set up random seed if one was specified
-        if not isinstance(team, TeamInfo):
-            raise Exception('team should be TeamInfo')
+        if not isinstance(team, RolloutPackIn):
+            raise Exception('team should be RolloutPackIn')
         if team.seed is not None:
             random.seed(team.seed)
             np.random.seed(team.seed)
@@ -432,7 +432,7 @@ class CooperativeCoevolutionaryAlgorithm():
         rewards = env.rewards()
         fitnesses = [r for r in rewards]+[team_fitness]
 
-        return EvalInfo(
+        return RolloutPackOut(
             fitnesses=fitnesses,
             joint_trajectory=JointTrajectory(
                 joint_state_trajectory,
@@ -752,7 +752,7 @@ class CooperativeCoevolutionaryAlgorithm():
 
         if self.save_elite_fitness_switch:
             eval_infos = [self.evaluateTeam(
-                team=TeamInfo(
+                team=RolloutPackIn(
                     policies=[subpop[0] for subpop in pop],
                     seed=seeds[0]
                 )
