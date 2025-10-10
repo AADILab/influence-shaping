@@ -20,7 +20,9 @@ if __name__ == '__main__':
     parser.add_argument(
         'out_dir',
         help='directory to save plots to',
-        type=str
+        type=str,
+        nargs='?',
+        default=None
     )
     parser.add_argument(
         '--fitness_colors',
@@ -36,4 +38,5 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    plot_comparison_tree(Path(args.root_dir), Path(args.out_dir), args.fitness_colors, args.csv_name, parser.dump_batch_plot_args(args), parser.dump_batch_line_plot_args(args))
+    out_dir = Path(args.out_dir) if args.out_dir is not None else None
+    plot_comparison_tree(Path(args.root_dir), out_dir, args.fitness_colors, args.csv_name, parser.dump_batch_plot_args(args), parser.dump_batch_line_plot_args(args))

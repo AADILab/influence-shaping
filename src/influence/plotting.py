@@ -143,8 +143,19 @@ def generate_joint_trajectory_plot(joint_traj_dir: Path, individual_colors: bool
     # Get the joint trajectory
     df = pd.read_csv(joint_traj_dir)
 
-    # Get config for map bounds
-    config_dir = joint_traj_dir.parent.parent.parent/'config.yaml'
+    # Get config for map bounds by crawling up the directory tree
+    config_dir = None
+    current_dir = joint_traj_dir.parent
+    while current_dir != current_dir.parent:  # Stop at root directory
+        potential_config = current_dir / 'config.yaml'
+        if potential_config.exists():
+            config_dir = potential_config
+            break
+        current_dir = current_dir.parent
+
+    if config_dir is None:
+        raise FileNotFoundError(f"No config.yaml found in any parent directory of {joint_traj_dir}")
+
     config = load_config(config_dir)
 
     # Get the number of each entity
@@ -306,8 +317,15 @@ def plot_stat_learning_curve(trials_dir, individual_trials, csv_name, line_plot_
     fig = generate_stat_learning_curve_plot(trials_dir, individual_trials, csv_name, line_plot_args, plot_args)
     plot_args.finish_figure(fig)
 
-def generate_stat_learning_curve_tree_plots(root_dir: Path, out_dir: Path, individual_trials: bool, csv_name: str, batch_plot_args: BatchPlotArgs, batch_line_plot_args: BatchLinePlotArgs):
+def generate_stat_learning_curve_tree_plots(root_dir: Path, out_dir: Optional[Path] = None, individual_trials: bool = False, csv_name: str = DEFAULT_FITNESS_NAME, batch_plot_args: BatchPlotArgs = None, batch_line_plot_args: BatchLinePlotArgs = None):
     """Generate all the stat learning curve plots in this experiment tree"""
+
+    if out_dir is None:
+        # Infer out_dir by replacing 'results' with 'outfigs' in root_dir
+        root_str = str(root_dir)
+        if 'results' not in root_str:
+            raise ValueError("No 'results' folder found in root_dir. out_dir must be specified so plots can be saved somewhere")
+        out_dir = Path(root_str.replace('results', 'outfigs'))
 
     experiment_dirs = set()
     for root, _, files in os.walk(root_dir):
@@ -336,7 +354,7 @@ def generate_stat_learning_curve_tree_plots(root_dir: Path, out_dir: Path, indiv
             )
         )
 
-def plot_stat_learning_curve_tree(root_dir: Path, out_dir: Path, individual_trials: bool, csv_name: str, batch_plot_args: BatchPlotArgs, batch_line_plot_args: BatchLinePlotArgs):
+def plot_stat_learning_curve_tree(root_dir: Path, out_dir: Optional[Path] = None, individual_trials: bool = False, csv_name: str = DEFAULT_FITNESS_NAME, batch_plot_args: BatchPlotArgs = None, batch_line_plot_args: BatchLinePlotArgs = None):
     generate_stat_learning_curve_tree_plots(root_dir, out_dir, individual_trials, csv_name, batch_plot_args, batch_line_plot_args)
 
 def generate_comparison_plot(experiment_dir: Path, use_fitness_colors: bool, csv_name: str, line_plot_args: LinePlotArgs, plot_args: PlotArgs):
@@ -406,8 +424,15 @@ def get_example_trial_dirs(parent_dir: Path):
 
     return low_trial_dir, med_trial_dir, high_trial_dir
 
-def generate_experiment_tree_plots(root_dir: Path, out_dir: Path, use_fitness_colors: bool, csv_name: str, batch_plot_args: BatchPlotArgs, batch_line_plot_args: BatchLinePlotArgs):
+def generate_experiment_tree_plots(root_dir: Path, out_dir: Optional[Path] = None, use_fitness_colors: bool = False, csv_name: str = DEFAULT_FITNESS_NAME, batch_plot_args: BatchPlotArgs = None, batch_line_plot_args: BatchLinePlotArgs = None):
     """Generate all the plots in this experiment tree"""
+
+    if out_dir is None:
+        # Infer out_dir by replacing 'results' with 'outfigs' in root_dir
+        root_str = str(root_dir)
+        if 'results' not in root_str:
+            raise ValueError("No 'results' folder found in root_dir. out_dir must be specified so plots can be saved somewhere")
+        out_dir = Path(root_str.replace('results', 'outfigs'))
 
     experiment_dirs = set()
     trial_parent_dirs = set()
@@ -460,8 +485,18 @@ def sort_jt_dirs_helper(jt_dirs: List[str], level: int):
         jt_dirs.sort(key = lambda x: x.split('/')[level])
         sort_jt_dirs_helper(jt_dirs, level=level+1)
 
-def generate_joint_trajectory_tree_plots(root_dir: Path, out_dir: Path, individual_colors: bool, no_shading: bool, downsample: int, batch_plot_args: BatchPlotArgs):
+def plot_comparison_tree(root_dir: Path, out_dir: Optional[Path] = None, use_fitness_colors:bool = False, csv_name: str = DEFAULT_FITNESS_NAME, batch_plot_args: BatchPlotArgs = None, batch_line_plot_args: BatchLinePlotArgs = None):
+    generate_experiment_tree_plots(root_dir, out_dir, use_fitness_colors, csv_name, batch_plot_args, batch_line_plot_args)
+
+def generate_joint_trajectory_tree_plots(root_dir: Path, out_dir: Optional[Path] = None, individual_colors: bool = False, no_shading: bool = False, downsample: int = 1, batch_plot_args: BatchPlotArgs = None):
     """Generate all the joint trajectories in this experiment tree"""
+
+    if out_dir is None:
+        # Infer out_dir by replacing 'results' with 'outfigs' in root_dir
+        root_str = str(root_dir)
+        if 'results' not in root_str:
+            raise ValueError("No 'results' folder found in root_dir. out_dir must be specified so plots can be saved somewhere")
+        out_dir = Path(root_str.replace('results', 'outfigs'))
 
     # Get all the directories of joint trajectories
     jt_dirs = set()
@@ -492,10 +527,7 @@ def generate_joint_trajectory_tree_plots(root_dir: Path, out_dir: Path, individu
             )
         )
 
-def plot_comparison_tree(root_dir: Path, out_dir: Path, use_fitness_colors:bool, csv_name: str, batch_plot_args: BatchPlotArgs, batch_line_plot_args: BatchLinePlotArgs):
-    generate_experiment_tree_plots(root_dir, out_dir, use_fitness_colors, csv_name, batch_plot_args, batch_line_plot_args)
-
-def plot_joint_trajectory_tree(root_dir: Path, out_dir: Path, individual_colors: bool, no_shading: bool, downsample: int, batch_plot_args: BatchPlotArgs):
+def plot_joint_trajectory_tree(root_dir: Path, out_dir: Optional[Path] = None, individual_colors: bool = False, no_shading: bool = False, downsample: int = 1, batch_plot_args: BatchPlotArgs = None):
     generate_joint_trajectory_tree_plots(root_dir, out_dir, individual_colors, no_shading, downsample, batch_plot_args)
 
 def generate_config_plot(config_dir: Path, individual_colors: bool, no_shading: bool, plot_args: PlotArgs):
@@ -543,6 +575,13 @@ def plot_config(config_dir: Path, individual_colors: bool, no_shading: bool, plo
 
 def generate_learning_curve_tree_plots(root_dir: Path, out_dir: Path, individual_agents: bool, batch_plot_args: BatchPlotArgs, batch_line_plot_args: BatchLinePlotArgs):
     """Generate all the learning curve plots in this experiment tree"""
+
+    if out_dir is None:
+        # Infer out_dir by replacing 'results' with 'outfigs' in root_dir
+        root_str = str(root_dir)
+        if 'results' not in root_str:
+            raise ValueError("No 'results' folder found in root_dir. out_dir must be specified so plots can be saved somewhere")
+        out_dir = Path(root_str.replace('results', 'outfigs'))
 
     fitness_files = set()
     for root, _, files in os.walk(root_dir):

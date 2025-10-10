@@ -20,7 +20,9 @@ if __name__ == '__main__':
     parser.add_argument(
         'out_dir',
         help='directory to save plots to',
-        type=str
+        type=str,
+        nargs='?',
+        default=None
     )
     parser.add_argument(
         '--individual_colors',
@@ -41,4 +43,5 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    plot_joint_trajectory_tree(Path(args.root_dir), Path(args.out_dir), args.individual_colors, args.no_shading, args.downsample, parser.dump_batch_plot_args(args))
+    out_dir = Path(args.out_dir) if args.out_dir is not None else None
+    plot_joint_trajectory_tree(Path(args.root_dir), out_dir, args.individual_colors, args.no_shading, args.downsample, parser.dump_batch_plot_args(args))
