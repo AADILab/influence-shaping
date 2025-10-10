@@ -150,7 +150,7 @@ def write_directory_dict(directory_dict, top_dir):
 def write_config_tree_cli(sweep_config_dir, top_write_dir: Optional[str] = None):
     # If top_write_dir is None, then try to infer it from sweep_config_dir
     if top_write_dir is None:
-        # Infer out_dir by replacing 'results' with 'outfigs' in root_dir
+        # Infer out_dir by replacing 'tree_gen' with 'results' in root_dir
         if 'tree_gen' not in sweep_config_dir:
             raise ValueError("No 'tree_gen' folder found in root_dir. out_dir must be specified so plots can be saved somewhere")
         top_write_dir = sweep_config_dir.replace('tree_gen', 'results')
