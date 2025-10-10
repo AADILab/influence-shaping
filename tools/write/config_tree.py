@@ -4,7 +4,7 @@ python tools/write_config_tree.py tree_gen/10_29_2024/alpha.yaml results/10_29_2
 """
 
 import argparse
-from influence.config import write_config_tree
+from influence.config import write_config_tree_cli
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
@@ -13,7 +13,13 @@ if __name__ == "__main__":
         epilog=""
     )
     parser.add_argument("config_directory", help="Directory of yaml file with sweep parameters")
-    parser.add_argument("top_write_directory", help="Top directory to write configs to")
+    parser.add_argument(
+        'top_write_directory',
+        help='Top directory to write configs to',
+        type=str,
+        nargs='?',
+        default=None
+    )
     args = parser.parse_args()
 
-    write_config_tree(args.config_directory, args.top_write_directory)
+    write_config_tree_cli(args.config_directory, args.top_write_directory)
