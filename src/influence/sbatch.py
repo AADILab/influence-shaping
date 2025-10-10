@@ -47,6 +47,15 @@ def write_sbatch_sh_file(batch_dir_root, sbatch_commands):
         file.write(batch_file_str)
     os.chmod(sbatch_dir, os.stat(sbatch_dir).st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
 
+def write_sbatch_executables_cli(top_dir: str, batch_dir_root: str, seperate_trials: bool):
+    # If batch_dir_root is None, then try to infer it from top_dir
+    if batch_dir_root is None:
+        # Infer out_dir by replacing 'results' with 'sbatch' in root_dir
+        if 'results' not in top_dir:
+            raise ValueError("No 'results' folder found in root_dir. sbatch_directory must be specified so sbatch files can be saved somewhere")
+        batch_dir_root = top_dir.replace('results', 'sbatch')
+    return write_sbatch_executables(Path(top_dir), Path(batch_dir_root), seperate_trials)
+
 def write_sbatch_executables(top_dir: Path, batch_dir_root: Path, seperate_trials: bool):
     # Define the string you want to write
     batch_file_start = [
