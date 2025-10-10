@@ -10,26 +10,27 @@ import matplotlib.pyplot as plt
 def moving_average_filter(arr, window_size: int):
     result = np.copy(arr).astype(float)
     half_window = window_size // 2
-    
+
     for i in range(len(arr)):
         # Try to center the window around point i
         start_idx = max(0, i - half_window)
         end_idx = min(len(arr), i + half_window + 1)
-        
+
         # If we can't get the full window, use what's available
         result[i] = np.mean(arr[start_idx:end_idx])
-    
+
     return result
 
 class PlotArgs():
-    def __init__(self, 
-            title: Optional[str]=None, 
-            output: Optional[str]=None, 
-            xlim: Optional[List[float]]=None, 
-            ylim: Optional[List[float]]=None, 
-            xlabel: Optional[str]=None, 
+    def __init__(self,
+            title: Optional[str]=None,
+            output: Optional[str]=None,
+            xlim: Optional[List[float]]=None,
+            ylim: Optional[List[float]]=None,
+            xlabel: Optional[str]=None,
             ylabel: Optional[str]=None,
-            silent: bool=False
+            silent: bool=False,
+            dpi: Optional[int]=None
         ):
         self.title = title
         if output is not None:
@@ -41,7 +42,8 @@ class PlotArgs():
         self.xlabel = xlabel
         self.ylabel = ylabel
         self.silent = silent
-    
+        self.dpi = dpi
+
     def apply(self, ax: Axes):
         if self.title:
             ax.set_title(self.title)
@@ -53,14 +55,14 @@ class PlotArgs():
             ax.set_xlabel(self.xlabel)
         if self.ylabel:
             ax.set_ylabel(self.ylabel)
-    
+
     def finish_figure(self, fig: Figure):
         if self.output is not None:
             if not os.path.exists(self.output.parent):
                 os.makedirs(self.output.parent)
-            fig.savefig(self.output)
+            fig.savefig(self.output, dpi=self.dpi)
             plt.close(fig)
-        
+
         if not self.silent:
             plt.show()
 
@@ -80,18 +82,20 @@ class LinePlotArgs():
 
 class BatchPlotArgs():
     def __init__(self,
-            xlim: Optional[List[float]], 
+            xlim: Optional[List[float]],
             ylim: Optional[List[float]],
             xlabel: Optional[str],
             ylabel: Optional[str],
-            silent: bool
+            silent: bool,
+            dpi: Optional[int]=None
         ):
         self.xlim = xlim
         self.ylim = ylim
         self.xlabel = xlabel
         self.ylabel = ylabel
         self.silent = silent
-    
+        self.dpi = dpi
+
     def build_plot_args(self, title: Optional[str], output: Optional[str]):
         return PlotArgs(
             title=title,
@@ -100,7 +104,8 @@ class BatchPlotArgs():
             ylim=self.ylim,
             xlabel=self.xlabel,
             ylabel=self.ylabel,
-            silent=self.silent
+            silent=self.silent,
+            dpi=self.dpi
         )
 
 class BatchLinePlotArgs():
@@ -110,7 +115,7 @@ class BatchLinePlotArgs():
         ):
         self.window_size = window_size
         self.downsample = downsample
-    
+
     def build_line_plot_args(self):
         return LinePlotArgs(
             window_size=self.window_size,
@@ -159,15 +164,21 @@ class PlotParser(argparse.ArgumentParser):
             help='run silently without showing the plot',
             action='store_true'
         )
+        self.add_argument(
+            '--dpi',
+            help='DPI (dots per inch) for saved plots',
+            type=int,
+            default=None
+        )
         return None
 
     def dump_plot_args(self, args):
-        return PlotArgs(args.title, args.output, args.xlim, args.ylim, args.xlabel, args.ylabel, args.silent)
+        return PlotArgs(args.title, args.output, args.xlim, args.ylim, args.xlabel, args.ylabel, args.silent, args.dpi)
 
 class LinePlotParser(PlotParser):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-    
+
     def add_plot_args(self):
         super().add_plot_args()
         self.add_argument(
@@ -182,14 +193,14 @@ class LinePlotParser(PlotParser):
             default=1
         )
         return None
-    
+
     def dump_line_plot_args(self, args):
         return LinePlotArgs(args.window_size, args.downsample)
 
 class BatchPlotParser(argparse.ArgumentParser):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-    
+
     def add_plot_args(self):
         self.add_argument(
             '--xlim',
@@ -218,10 +229,16 @@ class BatchPlotParser(argparse.ArgumentParser):
             help='run silently without showing any plots',
             action='store_true'
         )
+        self.add_argument(
+            '--dpi',
+            help='DPI (dots per inch) for saved plots',
+            type=int,
+            default=None
+        )
         return None
-    
+
     def dump_batch_plot_args(self, args):
-        return BatchPlotArgs(args.xlim, args.ylim, args.xlabel, args.ylabel, args.silent)
+        return BatchPlotArgs(args.xlim, args.ylim, args.xlabel, args.ylabel, args.silent, args.dpi)
 
 class BatchLinePlotParser(BatchPlotParser):
     def __init__(self, *args, **kwargs):
