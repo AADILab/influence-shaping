@@ -15,7 +15,7 @@ import pandas as pd
 from influence.evo_network import NeuralNetwork
 from influence.librovers import rovers
 from influence.custom_env import createEnv
-from influence.ccea_utils import  bound_velocity_arr, getRandomWeights, build_team_packs, build_team_pack, build_rollout_packs
+from influence.ccea_utils import  bound_velocity_arr, getRandomWeights, build_rollout_packs
 from influence.ccea_utils import FollowPolicy, JointTrajectory, RolloutPackOut, RolloutPackIn, RolloutPack, Individual, TeamPack
 from influence.ccea_utils import IndividualPopulation, Team, TeamPopulation, Checkpoint
 
@@ -125,6 +125,20 @@ class CooperativeCoevolutionaryAlgorithm():
         else:
             self.map = map
 
+        # Setup uid (unique id) tracking for individuals and teams
+        self.individual_uid = 0
+        self.team_uid = 0
+
+    def get_individual_uid(self):
+        uid = self.individual_uid
+        self.individual_uid+=1
+        return uid
+
+    def get_team_uid(self):
+        uid = self.team_uid
+        self.team_uid+=1
+        return uid
+
     def reset_seed(self):
         """Resets the random seed to what was specified in config"""
         self.random_seed_val = self.config['debug']['random_seed']['set_seed']
@@ -202,8 +216,8 @@ class CooperativeCoevolutionaryAlgorithm():
     def generateWeight(self):
         return random.uniform(self.lower_bound, self.upper_bound)
 
-    def generateIndividual(self, individual_size, temp_id):
-        return Individual(getRandomWeights(individual_size), temp_id)
+    def generateIndividual(self, individual_size, tid):
+        return Individual(getRandomWeights(individual_size), tid, self.get_individual_uid())
 
     def generateRoverIndividual(self):
         return self.generateIndividual(individual_size=self.rover_nn_size)
@@ -219,7 +233,7 @@ class CooperativeCoevolutionaryAlgorithm():
                 # Filling population for each agent
                 pop=[]
                 for ind, _ in enumerate(range(self.agent_population_size)):
-                    pop.append(self.generateIndividual(individual_size=self.nn_sizes[agent_id], temp_id=ind))
+                    pop.append(self.generateIndividual(individual_size=self.nn_sizes[agent_id], tid=ind))
             else:
                 # Population of None for fixed policies
                 pop=[]
@@ -230,11 +244,11 @@ class CooperativeCoevolutionaryAlgorithm():
 
     def init_team_population(self, agent_populations):
         team_population = []
-        for _ in range(self.n_team_elites):
-            team = []
+        for tid in range(self.n_team_elites):
+            individuals = []
             for i in range(self.num_rovers+self.num_uavs):
-                team.append(random.choice(agent_populations[i]))
-            team_population.append(team)
+                individuals.append(random.choice(agent_populations[i]))
+            team_population.append(Team(individuals,tid,self.get_team_uid()))
         return team_population
 
     def init_populations(self):
@@ -343,7 +357,7 @@ class CooperativeCoevolutionaryAlgorithm():
         agent_policies = [deepcopy(template_policy) for template_policy in template_policies]
 
         # Load in the weights
-        for nn, individual in zip(agent_policies, rollout_pack_in.team):
+        for nn, individual in zip(agent_policies, rollout_pack_in.individuals):
             if type(nn) is NeuralNetwork:
                 nn.setWeights(individual.weights)
 
@@ -466,7 +480,7 @@ class CooperativeCoevolutionaryAlgorithm():
         if type(population[0]) == Individual:
             return sorted(population, key=lambda ind: ind.shaped_fitness, reverse=True)[:num_best]
         else:
-            return sorted(population, key=lambda tp: tp.collapsed_team_fitness, reverse=True)[:num_best]
+            return sorted(population, key=lambda tp: tp.team.collapsed_team_fitness, reverse=True)[:num_best]
 
     def mutate_individual(self, individual):
         """Apply Gaussian mutation to an individual"""
@@ -480,6 +494,8 @@ class CooperativeCoevolutionaryAlgorithm():
             individual.team_fitness = None
             individual.rollout_team_fitnesses = None
             individual.rollout_shaped_fitnesses = None
+            # Update unique id since this is a new individual
+            individual.uid = self.get_individual_uid()
         return individual
 
     def set_populations(self, agent_populations, agent_offspring_pops, team_populations, team_offspring):
@@ -515,13 +531,13 @@ class CooperativeCoevolutionaryAlgorithm():
         # Collapsed fitnesses
         fitness_dict = {
             'generation': self.gen,
-            'collapsed_team_fitness': team_pack.collapsed_team_fitness
+            'collapsed_team_fitness': team_pack.team.collapsed_team_fitness
         }
         for r in range(self.num_rovers):
-            fitness_dict['collapsed_rover_'+str(r)] = team_pack.collapsed_shaped_fitness[r]
+            fitness_dict['collapsed_rover_'+str(r)] = team_pack.team.collapsed_shaped_fitnesses[r]
         for u in range(self.num_uavs):
             idx=self.num_rovers+u
-            fitness_dict['collapsed_uav_'+str(u)] = team_pack.collapsed_shaped_fitness[idx]
+            fitness_dict['collapsed_uav_'+str(u)] = team_pack.team.collapsed_shaped_fitnesses[idx]
         # Rollout fitnesses
         for rollout_id, rollout_pack in enumerate(team_pack.rollout_packs):
             rname = 'rollout_'+str(rollout_id)+'_team_fitness'
@@ -637,16 +653,36 @@ class CooperativeCoevolutionaryAlgorithm():
 
     def assign_agent_fitnesses(self, team_packs: List[TeamPack]):
         for team_pack in team_packs:
-            for id_, individual in enumerate(team_pack.team):
+            for id_, individual in enumerate(team_pack.team.individuals):
                 individual.rollout_shaped_fitnesses = [rp.shaped_fitnesses[id_] for rp in team_pack.rollout_packs]
                 individual.rollout_team_fitnesses = [rp.team_fitness for rp in team_pack.rollout_packs]
-                individual.shaped_fitness = team_pack.collapsed_shaped_fitness[id_]
-                individual.team_fitness = team_pack.collapsed_team_fitness
+                individual.shaped_fitness = team_pack.team.collapsed_shaped_fitnesses[id_]
+                individual.team_fitness = team_pack.team.collapsed_team_fitness
+
+    def build_team_pack(self, rollout_packs: List[RolloutPack], tid: int)->TeamPack:
+        return TeamPack(
+            team=Team(
+                individuals=rollout_packs[0].individuals,
+                tid=tid,
+                uid=self.get_team_uid()
+            ),
+            rollout_packs=rollout_packs
+        )
+
+    def build_team_packs(self, rollout_packs: List[RolloutPack], num_rollouts_per_team: int) -> List[TeamPack]:
+        rpt = num_rollouts_per_team
+        rollouts_packs_split_by_team = [
+            rollout_packs[i:i + rpt] for i in range(0, len(rollout_packs), rpt)
+        ]
+        team_packs = [
+            self.build_team_pack(rps, tid) for tid, rps in enumerate(rollouts_packs_split_by_team)
+        ]
+        return team_packs
 
     def evaluate_populations(self, agent_populations, team_population):
         # Create the teams
-        teams = self.form_teams(agent_populations)+team_population
-        rollout_pack_ins = self.build_rollout_pack_ins(teams)
+        raw_teams = self.form_teams(agent_populations)+[team.individuals for team in team_population]
+        rollout_pack_ins = self.build_rollout_pack_ins(raw_teams)
 
         # Now run the rollouts
         rollout_pack_outs = self.simulate_rollouts(rollout_pack_ins)
@@ -656,21 +692,22 @@ class CooperativeCoevolutionaryAlgorithm():
             self.write_trajectories(self.trial_dir, rollout_pack_outs, save_folder='train')
 
         rollout_packs = build_rollout_packs(rollout_pack_ins, rollout_pack_outs)
-        team_packs = build_team_packs(rollout_packs, self.num_rollouts_per_team)
+        team_packs = self.build_team_packs(rollout_packs, self.num_rollouts_per_team)
 
         # Assign fitnesses to individuals based on adhoc teams
         adhoc_team_packs = team_packs[:self.agent_population_size*self.rpt]
         self.assign_agent_fitnesses(adhoc_team_packs)
 
         # Re-simulate our test team (pick from all teams)
-        test_team_pack = max(team_packs, key=lambda tp: tp.collapsed_team_fitness)
+        test_team_pack = max(team_packs, key=lambda tp: tp.team.collapsed_team_fitness)
         seeds = self.get_rollout_seeds()
         test_rollout_pack_ins = [
-            RolloutPackIn(team=test_team_pack.team, seed=seed) for seed in seeds
+            RolloutPackIn(individuals=test_team_pack.team.individuals, seed=seed) for seed in seeds
         ]
         test_rollout_pack_outs = self.simulate_rollouts(test_rollout_pack_ins)
-        test_team_pack = build_team_pack(
-            build_rollout_packs(test_rollout_pack_ins, test_rollout_pack_outs)
+        test_team_pack = self.build_team_pack(
+            build_rollout_packs(test_rollout_pack_ins, test_rollout_pack_outs),
+            tid=len(team_packs)
         )
         self.update_fitness_csv(self.trial_dir, test_team_pack)
 
@@ -684,23 +721,32 @@ class CooperativeCoevolutionaryAlgorithm():
             agent_populations: List[IndividualPopulation],
             team_packs: List[TeamPack]
         ) -> Tuple[List[IndividualPopulation], TeamPopulation]:
-        # Put our best teams into team offsprin
-        team_offspring_pop = deepcopy([tp.team for tp in self.sel_best(team_packs, self.n_team_elites)])
+        # Put our best teams into team offspring
+        team_offspring_pop: List[Team] = deepcopy([tp.team for tp in self.sel_best(team_packs, self.n_team_elites)])
 
         # Add individuals from teams back into agent populations for selection
         temp_agent_populations = []
         for a_id, agent_pop in enumerate(agent_populations):
-            temp_agent_populations.append(agent_pop+[tp.team[a_id] for tp in team_packs])
+            temp_agent_populations.append(agent_pop+[tp.team.individuals[a_id] for tp in team_packs])
 
         # Get the offspring for agent populations
-        agent_offspring_pops = []
+        agent_offspring_pops: List[IndividualPopulation] = []
         for agent_pop in temp_agent_populations:
             offspring_pop = deepcopy(self.sel_best(agent_pop, self.n_individual_elites))
-            tourn_select = deepcopy(self.sel_tournament(agent_pop, len(offspring_pop)-self.n_individual_elites, 2))
+            tourn_select = deepcopy(self.sel_tournament(agent_pop, self.agent_population_size-self.n_individual_elites, 2))
             for individual in tourn_select:
                 self.mutate_individual(individual)
             offspring_pop += tourn_select
             agent_offspring_pops.append(offspring_pop)
+
+        # Assign new tids to all the agents
+        for agent_offspring in agent_offspring_pops:
+            for tid, individual in enumerate(agent_offspring):
+                individual.tid = tid
+
+        # Assign new tids to teams
+        for tid, team in enumerate(team_offspring_pop):
+            team.tid = tid
 
         return agent_offspring_pops, team_offspring_pop
 

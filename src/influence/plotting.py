@@ -177,7 +177,7 @@ def add_learning_curve(ax: Axes, df: pd.DataFrame, line_plot_args: LinePlotArgs,
 
     # Get the points for plotting team fitness
     # print(df['generation'])
-    gens, fits = line_plot_args.get_pts(xs=df['generation'], ys=df['team_fitness_aggregated'])
+    gens, fits = line_plot_args.get_pts(xs=df['generation'], ys=df['collapsed_team_fitness'])
     # print(gens)
     ax.plot(gens, fits, label=label)
 
@@ -253,11 +253,11 @@ def add_stat_learning_curve(ax: Axes, individual_trials: bool, csv_name: str, tr
     else:
         # Figure out which trial ran the shortest
         # (We can only accurately compute statistics for generations that we have all trials' output for)
-        ind = min([len(df['team_fitness_aggregated']) for df in dfs])
+        ind = min([len(df['collapsed_team_fitness']) for df in dfs])
 
         # Compute the statistics
-        avg = np.average([df['team_fitness_aggregated'][:ind] for df in dfs], axis=0)
-        err = np.std([df['team_fitness_aggregated'][:ind] for df in dfs], axis=0) / np.sqrt(len(dfs))
+        avg = np.average([df['collapsed_team_fitness'][:ind] for df in dfs], axis=0)
+        err = np.std([df['collapsed_team_fitness'][:ind] for df in dfs], axis=0) / np.sqrt(len(dfs))
         upp_err = avg+err
         low_err = avg-err
         gens = list(range(len(avg)))
@@ -384,7 +384,7 @@ def plot_comparison(experiment_dir: Path, use_fitness_colors: bool, csv_name: st
 def get_example_trial_dirs(parent_dir: Path):
     dirs = [parent_dir/dir for dir in os.list(parent_dir) if 'trial_' in dir]
     dfs = [pd.read_csv(dir/'fitness.csv') for dir in dirs]
-    fits = [df['team_fitness_aggregated'] for df in dfs]
+    fits = [df['collapsed_team_fitness'] for df in dfs]
     final_fits = [fit[-1] for fit in fits]
     class FitPair():
         def __init__(self, fit, ind):

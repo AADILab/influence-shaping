@@ -51,34 +51,57 @@ class RolloutPackOut():
         self.joint_trajectory = joint_trajectory
 
 class RolloutPackIn():
-    def __init__(self, team, seed):
-        self.team = team
+    def __init__(self, individuals, seed):
+        self.individuals = individuals
         self.seed = seed
-
-class RolloutPack():
-    def __init__(self, team, seed, shaped_fitnesses, team_fitness, joint_trajectory):
-        self.team = team
-        self.seed = seed
-        self.shaped_fitnesses = shaped_fitnesses
-        self.team_fitness = team_fitness
-        self.joint_trajectory = joint_trajectory
 
 class Individual:
-    def __init__(self, weights, temp_id):
+    def __init__(self, weights: List[float], tid: int, uid: int):
         self.weights = weights
-        self.temp_id = temp_id
+        self.tid = tid
+        self.uid = uid
         self.rollout_team_fitnesses = []
         self.rollout_shaped_fitnesses = []
         self.team_fitness = None
         self.shaped_fitness = None
 
+class RolloutPack():
+    def __init__(self, individuals: List[Individual], seed: int, shaped_fitnesses: List[float], team_fitness: float, joint_trajectory):
+        self.individuals = individuals
+        self.seed = seed
+        self.shaped_fitnesses = shaped_fitnesses
+        self.team_fitness = team_fitness
+        self.joint_trajectory = joint_trajectory
+
+class Team:
+    def __init__(self,
+            individuals: List[Individual],
+            tid: int,
+            uid: int
+        ):
+        self.individuals = individuals
+        self.tid = tid
+        self.uid = uid
+
+        self.rollout_shaped_fitnesses = None
+        self.rollout_team_fitnesses = None
+        self.collapsed_shaped_fitnesses = None
+        self.collapsed_team_fitness = None
+
+    def set_fitnesses(self, rollout_packs: List[RolloutPack]):
+        self.rollout_shaped_fitnesses = [rp.shaped_fitnesses for rp in rollout_packs]
+        self.rollout_team_fitnesses = [rp.team_fitness for rp in rollout_packs]
+        self.collapsed_shaped_fitnesses = collapse_shaped_fitnesses(rollout_packs)
+        self.collapsed_team_fitness = collapse_team_fitness(rollout_packs)
+
 class TeamPack():
-    def __init__(self, team: List[Individual], rollout_packs: List[RolloutPack]):
+    def __init__(self, team: Team, rollout_packs: List[RolloutPack]):
         self.team = team
         self.rollout_packs = rollout_packs
+        self.set_fitnesses()
 
-        self.collapsed_team_fitness = collapse_team_fitness(rollout_packs)
-        self.collapsed_shaped_fitness = collapse_shaped_fitnesses(rollout_packs)
+    def set_fitnesses(self):
+        self.team.set_fitnesses(self.rollout_packs)
 
 class Checkpoint():
     def __init__(self, loaded: bool, agent_pops=None, team_pop=None, team_packs=None, gen=None):
@@ -89,7 +112,6 @@ class Checkpoint():
         self.gen = gen
 
 IndividualPopulation = List[Individual]
-Team = List[Individual]
 TeamPopulation = List[Team]
 
 def build_rollout_packs(rollout_pack_ins: List[RolloutPackIn], rollout_pack_outs: List[RolloutPackOut])->List[RolloutPack]:
@@ -97,7 +119,7 @@ def build_rollout_packs(rollout_pack_ins: List[RolloutPackIn], rollout_pack_outs
     for in_, out in zip(rollout_pack_ins, rollout_pack_outs):
         rollout_packs.append(
             RolloutPack(
-                in_.team,
+                in_.individuals,
                 in_.seed,
                 out.shaped_fitnesses,
                 out.team_fitness,
@@ -112,19 +134,3 @@ def collapse_team_fitness(rollout_packs: List[RolloutPack]):
 def collapse_shaped_fitnesses(rollout_packs: List[RolloutPack]):
     fit_lists = [r.shaped_fitnesses for r in rollout_packs]
     return [sum(agent_values) / len(agent_values) for agent_values in zip(*fit_lists)]
-
-def build_team_pack(rollout_packs: List[RolloutPack])->TeamPack:
-    return TeamPack(
-        team=rollout_packs[0].team,
-        rollout_packs=rollout_packs
-    )
-
-def build_team_packs(rollout_packs: List[RolloutPack], num_rollouts_per_team: int) -> List[TeamPack]:
-    rpt = num_rollouts_per_team
-    rollouts_packs_split_by_team = [
-        rollout_packs[i:i + rpt] for i in range(0, len(rollout_packs), rpt)
-    ]
-    team_packs = [
-        build_team_pack(rps) for rps in rollouts_packs_split_by_team
-    ]
-    return team_packs
