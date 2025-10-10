@@ -92,7 +92,7 @@ def plot_poi(ax, poi_config, x, y, color, radius_shading):
         radius = min(1.0, poi_config['observation_radius']),
         color=color,
         fill=True,
-        alpha=0.9
+        alpha=1.0
         )
     ax.add_patch(center_circle)
     if radius_shading:
@@ -109,21 +109,17 @@ def get_rover_colors(individual_colors: bool):
     if individual_colors:
         rover_colors = plt.cm.Set1.colors[:1]+plt.cm.Set1.colors[3:]
     else:
-        rover_colors = ['tab:purple']
+        rover_colors = [(123/255, 170/255, 210/255)]
     return rover_colors
 
 def get_uav_colors(individual_colors: bool):
     if individual_colors:
         uav_colors = plt.cm.Dark2.colors[1:]
     else:
-        uav_colors = ['tab:orange']
+        uav_colors = [(189/255,112/255,208/255)]
     return uav_colors
 
 def add_rover_trajectories(ax: Axes, df: pd.DataFrame, num_rovers: int, individual_colors: bool):
-    # if individual_colors:
-    #     rover_colors = plt.cm.Set1.colors[:1]+plt.cm.Set1.colors[3:]
-    # else:
-    #     rover_colors = ['tab:purple']*num_rovers
     rover_colors = get_rover_colors(individual_colors)
     for i in range(num_rovers):
         ax.plot(df['rover_'+str(i)+'_x'], df['rover_'+str(i)+'_y'], ':', lw=2, color=rover_colors[i%len(rover_colors)])
@@ -139,6 +135,8 @@ def generate_joint_trajectory_plot(joint_traj_dir: Path, individual_colors: bool
     """Generate plot of the joint trajectory specified in joint_traj_dir"""
 
     fig, ax = plt.subplots(1,1)
+    ax.grid(zorder=0)
+    ax.set_axisbelow(True)
 
     # Get the joint trajectory
     df = pd.read_csv(joint_traj_dir)
