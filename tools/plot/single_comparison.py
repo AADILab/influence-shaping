@@ -19,12 +19,12 @@ if __name__ == '__main__':
         type=str
     )
     parser.add_argument(
-        '--fitness_colors',
+        '--fitness-colors',
         help='use defined colors for plotting results of fitness shaping methods',
         action='store_true'
     )
     parser.add_argument(
-        '--csv_name',
+        '--csv-name',
         help='name of csv to use for fitness',
         type=str,
         default=DEFAULT_FITNESS_NAME

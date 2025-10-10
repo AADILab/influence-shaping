@@ -24,7 +24,7 @@ if __name__=='__main__':
         default=None
     )
     parser.add_argument(
-        '--individual_agents',
+        '--individual-agents',
         help="include individual agents' shaped rewards",
         action='store_true'
     )

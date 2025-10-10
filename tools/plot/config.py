@@ -13,12 +13,12 @@ if __name__ == "__main__":
     parser.add_plot_args()
     parser.add_argument("config_dir")
     parser.add_argument(
-        '--individual_colors',
+        '--individual-colors',
         help='plot each agent as a different color',
         action='store_true'
     )
     parser.add_argument(
-        '--no_shading',
+        '--no-shading',
         help='turn off shading for poi observation radii',
         action='store_true'
     )
