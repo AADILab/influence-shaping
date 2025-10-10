@@ -72,7 +72,7 @@ def write_sbatch_executables(top_dir: Path, batch_dir_root: Path, seperate_trial
         "#SBATCH --nodes=1",
         "#SBATCH --time=2-00:00:00",
         "#SBATCH --requeue",
-        "#SBATCH --nodelist=cn-v-[1-8],cn-t-1,cn-s-[1-5],cn-r-[1-4]",
+        "#SBATCH --nodelist=cn-v-[1-9],cn-t-1,cn-s-[1-5],cn-r-[1-4]",
         "",
         "source ~/hpc-share/miniforge/bin/activate",
         "conda activate influence",
