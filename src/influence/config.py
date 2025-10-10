@@ -152,7 +152,7 @@ def write_config_tree_cli(sweep_config_dir, top_write_dir: Optional[str] = None)
     if top_write_dir is None:
         # Infer out_dir by replacing 'tree_gen' with 'results' in root_dir
         if 'tree_gen' not in sweep_config_dir:
-            raise ValueError("No 'tree_gen' folder found in root_dir. out_dir must be specified so plots can be saved somewhere")
+            raise ValueError("No 'tree_gen' folder found in root_dir. top_write_directory must be specified so configs can be saved somewhere")
         top_write_dir = sweep_config_dir.replace('tree_gen', 'results')
         # Also make sure to get rid of the .yaml at the end
         if top_write_dir[-5:] == '.yaml':
