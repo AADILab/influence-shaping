@@ -25,13 +25,18 @@ if __name__ == '__main__':
         default=None
     )
     parser.add_argument(
-        '--individual_colors',
+        '--individual-colors',
         help='plot each agent as a different color',
         action='store_true'
     )
     parser.add_argument(
-        '--no_shading',
+        '--no-shading',
         help='turn off shading for poi observation radii',
+        action='store_true'
+    )
+    parser.add_argument(
+        '--no-grid',
+        help='turn off grid in background',
         action='store_true'
     )
     parser.add_argument(
@@ -44,4 +49,4 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     out_dir = Path(args.out_dir) if args.out_dir is not None else None
-    plot_joint_trajectory_tree(Path(args.root_dir), out_dir, args.individual_colors, args.no_shading, args.downsample, parser.dump_batch_plot_args(args))
+    plot_joint_trajectory_tree(Path(args.root_dir), out_dir, args.individual_colors, args.no_shading, args.no_grid, args.downsample, parser.dump_batch_plot_args(args))

@@ -131,12 +131,13 @@ def add_uav_trajectories(ax: Axes, df: pd.DataFrame, num_uavs: int, individual_c
         ax.plot(df['uav_'+str(i)+'_x'], df['uav_'+str(i)+'_y'], ':', lw=2, color=uav_colors[i%len(uav_colors)])
         ax.plot(df['uav_'+str(i)+'_x'].iloc[-1], df['uav_'+str(i)+'_y'].iloc[-1], 'x', ms=8, color=uav_colors[i%len(uav_colors)])
 
-def generate_joint_trajectory_plot(joint_traj_dir: Path, individual_colors: bool, no_shading: bool, plot_args: PlotArgs):
+def generate_joint_trajectory_plot(joint_traj_dir: Path, individual_colors: bool, no_shading: bool, no_grid: bool, plot_args: PlotArgs):
     """Generate plot of the joint trajectory specified in joint_traj_dir"""
 
     fig, ax = plt.subplots(1,1)
-    ax.grid(zorder=0)
-    ax.set_axisbelow(True)
+    if not no_grid:
+        ax.grid(zorder=0)
+        ax.set_axisbelow(True)
 
     # Get the joint trajectory
     df = pd.read_csv(joint_traj_dir)
@@ -177,8 +178,8 @@ def generate_joint_trajectory_plot(joint_traj_dir: Path, individual_colors: bool
 
     return fig
 
-def plot_joint_trajectory(joint_traj_dir: Path, individual_colors: bool, no_shading: bool, plot_args: PlotArgs):
-    fig = generate_joint_trajectory_plot(joint_traj_dir, individual_colors, no_shading, plot_args)
+def plot_joint_trajectory(joint_traj_dir: Path, individual_colors: bool, no_shading: bool, no_grid: bool, plot_args: PlotArgs):
+    fig = generate_joint_trajectory_plot(joint_traj_dir, individual_colors, no_shading, no_grid, plot_args)
     plot_args.finish_figure(fig)
 
 def add_learning_curve(ax: Axes, df: pd.DataFrame, line_plot_args: LinePlotArgs, label: str = 'team'):
@@ -486,7 +487,7 @@ def sort_jt_dirs_helper(jt_dirs: List[str], level: int):
 def plot_comparison_tree(root_dir: Path, out_dir: Optional[Path] = None, use_fitness_colors:bool = False, csv_name: str = DEFAULT_FITNESS_NAME, batch_plot_args: BatchPlotArgs = None, batch_line_plot_args: BatchLinePlotArgs = None):
     generate_experiment_tree_plots(root_dir, out_dir, use_fitness_colors, csv_name, batch_plot_args, batch_line_plot_args)
 
-def generate_joint_trajectory_tree_plots(root_dir: Path, out_dir: Optional[Path] = None, individual_colors: bool = False, no_shading: bool = False, downsample: int = 1, batch_plot_args: BatchPlotArgs = None):
+def generate_joint_trajectory_tree_plots(root_dir: Path, out_dir: Optional[Path] = None, individual_colors: bool = False, no_shading: bool = False, no_grid: bool = False, downsample: int = 1, batch_plot_args: BatchPlotArgs = None):
     """Generate all the joint trajectories in this experiment tree"""
 
     if out_dir is None:
@@ -519,14 +520,15 @@ def generate_joint_trajectory_tree_plots(root_dir: Path, out_dir: Optional[Path]
             joint_traj_dir=jt_dir,
             individual_colors=individual_colors,
             no_shading=no_shading,
+            no_grid=no_grid,
             plot_args=batch_plot_args.build_plot_args(
                 title=jt_dir.name,
                 output=out_dir/dir_name/file_name
             )
         )
 
-def plot_joint_trajectory_tree(root_dir: Path, out_dir: Optional[Path] = None, individual_colors: bool = False, no_shading: bool = False, downsample: int = 1, batch_plot_args: BatchPlotArgs = None):
-    generate_joint_trajectory_tree_plots(root_dir, out_dir, individual_colors, no_shading, downsample, batch_plot_args)
+def plot_joint_trajectory_tree(root_dir: Path, out_dir: Optional[Path] = None, individual_colors: bool = False, no_shading: bool = False, no_grid: bool = False, downsample: int = 1, batch_plot_args: BatchPlotArgs = None):
+    generate_joint_trajectory_tree_plots(root_dir, out_dir, individual_colors, no_shading, no_grid, downsample, batch_plot_args)
 
 def generate_config_plot(config_dir: Path, individual_colors: bool, no_shading: bool, plot_args: PlotArgs):
     # Load the config
