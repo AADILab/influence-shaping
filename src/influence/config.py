@@ -157,7 +157,8 @@ def write_config_tree_cli(sweep_config_dir, top_write_dir: Optional[str] = None)
         # Also make sure to get rid of the .yaml at the end
         if top_write_dir[-5:] == '.yaml':
             top_write_dir=top_write_dir[:-5]
-    return write_config_tree(sweep_config_dir, top_write_dir)
+    write_config_tree(sweep_config_dir, top_write_dir)
+    print(f"Successfully wrote config files to {top_write_dir}")
 
 def write_config_tree(sweep_config_dir, top_write_dir):
     # Load in sweep config with base parameters and sweep parameters

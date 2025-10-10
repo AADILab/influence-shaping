@@ -48,13 +48,18 @@ def write_sbatch_sh_file(batch_dir_root, sbatch_commands):
     os.chmod(sbatch_dir, os.stat(sbatch_dir).st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
 
 def write_sbatch_executables_cli(top_dir: str, batch_dir_root: str, seperate_trials: bool):
+    if len(os.listdir(top_dir)) == 0:
+        print("Warning: Specified results directory is empty. Not writing out files.")
+        return None
+
     # If batch_dir_root is None, then try to infer it from top_dir
     if batch_dir_root is None:
         # Infer out_dir by replacing 'results' with 'sbatch' in root_dir
         if 'results' not in top_dir:
             raise ValueError("No 'results' folder found in root_dir. sbatch_directory must be specified so sbatch files can be saved somewhere")
         batch_dir_root = top_dir.replace('results', 'sbatch')
-    return write_sbatch_executables(Path(top_dir), Path(batch_dir_root), seperate_trials)
+    write_sbatch_executables(Path(top_dir), Path(batch_dir_root), seperate_trials)
+    print(f"Successfully wrote top level executable to {batch_dir_root}/sbatch.sh")
 
 def write_sbatch_executables(top_dir: Path, batch_dir_root: Path, seperate_trials: bool):
     # Define the string you want to write
@@ -76,13 +81,14 @@ def write_sbatch_executables(top_dir: Path, batch_dir_root: Path, seperate_trial
 
     file_str_start = '\n'.join(batch_file_start)
 
+    # Leaving commented print statements for ease of debugging in the future
     config_dirs = get_config_dirs(top_dir)
-    pprint.pprint(config_dirs)
+    # pprint.pprint(config_dirs)
     commands = generate_commands(config_dirs, seperate_trials)
-    pprint.pprint(commands)
+    # pprint.pprint(commands)
     file_dirs = generate_sh_command_dirs(batch_dir_root, commands)
-    pprint.pprint(file_dirs)
+    # pprint.pprint(file_dirs)
     sbatch_commands = generate_sbatch_commands(file_dirs)
-    pprint.pprint(sbatch_commands)
+    # pprint.pprint(sbatch_commands)
     write_command_sh_files(batch_dir_root, file_dirs, commands, file_str_start)
     write_sbatch_sh_file(batch_dir_root, sbatch_commands)
