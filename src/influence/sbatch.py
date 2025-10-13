@@ -74,7 +74,7 @@ def generate_sbatch_commands(bash_file_infos: List[FileInfo]):
     return sbatch_commands
 
 def write_sbatch_sh_file(out_root, sbatch_commands):
-    batch_file_str = '\n'.join(sbatch_commands)+'\n'
+    batch_file_str = '#!/bin/bash\n'+'\n'.join(sbatch_commands)+'\n'
     sbatch_dir = os.path.expanduser(out_root/'sbatch.sh')
     with open(sbatch_dir, 'w') as file:
         file.write(batch_file_str)
@@ -93,6 +93,7 @@ def write_sbatch_executables_cli(top_dir: str, out_root: str, time: str, seperat
         out_root = top_dir.replace('results', 'sbatch')
     write_sbatch_executables(Path(top_dir), Path(out_root), time, seperate_trials)
     print(f"Successfully wrote top level executable to {out_root}/sbatch.sh")
+    return out_root+'/sbatch.sh'
 
 def extract_path_after_results(path: Path):
     """Extract path after 'results' and convert to dot notation"""

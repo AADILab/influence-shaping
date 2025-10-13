@@ -159,6 +159,7 @@ def write_config_tree_cli(sweep_config_dir, top_write_dir: Optional[str] = None)
             top_write_dir=top_write_dir[:-5]
     write_config_tree(sweep_config_dir, top_write_dir)
     print(f"Successfully wrote config files to {top_write_dir}")
+    return top_write_dir
 
 def write_config_tree(sweep_config_dir, top_write_dir):
     # Load in sweep config with base parameters and sweep parameters
