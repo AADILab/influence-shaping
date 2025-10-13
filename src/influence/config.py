@@ -188,34 +188,6 @@ def contractuser(path: str):
         return path.replace(home_dir, '~')
     return path
 
-def get_config_dirs(top_dir):
-    config_dirs = []
-    for dirpath, _, filenames in os.walk(os.path.expanduser(top_dir)):
-        for filename in filenames:
-            if filename == 'config.yaml':
-                config_dir = Path(contractuser(str(dirpath))+'/config.yaml')
-                config_dirs.append(config_dir)
-    return config_dirs
-
-def generate_commands(config_dirs, seperate_trials):
-    """Generate python commands to run configs in config_dirs"""
-    commands = []
-    for config_dir in config_dirs:
-        command_start = 'python ~/influence-shaping/tools/run/config.py '
-        command_end = ' --load_checkpoint'
-        if seperate_trials:
-            # Seperate trials means we generate a different command for running each trial
-            config = load_config(config_dir)
-            num_trials = config['experiment']['num_trials']
-            for t in range(num_trials):
-                command = command_start + '\'' + str(config_dir) + '\'' + ' -t ' + str(t) + command_end
-                commands.append(command)
-        else:
-            # Running trials together means each config gets one command (rather than one command per trial)
-            command = command_start + str(config_dir) + command_end
-            commands.append(command)
-    return commands
-
 def overwrite_configs(configs_directory, overwrite_directory):
     pass
     # TODO: write this function

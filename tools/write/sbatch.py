@@ -14,7 +14,7 @@ if __name__ == "__main__":
     )
     parser.add_argument("config_directory", help="top directory of configs that need to be batched")
     parser.add_argument(
-        'sbatch_directory',
+        'out_directory',
         help='directory to write sbatch files to',
         type=str,
         nargs='?',
@@ -24,4 +24,4 @@ if __name__ == "__main__":
     parser.add_argument("--seperate-trials", help="flag to treat each trial as a seperate job", action='store_true')
     args = parser.parse_args()
 
-    write_sbatch_executables_cli(args.config_directory, args.sbatch_directory, args.time, args.seperate_trials)
+    write_sbatch_executables_cli(args.config_directory, args.out_directory, args.time, args.seperate_trials)
