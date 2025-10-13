@@ -20,7 +20,8 @@ if __name__ == "__main__":
         nargs='?',
         default=None
     )
+    parser.add_argument('--time', help='time limit for job formatted as D-HH:MM:SS', default='2-00:00:00')
     parser.add_argument("--seperate-trials", help="flag to treat each trial as a seperate job", action='store_true')
     args = parser.parse_args()
 
-    write_sbatch_executables_cli(args.config_directory, args.sbatch_directory, args.seperate_trials)
+    write_sbatch_executables_cli(args.config_directory, args.sbatch_directory, args.time, args.seperate_trials)

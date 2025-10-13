@@ -47,7 +47,7 @@ def write_sbatch_sh_file(batch_dir_root, sbatch_commands):
         file.write(batch_file_str)
     os.chmod(sbatch_dir, os.stat(sbatch_dir).st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
 
-def write_sbatch_executables_cli(top_dir: str, batch_dir_root: str, seperate_trials: bool):
+def write_sbatch_executables_cli(top_dir: str, batch_dir_root: str, time: str, seperate_trials: bool):
     if len(os.listdir(top_dir)) == 0:
         print("Warning: Specified results directory is empty. Not writing out files.")
         return None
@@ -58,10 +58,10 @@ def write_sbatch_executables_cli(top_dir: str, batch_dir_root: str, seperate_tri
         if 'results' not in top_dir:
             raise ValueError("No 'results' folder found in root_dir. sbatch_directory must be specified so sbatch files can be saved somewhere")
         batch_dir_root = top_dir.replace('results', 'sbatch')
-    write_sbatch_executables(Path(top_dir), Path(batch_dir_root), seperate_trials)
+    write_sbatch_executables(Path(top_dir), Path(batch_dir_root), time, seperate_trials)
     print(f"Successfully wrote top level executable to {batch_dir_root}/sbatch.sh")
 
-def write_sbatch_executables(top_dir: Path, batch_dir_root: Path, seperate_trials: bool):
+def write_sbatch_executables(top_dir: Path, batch_dir_root: Path, time: str, seperate_trials: bool):
     # Define the string you want to write
     batch_file_start = [
         "#!/bin/bash",
@@ -70,7 +70,7 @@ def write_sbatch_executables(top_dir: Path, batch_dir_root: Path, seperate_trial
         "#SBATCH -c 12",
         "#SBATCH --mem=16G",
         "#SBATCH --nodes=1",
-        "#SBATCH --time=2-00:00:00",
+        "#SBATCH --time="+time,
         "#SBATCH --requeue",
         "#SBATCH --nodelist=cn-v-[1-9],cn-t-1,cn-s-[1-5],cn-r-[1-4]",
         "",

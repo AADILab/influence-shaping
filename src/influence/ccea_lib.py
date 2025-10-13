@@ -681,7 +681,7 @@ class CooperativeCoevolutionaryAlgorithm():
 
     def evaluate_populations(self, agent_populations, team_population):
         # Create the teams
-        raw_teams = self.form_teams(agent_populations)+[team.individuals for team in team_population]
+        raw_teams = [team.individuals for team in team_population]+self.form_teams(agent_populations)
         rollout_pack_ins = self.build_rollout_pack_ins(raw_teams)
 
         # Now run the rollouts
@@ -695,7 +695,7 @@ class CooperativeCoevolutionaryAlgorithm():
         team_packs = self.build_team_packs(rollout_packs, self.num_rollouts_per_team)
 
         # Assign fitnesses to individuals based on adhoc teams
-        adhoc_team_packs = team_packs[:self.agent_population_size*self.rpt]
+        adhoc_team_packs = team_packs[self.n_team_elites:]
         self.assign_agent_fitnesses(adhoc_team_packs)
 
         # Re-simulate our test team (pick from all teams)
