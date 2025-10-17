@@ -46,6 +46,7 @@ class SmartLidar(rovers.Lidar[rovers.Density]):
         self.default_values = default_values
         self.m_resolution = resolution
         self.m_composition = composition_policy
+        self.m_num_sensed_uavs = 0
 
     def measure(self, distance, agent_id):
         if self.measurement_type[agent_id] == 'inverse_distance_squared':
@@ -64,6 +65,7 @@ class SmartLidar(rovers.Lidar[rovers.Density]):
         uav_values = [[] for _ in range(num_sectors)]
         agent = agent_pack.agents[agent_pack.agent_index]
         my_type = self.agent_types[agent_pack.agent_index]
+        self.m_num_sensed_uavs = 0
 
         # Observe POIs
         # print("Observe POIs")
@@ -156,6 +158,7 @@ class SmartLidar(rovers.Lidar[rovers.Density]):
                 rover_values[sector].append(self.measure(distance, agent_pack.agent_index))
             elif self.agent_types[i] == "uav":
                 uav_values[sector].append(self.measure(distance, agent_pack.agent_index))
+                self.m_num_sensed_uavs+=1
             # print("Finished binning agent")
         # print("Finished agent sensing")
 
@@ -210,6 +213,9 @@ class SmartLidar(rovers.Lidar[rovers.Density]):
                     state[num_sectors*2 + i] = self.m_composition.compose(cpp_vector, 0.0, 1)
 
         return rovers.tensor(state)
+
+    def num_sensed_uavs(self):
+        return self.m_num_sensed_uavs
 
 class UavDistanceLidar(rovers.ISensor):
     """This lidar gives distance to each uav in the environment"""

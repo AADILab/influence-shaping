@@ -129,6 +129,11 @@ class CooperativeCoevolutionaryAlgorithm():
         self.individual_uid = 0
         self.team_uid = 0
 
+        self.rovers_cant_move_without_uav = [False for _ in range(self.num_rovers)]
+        for rover_id, rover_config in enumerate(self.config['env']['agents']['rovers']):
+            if 'needs_uav_to_move' in rover_config:
+                self.rovers_cant_move_without_uav[rover_id] = rover_config['needs_uav_to_move']
+
     def get_individual_uid(self):
         uid = self.individual_uid
         self.individual_uid+=1
@@ -281,7 +286,7 @@ class CooperativeCoevolutionaryAlgorithm():
             seeds = [int.from_bytes(os.urandom(4), 'big') for _ in range(self.num_rollouts_per_team)]
         return seeds
 
-    def form_teams(self, populations, skip_preserved=True) -> List:
+    def form_random_teams(self, populations) -> List:
         # Base case: No individuals left
         # For each population
         #   Pick a random policy from the population, excluding preserved elites
@@ -302,7 +307,56 @@ class CooperativeCoevolutionaryAlgorithm():
             team.append(pop[index])
             # Remove from team formation
             reduced_populations.append(pop[:index]+pop[index+1:])
-        return [team]+self.form_teams(reduced_populations, skip_preserved=skip_preserved)
+        return [team]+self.form_random_teams(reduced_populations)
+
+    def form_shaped_teams(self, populations):
+        """Form teams based on putting agents with highest shaped rewards together"""
+        # Sort each agent population based on shaped fitness
+        sorted_pops = [sorted(pop, key=lambda ind: ind.shaped_fitness if ind.shaped_fitness is not None else 0, reverse=True) for pop in populations]
+
+        # Zip agent populations together into teams,
+        # so agents with highest shaped fitness are put together on a team,
+        # agents with second highest shaped fitness are on a team, etc
+        raw_shaped_teams = []
+        for i in range(self.agent_population_size):
+            raw_team = [pop[i] for pop in sorted_pops]
+            raw_shaped_teams.append(raw_team)
+        return raw_shaped_teams
+
+    def form_softmax_teams(self, populations) -> Individual:
+        """
+        Form teams randomly based on a softmax probability distribution of individuals' shaped fitnesses.
+        """
+
+        # Base Case. No individuals left
+        if len(populations[0]) <= 0:
+            return []
+
+        # Standard Case. Form a team and keep going!
+        # Compute probabilities
+        pops_probabilities = []
+        for pop in populations:
+            # Extract fitness values, handling None values
+            fitnesses = np.array([ind.shaped_fitness if ind.shaped_fitness is not None else 0.0 for ind in pop])
+
+            # Apply softmax transformation
+            # Subtract max for numerical stability
+            exp_fitnesses = np.exp(fitnesses - np.max(fitnesses))
+            probabilities = exp_fitnesses / np.sum(exp_fitnesses)
+            pops_probabilities.append(list(probabilities))
+
+        # Form teams based on probabilities
+        team = []
+        reduced_populations = []
+        for pop, probabilities in zip(populations, pops_probabilities):
+            # Pick individual based on softmax distribution
+            selected_index = np.random.choice(len(pop), p=probabilities)
+            # Add them to the team
+            team.append(pop[selected_index])
+            # Remove from team formation process
+            reduced_populations.append(pop[:selected_index]+pop[selected_index+1:])
+
+        return [team]+self.form_softmax_teams(reduced_populations)
 
     def build_rollout_pack_ins(self, teams):
         # Get the seeds
@@ -428,6 +482,13 @@ class CooperativeCoevolutionaryAlgorithm():
                                 velocity_arr=input_action_arr,
                                 max_velocity=config['ccea']['network']['uav_max_velocity']
                             )
+
+                # Add a hard constraint.
+                # If the rover is too far from a uav, it cannot move
+
+                # If this is a rover and it did not sense any uavs, don't move
+                if ind < num_rovers and env.rovers()[ind].m_sensor.m_num_sensed_uavs == 0:
+                    input_action_arr = np.array([0.0,0.0])
 
                 # Save this info for debugging purposes
                 observation_arrs.append(observation_arr)
@@ -681,7 +742,7 @@ class CooperativeCoevolutionaryAlgorithm():
 
     def evaluate_populations(self, agent_populations, team_population):
         # Create the teams
-        raw_teams = [team.individuals for team in team_population]+self.form_teams(agent_populations)
+        raw_teams = [team.individuals for team in team_population]+self.form_softmax_teams(agent_populations)
         rollout_pack_ins = self.build_rollout_pack_ins(raw_teams)
 
         # Now run the rollouts

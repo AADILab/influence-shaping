@@ -89,7 +89,7 @@ def get_num_entities(labels: List[str]):
 def plot_poi(ax, poi_config, x, y, color, radius_shading):
     center_circle = plt.Circle(
         xy = (x, y),
-        radius = min(1.0, poi_config['observation_radius']),
+        radius = min(1.0, poi_config['capture_radius']),
         color=color,
         fill=True,
         alpha=1.0
@@ -98,7 +98,7 @@ def plot_poi(ax, poi_config, x, y, color, radius_shading):
     if radius_shading:
         outer_circle = plt.Circle(
             xy = (x, y),
-            radius = poi_config['observation_radius'],
+            radius = poi_config['capture_radius'],
             color=color,
             fill=True,
             alpha=0.2
@@ -226,7 +226,9 @@ def generate_learning_curve_plot(fitness_dir, individual_agents, line_plot_args:
     ax.set_ylabel('Performance')
 
     ax.set_xlim([0, gens.iloc[-1]])
-    ax.set_ylim([0, 1.1])
+    config = load_config(fitness_dir.parent.parent/'config.yaml')
+    high_y = sum([poi_config['value'] for poi_config in config['env']['pois']['hidden_pois']+config['env']['pois']['rover_pois']])
+    ax.set_ylim([0, high_y])
 
     plot_args.apply(ax)
 
