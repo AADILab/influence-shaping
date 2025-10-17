@@ -71,9 +71,9 @@ class IRover {
     IRover(const IRover&) = default;
     virtual ~IRover() = default;
 
-    void reset() { 
+    void reset() {
         // std::cout << "IRover::reset()" << std::endl;
-        m_path.clear(); 
+        m_path.clear();
         }
 
     const Point& position() const { return m_position; }
@@ -165,7 +165,8 @@ class Rover final : public IRover {
         update_position(act[0], act[1]);
     }
 
-   private:
+
+   public:
     SType m_sensor;
     RType m_reward;
 };
