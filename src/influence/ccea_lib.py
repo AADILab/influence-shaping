@@ -134,6 +134,11 @@ class CooperativeCoevolutionaryAlgorithm():
             if 'needs_uav_to_move' in rover_config:
                 self.rovers_cant_move_without_uav[rover_id] = rover_config['needs_uav_to_move']
 
+        # team formation params
+        self.team_formation_type = 'random_teams'
+        if 'team_formation' in self.config['ccea'] and 'type' in self.config['ccea']['team_formation']:
+            self.team_formation_type = self.config['ccea']['team_formation']['type']
+
     def get_individual_uid(self):
         uid = self.individual_uid
         self.individual_uid+=1
@@ -285,6 +290,17 @@ class CooperativeCoevolutionaryAlgorithm():
         else:
             seeds = [int.from_bytes(os.urandom(4), 'big') for _ in range(self.num_rollouts_per_team)]
         return seeds
+
+    def form_teams(self, populations) -> List:
+        if self.team_formation_type == 'random_teams':
+            return self.form_random_teams(populations)
+        elif self.team_formation_type == 'softmax_teams':
+            return self.form_softmax_teams(populations)
+        elif self.team_formation_type == 'fixed_teams':
+            return self.form_shaped_teams(populations)
+        else:
+            print("WARNING: form_teams did not have a valid formation type specified. Defaulting to random teams.")
+            return self.form_random_teams(populations)
 
     def form_random_teams(self, populations) -> List:
         # Base case: No individuals left
