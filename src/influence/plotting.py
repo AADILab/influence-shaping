@@ -54,17 +54,49 @@ def sort_fitness_path_list(input_list: List[Path]):
 
     return sorted_fit_list+nonfit_list
 
-def get_num_entities(labels: List[str]):
+def get_num_entities_traj(labels: List[str]):
     num_rovers = 0
     num_uavs = 0
     num_hidden_pois = 0
     num_rover_pois = 0
 
     def get_agent_id(label):
-        return int(label.split("_")[1])
+        return int(label.split("_")[-2])
 
     def get_poi_id(label):
-        return int(label.split("_")[2])
+        return int(label.split("_")[-2])
+
+    for label in labels:
+        if "rover" in label and "_x" in label and "poi" not in label:
+            id_ = get_agent_id(label)
+            if id_ + 1 > num_rovers:
+                num_rovers += 1
+        elif "uav" in label and "_x" in label:
+            id_ = get_agent_id(label)
+            if id_ + 1 > num_uavs:
+                num_uavs += 1
+        elif "rover_poi" in label and "_x" in label:
+            id_ = get_poi_id(label)
+            if id_ + 1 > num_rover_pois:
+                num_rover_pois += 1
+        elif "hidden_poi" in label and "_x" in label:
+            id_ = get_poi_id(label)
+            if id_ + 1 > num_hidden_pois:
+                num_hidden_pois += 1
+
+    return num_rovers, num_uavs, num_rover_pois, num_hidden_pois
+
+def get_num_entities_fit(labels: List[str]):
+    num_rovers = 0
+    num_uavs = 0
+    num_hidden_pois = 0
+    num_rover_pois = 0
+
+    def get_agent_id(label):
+        return int(label.split("_")[-1])
+
+    def get_poi_id(label):
+        return int(label.split("_")[-1])
 
     for label in labels:
         if "rover" in label and "poi" not in label:
@@ -159,7 +191,7 @@ def generate_joint_trajectory_plot(joint_traj_dir: Path, individual_colors: bool
 
     # Get the number of each entity
     num_rovers, num_uavs, _, _ \
-        = get_num_entities(labels=df.columns.to_list())
+        = get_num_entities_traj(labels=df.columns.to_list())
 
     add_rover_trajectories(ax, df, num_rovers, individual_colors)
     add_uav_trajectories(ax, df, num_uavs, individual_colors)
@@ -206,18 +238,13 @@ def generate_learning_curve_plot(fitness_dir, individual_agents, line_plot_args:
     gens = add_learning_curve(ax, df, line_plot_args)
 
     if individual_agents:
-        num_rovers, num_uavs, _, _ = get_num_entities(labels=df.columns.to_list())
+        num_rovers, num_uavs, _, _ = get_num_entities_fit(labels=df.columns.to_list())
         for i in range(num_rovers):
-            rover_label = 'rover_'+str(i)+'_'
+            rover_label = 'collapsed_rover_'+str(i)
             fits = line_plot_args.get_ys(ys=df[rover_label])
             ax.plot(gens, fits, label=rover_label)
-        if num_uavs > 0:
-            if 'uav_0_' in df:
-                _flag = 1
-            elif 'uav_0' in df:
-                _flag = 0
         for i in range(num_uavs):
-            uav_label = 'uav_'+str(i)+_flag*'_'
+            uav_label = 'collapsed_uav_'+str(i)
             fits = line_plot_args.get_ys(ys=df[uav_label])
             ax.plot(gens, fits, label=uav_label)
         ax.legend()
