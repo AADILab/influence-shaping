@@ -12,7 +12,7 @@ if __name__ == '__main__':
     )
     parser.add_plot_args()
     parser.add_argument(
-        'joint-traj-dir',
+        'joint_traj_dir',
         help='directory of csv file containing joint trajectory',
         type=str
     )
@@ -22,7 +22,7 @@ if __name__ == '__main__':
         action='store_true'
     )
     parser.add_argument(
-        '--no-shading',
+        '--no-poi-shading',
         help='turn off shading for poi observation radii',
         action='store_true'
     )
@@ -31,6 +31,33 @@ if __name__ == '__main__':
         help='turn off grid in background',
         action='store_true'
     )
+    # Add shading for radius of influence of uavs
+    parser.add_argument(
+        '--influence-shading',
+        help='turn on shading for radius of influence of uavs',
+        action='store_true'
+    )
+    # Add circle for observation radius of uavs
+    parser.add_argument(
+        '--uav-observation-radius',
+        help='draw circle for observation radius of uavs',
+        action='store_true'
+    )
+    # Add circle for observation radius of rovers
+    parser.add_argument(
+        '--rover-observation-radius',
+        help='draw circle for observation radius of rovers',
+        action='store_true'
+    )
     args = parser.parse_args()
 
-    plot_joint_trajectory(Path(args.joint_traj_dir), args.individual_colors, args.no_shading, args.no_grid, parser.dump_plot_args(args))
+    plot_joint_trajectory(
+        Path(args.joint_traj_dir),
+        args.individual_colors,
+        args.no_poi_shading,
+        args.no_grid,
+        args.influence_shading,
+        args.uav_observation_radius,
+        args.rover_observation_radius,
+        parser.dump_plot_args(args)
+    )
