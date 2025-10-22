@@ -13,12 +13,14 @@ class TestResults(TestEnv):
 
     def test_quartz(self):
         # Load all the relevant resources
-        top_dir = '~/influence-shaping/test/resources/results/10_29_2024/quartz/1_rover_1_uav/random_pois_10x10/IndirectDifferenceAutomatic'
+        current_dir = Path(__file__).parent
+        test_dir = current_dir.parent.parent
+        quartz_dir = test_dir/'resources'/'quartz'
         config = load_config(
-            config_dir=Path(top_dir)/'config.yaml'
+            config_dir=quartz_dir/'config.yaml'
         )
         joint_traj = pd.read_csv(
-            Path(top_dir)/'trial_0'/'gen_0'/'eval_team_6_joint_traj.csv'
+            quartz_dir/'eval_team_6_joint_traj.csv'
         )
 
         # Modify the config so that pois are fixed according to where they were in the joint trajectory
@@ -36,7 +38,7 @@ class TestResults(TestEnv):
             agent_paths.append([ [rover_x, rover_y], [uav_x, uav_y] ])
 
         # Get the expected final rewards from the fitness csv file
-        fitness_df = pd.read_csv(Path(top_dir)/'trial_0'/'fitness.csv')
+        fitness_df = pd.read_csv(quartz_dir/'fitness.csv', index_col=False)
         expected_final_rewards = [fitness_df['team_6_rover_0'][0], fitness_df['team_6_uav_0'][0]]
 
         # Now run the check
