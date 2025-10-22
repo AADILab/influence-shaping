@@ -156,7 +156,8 @@ def add_rover_trajectories(
         df: pd.DataFrame,
         num_rovers: int,
         individual_colors: bool,
-        rover_observation_radii: Optional[List[float]]
+        rover_observation_radii: Optional[List[float]],
+        all_rover_bounds: Optional[List[Optional[dict]]]
     ):
     rover_colors = get_rover_colors(individual_colors)
     for i in range(num_rovers):
@@ -177,6 +178,23 @@ def add_rover_trajectories(
                 linewidth=1
             )
             ax.add_patch(observation_circle)
+        if all_rover_bounds is not None:
+            rover_bounds = all_rover_bounds[i]
+            if rover_bounds is not None:
+                low_x = rover_bounds['low_x']+0.05
+                high_x = rover_bounds['high_x']-0.05
+                low_y = rover_bounds['low_y']+0.05
+                high_y = rover_bounds['high_y']-0.05
+                bounds_rect = plt.Rectangle(
+                    xy=(low_x, low_y),
+                    width=high_x - low_x,
+                    height=high_y - low_y,
+                    color=color,
+                    fill=False,
+                    linewidth=2,
+                    linestyle='--'
+                )
+                ax.add_patch(bounds_rect)
 
 def add_uav_trajectories(
         ax: Axes,
@@ -184,7 +202,8 @@ def add_uav_trajectories(
         num_uavs: int,
         individual_colors: bool,
         influence_shading: bool,
-        uav_observation_radii: Optional[List[float]]
+        uav_observation_radii: Optional[List[float]],
+        all_uav_bounds: Optional[List[Optional[dict]]]
     ):
     uav_colors = get_uav_colors(individual_colors)
     for i in range(num_uavs):
@@ -214,6 +233,23 @@ def add_uav_trajectories(
                 linewidth=1
             )
             ax.add_patch(observation_circle)
+        if all_uav_bounds is not None:
+            uav_bounds = all_uav_bounds[i]
+            if uav_bounds is not None:
+                low_x = uav_bounds['low_x']+0.05
+                high_x = uav_bounds['high_x']-0.05
+                low_y = uav_bounds['low_y']+0.05
+                high_y = uav_bounds['high_y']-0.05
+                bounds_rect = plt.Rectangle(
+                    xy=(low_x, low_y),
+                    width=high_x - low_x,
+                    height=high_y - low_y,
+                    color=color,
+                    fill=False,
+                    linewidth=2,
+                    linestyle='--'
+                )
+                ax.add_patch(bounds_rect)
 
 def generate_joint_trajectory_plot(
         joint_traj_dir: Path,
@@ -223,6 +259,7 @@ def generate_joint_trajectory_plot(
         influence_shading: bool,
         uav_observation_radius: bool,
         rover_observation_radius: bool,
+        include_bounds: bool,
         plot_args: PlotArgs
     ):
     """Generate plot of the joint trajectory specified in joint_traj_dir"""
@@ -249,24 +286,44 @@ def generate_joint_trajectory_plot(
         raise FileNotFoundError(f"No config.yaml found in any parent directory of {joint_traj_dir}")
 
     config = load_config(config_dir)
+    rover_configs = config['env']['agents']['rovers']
+    uav_configs = config['env']['agents']['uavs']
 
     # Get the number of each entity
     num_rovers, num_uavs, _, _ \
         = get_num_entities_traj(labels=df.columns.to_list())
 
+    # Collect observation radii if specified
     rover_observation_radii = None
     if rover_observation_radius:
         rover_observation_radii = [
-            rover_config['observation_radius'] for rover_config in config['env']['agents']['rovers']
+            rover_config['observation_radius'] for rover_config in rover_configs
         ]
     uav_observation_radii = None
     if uav_observation_radius:
         uav_observation_radii = [
-            uav_config['observation_radius'] for uav_config in config['env']['agents']['uavs']
+            uav_config['observation_radius'] for uav_config in uav_configs
         ]
 
-    add_rover_trajectories(ax, df, num_rovers, individual_colors, rover_observation_radii)
-    add_uav_trajectories(ax, df, num_uavs, individual_colors, influence_shading, uav_observation_radii)
+    # Collect bounds if specified
+    all_rover_bounds = None
+    all_uav_bounds = None
+    if include_bounds:
+        all_rover_bounds = []
+        for rover_config in rover_configs:
+            if 'bounds' in rover_config:
+                all_rover_bounds.append(rover_config['bounds'])
+            else:
+                all_rover_bounds.append(None)
+        all_uav_bounds = []
+        for uav_config in uav_configs:
+            if 'bounds' in uav_config:
+                all_uav_bounds.append(uav_config['bounds'])
+            else:
+                all_uav_bounds.append(None)
+
+    add_rover_trajectories(ax, df, num_rovers, individual_colors, rover_observation_radii, all_rover_bounds)
+    add_uav_trajectories(ax, df, num_uavs, individual_colors, influence_shading, uav_observation_radii, all_uav_bounds)
     for i, poi_config in enumerate(config['env']['pois']['rover_pois']):
         plot_poi(ax, poi_config, x=df['rover_poi_'+str(i)+'_x'][0], y=df['rover_poi_'+str(i)+'_y'][0], color='tab:green', radius_shading=not no_shading)
     for i, poi_config in enumerate(config['env']['pois']['hidden_pois']):
@@ -290,6 +347,7 @@ def plot_joint_trajectory(
         influence_shading: bool,
         uav_observation_radius: bool,
         rover_observation_radius: bool,
+        include_bounds: bool,
         plot_args: PlotArgs
     ):
     fig = generate_joint_trajectory_plot(
@@ -300,6 +358,7 @@ def plot_joint_trajectory(
         influence_shading,
         uav_observation_radius,
         rover_observation_radius,
+        include_bounds,
         plot_args
     )
     plot_args.finish_figure(fig)

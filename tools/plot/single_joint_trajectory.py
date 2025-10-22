@@ -49,6 +49,12 @@ if __name__ == '__main__':
         help='draw circle for observation radius of rovers',
         action='store_true'
     )
+    # Add bounds for agents
+    parser.add_argument(
+        '--include-bounds',
+        help='draw bounds for each agent',
+        action='store_true'
+    )
     args = parser.parse_args()
 
     plot_joint_trajectory(
@@ -59,5 +65,6 @@ if __name__ == '__main__':
         args.influence_shading,
         args.uav_observation_radius,
         args.rover_observation_radius,
+        args.include_bounds,
         parser.dump_plot_args(args)
     )
