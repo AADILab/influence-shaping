@@ -156,8 +156,7 @@ def add_rover_trajectories(
         df: pd.DataFrame,
         num_rovers: int,
         individual_colors: bool,
-        rover_observation_radius: bool,
-        config: Optional[dict]
+        rover_observation_radii: Optional[List[float]]
     ):
     rover_colors = get_rover_colors(individual_colors)
     for i in range(num_rovers):
@@ -168,9 +167,8 @@ def add_rover_trajectories(
         final_y = ys.iloc[-1]
         ax.plot(xs, ys, ':', lw=2, color=color)
         ax.plot(final_x, final_y, 's', ms=8, color=color)
-        if rover_observation_radius:
-            rover_config = config['env']['agents']['rovers'][i]
-            obs_rad = rover_config['observation_radius']
+        if rover_observation_radii is not None:
+            obs_rad = rover_observation_radii[i]
             observation_circle = plt.Circle(
                 xy = (final_x, final_y),
                 radius = obs_rad,
@@ -186,8 +184,7 @@ def add_uav_trajectories(
         num_uavs: int,
         individual_colors: bool,
         influence_shading: bool,
-        uav_observation_radius: bool,
-        config: Optional[dict]
+        uav_observation_radii: Optional[List[float]]
     ):
     uav_colors = get_uav_colors(individual_colors)
     for i in range(num_uavs):
@@ -207,9 +204,8 @@ def add_uav_trajectories(
                 alpha=0.1
             )
             ax.add_patch(influence_circle)
-        if uav_observation_radius:
-            uav_config = config['env']['agents']['uavs'][i]
-            obs_rad = uav_config['observation_radius']
+        if uav_observation_radii is not None:
+            obs_rad = uav_observation_radii[i]
             observation_circle = plt.Circle(
                 xy = (final_x, final_y),
                 radius = obs_rad,
@@ -258,8 +254,19 @@ def generate_joint_trajectory_plot(
     num_rovers, num_uavs, _, _ \
         = get_num_entities_traj(labels=df.columns.to_list())
 
-    add_rover_trajectories(ax, df, num_rovers, individual_colors, rover_observation_radius, config)
-    add_uav_trajectories(ax, df, num_uavs, individual_colors, influence_shading, uav_observation_radius, config)
+    rover_observation_radii = None
+    if rover_observation_radius:
+        rover_observation_radii = [
+            rover_config['observation_radius'] for rover_config in config['env']['agents']['rovers']
+        ]
+    uav_observation_radii = None
+    if uav_observation_radius:
+        uav_observation_radii = [
+            uav_config['observation_radius'] for uav_config in config['env']['agents']['uavs']
+        ]
+
+    add_rover_trajectories(ax, df, num_rovers, individual_colors, rover_observation_radii)
+    add_uav_trajectories(ax, df, num_uavs, individual_colors, influence_shading, uav_observation_radii)
     for i, poi_config in enumerate(config['env']['pois']['rover_pois']):
         plot_poi(ax, poi_config, x=df['rover_poi_'+str(i)+'_x'][0], y=df['rover_poi_'+str(i)+'_y'][0], color='tab:green', radius_shading=not no_shading)
     for i, poi_config in enumerate(config['env']['pois']['hidden_pois']):
