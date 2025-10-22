@@ -7,7 +7,8 @@ from copy import deepcopy
 import numpy as np
 from influence.testing import TestEnv
 from influence.custom_env import createEnv
-from influence.ccea_lib import TeamInfo, CooperativeCoevolutionaryAlgorithm, FollowPolicy
+from influence.ccea_utils import RolloutPackIn
+from influence.ccea_lib import CooperativeCoevolutionaryAlgorithm, FollowPolicy
 
 class PickZeroPolicy():
     def forward(self):
@@ -51,20 +52,19 @@ class TestPickUav(TestEnv):
         # Build team policies
         # Rover always picks 0, uav does nothing
         policies = [PickZeroPolicy, DoNothingPolicy]
-        team = TeamInfo(
-            policies=policies,
+        rollout_pack_in = RolloutPackIn(
+            individuals=policies,
             seed=None
         )
 
         # Run sim
         eval_info = CooperativeCoevolutionaryAlgorithm.evaluateTeamStatic(
-            team=team,
+            rollout_pack_in=rollout_pack_in,
             template_policies=policies,
             config=config,
             num_rovers=1,
             num_uavs=1,
-            num_steps=10,
-            compute_team_fitness=True
+            num_steps=10
         )
 
         # The uav should have not moved and the rover should have moved at max velocity to the uav
@@ -107,20 +107,19 @@ class TestPickUav(TestEnv):
         # Build team policies
         # Rover always picks 1 (stay still), uav does nothing
         policies = [PickOnePolicy, DoNothingPolicy]
-        team = TeamInfo(
-            policies=policies,
+        rollout_pack_in = RolloutPackIn(
+            individuals=policies,
             seed=None
         )
 
         # Run sim
         eval_info = CooperativeCoevolutionaryAlgorithm.evaluateTeamStatic(
-            team=team,
+            rollout_pack_in=rollout_pack_in,
             template_policies=policies,
             config=config,
             num_rovers=1,
             num_uavs=1,
-            num_steps=10,
-            compute_team_fitness=True
+            num_steps=10
         )
 
         # The uav and rover both should not have moved
@@ -159,20 +158,19 @@ class TestPickUav(TestEnv):
         # Build team policies
         # Rover always picks 0, uav does nothing
         policies = [FollowPolicy, DoNothingPolicy]
-        team = TeamInfo(
-            policies=policies,
+        rollout_pack_in = RolloutPackIn(
+            individuals=policies,
             seed=None
         )
 
         # Run sim
         eval_info = CooperativeCoevolutionaryAlgorithm.evaluateTeamStatic(
-            team=team,
+            rollout_pack_in=rollout_pack_in,
             template_policies=policies,
             config=config,
             num_rovers=1,
             num_uavs=1,
-            num_steps=10,
-            compute_team_fitness=True
+            num_steps=10
         )
 
         # The uav should have not moved and the rover should have moved at max velocity to the uav
@@ -223,22 +221,21 @@ class TestPickUav(TestEnv):
         # Build team policies
         # Rover always picks 0, uav does nothing
         policies = [FollowPolicy, DoNothingPolicy, DoNothingPolicy]
-        team = TeamInfo(
-            policies=policies,
+        rollout_pack_in = RolloutPackIn(
+            individuals=policies,
             seed=None
         )
 
         # Run sim
         eval_info = CooperativeCoevolutionaryAlgorithm.evaluateTeamStatic(
-            team=team,
+            rollout_pack_in=rollout_pack_in,
             template_policies=policies,
             config=config,
             num_rovers=1,
             num_uavs=1,
-            num_steps=10,
-            compute_team_fitness=True
+            num_steps=10
         )
-        print(eval_info.joint_trajectory.states)
+        # print(eval_info.joint_trajectory.states)
 
         # The uav should have not moved and the rover should have moved at max velocity to the uav
         expected_rover_xs = np.linspace(5,10,6,dtype=int).tolist() + [10 for _ in range(4)]
@@ -291,20 +288,19 @@ class TestPickUav(TestEnv):
         # Build team policies
         # Rover always picks 0, uav does nothing
         policies = [FollowPolicy, DoNothingPolicy, DoNothingPolicy]
-        team = TeamInfo(
-            policies=policies,
+        rollout_pack_in = RolloutPackIn(
+            individuals=policies,
             seed=None
         )
 
         # Run sim
         eval_info = CooperativeCoevolutionaryAlgorithm.evaluateTeamStatic(
-            team=team,
+            rollout_pack_in=rollout_pack_in,
             template_policies=policies,
             config=config,
             num_rovers=1,
             num_uavs=len(config['env']['agents']['uavs']),
-            num_steps=10,
-            compute_team_fitness=True
+            num_steps=10
         )
 
         for rover_pos, uav_pos_A, uav_pos_B in eval_info.joint_trajectory.states:

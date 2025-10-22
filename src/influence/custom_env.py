@@ -222,8 +222,10 @@ class UavDistanceLidar(rovers.ISensor):
     def __init__(self, agent_types):
         super().__init__()
         self.agent_types = agent_types
+        self.m_num_sensed_uavs = 0
 
     def scan(self, agent_pack):
+        self.m_num_sensed_uavs = 0
         agent = agent_pack.agents[agent_pack.agent_index]
         distances = []
         for i in range(agent_pack.agents.size()):
@@ -231,6 +233,7 @@ class UavDistanceLidar(rovers.ISensor):
                 distance = calculateDistance(agent.position(), agent_pack.agents[i].position())
                 if distance <= agent.obs_radius():
                     distances.append( distance / agent.obs_radius() )
+                    self.m_num_sensed_uavs+=1
                 else:
                     distances.append(-1.0)
 
