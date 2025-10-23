@@ -42,7 +42,7 @@ if __name__ == '__main__':
     parser.add_argument(
         '--downsample',
         help='only generate one plot for every _ joint trajectories',
-        action='store_true'
+        type=int
     )
     parser.add_plot_args()
 

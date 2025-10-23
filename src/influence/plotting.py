@@ -157,13 +157,17 @@ def add_rover_trajectories(
         num_rovers: int,
         individual_colors: bool,
         rover_observation_radii: Optional[List[float]],
-        all_rover_bounds: Optional[List[Optional[dict]]]
+        all_rover_bounds: Optional[List[Optional[dict]]],
+        num_steps: Optional[int]
     ):
     rover_colors = get_rover_colors(individual_colors)
     for i in range(num_rovers):
         color = rover_colors[i%len(rover_colors)]
         xs = df['rover_'+str(i)+'_x']
         ys = df['rover_'+str(i)+'_y']
+        if num_steps is not None:
+            xs = xs.iloc[0:num_steps]
+            ys = ys.iloc[0:num_steps]
         final_x = xs.iloc[-1]
         final_y = ys.iloc[-1]
         ax.plot(xs, ys, ':', lw=2, color=color)
@@ -203,13 +207,17 @@ def add_uav_trajectories(
         individual_colors: bool,
         influence_shading: bool,
         uav_observation_radii: Optional[List[float]],
-        all_uav_bounds: Optional[List[Optional[dict]]]
+        all_uav_bounds: Optional[List[Optional[dict]]],
+        num_steps: int
     ):
     uav_colors = get_uav_colors(individual_colors)
     for i in range(num_uavs):
         color = uav_colors[i%len(uav_colors)]
         xs = df['uav_'+str(i)+'_x']
         ys = df['uav_'+str(i)+'_y']
+        if num_steps is not None:
+            xs = xs.iloc[0:num_steps]
+            ys = ys.iloc[0:num_steps]
         final_x = xs.iloc[-1]
         final_y = ys.iloc[-1]
         ax.plot(xs, ys, ':', lw=2, color=color)
@@ -253,6 +261,7 @@ def add_uav_trajectories(
 
 def generate_joint_trajectory_plot(
         joint_traj_dir: Path,
+        num_steps: Optional[int],
         individual_colors: bool,
         no_shading: bool,
         no_grid: bool,
@@ -322,8 +331,8 @@ def generate_joint_trajectory_plot(
             else:
                 all_uav_bounds.append(None)
 
-    add_rover_trajectories(ax, df, num_rovers, individual_colors, rover_observation_radii, all_rover_bounds)
-    add_uav_trajectories(ax, df, num_uavs, individual_colors, influence_shading, uav_observation_radii, all_uav_bounds)
+    add_rover_trajectories(ax, df, num_rovers, individual_colors, rover_observation_radii, all_rover_bounds, num_steps)
+    add_uav_trajectories(ax, df, num_uavs, individual_colors, influence_shading, uav_observation_radii, all_uav_bounds, num_steps)
     for i, poi_config in enumerate(config['env']['pois']['rover_pois']):
         plot_poi(ax, poi_config, x=df['rover_poi_'+str(i)+'_x'][0], y=df['rover_poi_'+str(i)+'_y'][0], color='tab:green', radius_shading=not no_shading)
     for i, poi_config in enumerate(config['env']['pois']['hidden_pois']):
@@ -341,6 +350,7 @@ def generate_joint_trajectory_plot(
 
 def plot_joint_trajectory(
         joint_traj_dir: Path,
+        num_steps: Optional[int],
         individual_colors: bool,
         no_poi_shading: bool,
         no_grid: bool,
@@ -352,6 +362,7 @@ def plot_joint_trajectory(
     ):
     fig = generate_joint_trajectory_plot(
         joint_traj_dir,
+        num_steps,
         individual_colors,
         no_poi_shading,
         no_grid,
@@ -688,17 +699,22 @@ def generate_joint_trajectory_tree_plots(root_dir: Path, out_dir: Optional[Path]
     jt_dirs = [Path(jt_dir) for jt_dir in jt_dirs]
 
 
-    # Plot each one
-    for jt_dir in jt_dirs:
+    # Plot each one (depending on downsample)
+    for jt_dir in jt_dirs[::downsample]:
         dir_list = str(jt_dir).split("/")
         dir_name = "/".join(dir_list[dir_list.index(root_dir.name)+1:-1])
         file_name = jt_dir.name.replace('.csv', '.png')
 
         plot_joint_trajectory(
             joint_traj_dir=jt_dir,
+            num_steps=None,
             individual_colors=individual_colors,
-            no_shading=no_shading,
+            no_poi_shading=no_shading,
             no_grid=no_grid,
+            influence_shading=False,
+            uav_observation_radius=None,
+            rover_observation_radius=None,
+            include_bounds=False,
             plot_args=batch_plot_args.build_plot_args(
                 title=jt_dir.name,
                 output=out_dir/dir_name/file_name

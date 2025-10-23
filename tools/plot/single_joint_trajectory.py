@@ -17,6 +17,11 @@ if __name__ == '__main__':
         type=str
     )
     parser.add_argument(
+        '--num_steps',
+        help='number of steps of the joint trajectory to plot',
+        type=int
+    )
+    parser.add_argument(
         '--individual-colors',
         help='plot each agent as a different color',
         action='store_true'
@@ -59,6 +64,7 @@ if __name__ == '__main__':
 
     plot_joint_trajectory(
         Path(args.joint_traj_dir),
+        args.num_steps,
         args.individual_colors,
         args.no_poi_shading,
         args.no_grid,
