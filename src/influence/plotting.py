@@ -676,7 +676,20 @@ def sort_jt_dirs_helper(jt_dirs: List[str], level: int):
 def plot_comparison_tree(root_dir: Path, out_dir: Optional[Path] = None, use_fitness_colors:bool = False, csv_name: str = DEFAULT_FITNESS_NAME, batch_plot_args: BatchPlotArgs = None, batch_line_plot_args: BatchLinePlotArgs = None):
     generate_experiment_tree_plots(root_dir, out_dir, use_fitness_colors, csv_name, batch_plot_args, batch_line_plot_args)
 
-def generate_joint_trajectory_tree_plots(root_dir: Path, out_dir: Optional[Path] = None, individual_colors: bool = False, no_shading: bool = False, no_grid: bool = False, downsample: int = 1, batch_plot_args: BatchPlotArgs = None):
+def generate_joint_trajectory_tree_plots(
+        root_dir: Path,
+        out_dir: Optional[Path] = None,
+        num_steps: Optional[int] = None,
+        individual_colors: bool = False,
+        no_shading: bool = False,
+        no_grid: bool = False,
+        influence_shading: bool = False,
+        uav_observation_radius: bool = False,
+        rover_observation_radius: bool = False,
+        include_bounds: bool = False,
+        downsample: int = 1,
+        batch_plot_args: BatchPlotArgs = None
+    ):
     """Generate all the joint trajectories in this experiment tree"""
 
     if out_dir is None:
@@ -707,22 +720,48 @@ def generate_joint_trajectory_tree_plots(root_dir: Path, out_dir: Optional[Path]
 
         plot_joint_trajectory(
             joint_traj_dir=jt_dir,
-            num_steps=None,
+            num_steps=num_steps,
             individual_colors=individual_colors,
             no_poi_shading=no_shading,
             no_grid=no_grid,
-            influence_shading=False,
-            uav_observation_radius=None,
-            rover_observation_radius=None,
-            include_bounds=False,
+            influence_shading=influence_shading,
+            uav_observation_radius=uav_observation_radius,
+            rover_observation_radius=rover_observation_radius,
+            include_bounds=include_bounds,
             plot_args=batch_plot_args.build_plot_args(
                 title=jt_dir.name,
                 output=out_dir/dir_name/file_name
             )
         )
 
-def plot_joint_trajectory_tree(root_dir: Path, out_dir: Optional[Path] = None, individual_colors: bool = False, no_shading: bool = False, no_grid: bool = False, downsample: int = 1, batch_plot_args: BatchPlotArgs = None):
-    generate_joint_trajectory_tree_plots(root_dir, out_dir, individual_colors, no_shading, no_grid, downsample, batch_plot_args)
+def plot_joint_trajectory_tree(
+        root_dir: Path,
+        out_dir: Optional[Path] = None,
+        num_steps: Optional[int] = None,
+        individual_colors: bool = False,
+        no_poi_shading: bool = False,
+        no_grid: bool = False,
+        influence_shading: bool = False,
+        uav_observation_radius: bool = False,
+        rover_observation_radius: bool = False,
+        include_bounds: bool = False,
+        downsample: int = 1,
+        batch_plot_args: BatchPlotArgs = None
+    ):
+    generate_joint_trajectory_tree_plots(
+        root_dir,
+        out_dir,
+        num_steps,
+        individual_colors,
+        no_poi_shading,
+        no_grid,
+        influence_shading,
+        uav_observation_radius,
+        rover_observation_radius,
+        include_bounds,
+        downsample,
+        batch_plot_args
+    )
 
 def generate_config_plot(config_dir: Path, individual_colors: bool, no_shading: bool, plot_args: PlotArgs):
     # Load the config

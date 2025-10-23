@@ -25,18 +25,47 @@ if __name__ == '__main__':
         default=None
     )
     parser.add_argument(
+        '--num_steps',
+        help='number of steps of the joint trajectory to plot',
+        type=int
+    )
+    parser.add_argument(
         '--individual-colors',
         help='plot each agent as a different color',
         action='store_true'
     )
     parser.add_argument(
-        '--no-shading',
+        '--no-poi-shading',
         help='turn off shading for poi observation radii',
         action='store_true'
     )
     parser.add_argument(
         '--no-grid',
         help='turn off grid in background',
+        action='store_true'
+    )
+    # Add shading for radius of influence of uavs
+    parser.add_argument(
+        '--influence-shading',
+        help='turn on shading for radius of influence of uavs',
+        action='store_true'
+    )
+    # Add circle for observation radius of uavs
+    parser.add_argument(
+        '--uav-observation-radius',
+        help='draw circle for observation radius of uavs',
+        action='store_true'
+    )
+    # Add circle for observation radius of rovers
+    parser.add_argument(
+        '--rover-observation-radius',
+        help='draw circle for observation radius of rovers',
+        action='store_true'
+    )
+    # Add bounds for agents
+    parser.add_argument(
+        '--include-bounds',
+        help='draw bounds for each agent',
         action='store_true'
     )
     parser.add_argument(
@@ -49,4 +78,17 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     out_dir = Path(args.out_dir) if args.out_dir is not None else None
-    plot_joint_trajectory_tree(Path(args.root_dir), out_dir, args.individual_colors, args.no_shading, args.no_grid, args.downsample, parser.dump_batch_plot_args(args))
+    plot_joint_trajectory_tree(
+        Path(args.root_dir),
+        out_dir,
+        args.num_steps,
+        args.individual_colors,
+        args.no_poi_shading,
+        args.no_grid,
+        args.influence_shading,
+        args.uav_observation_radius,
+        args.rover_observation_radius,
+        args.include_bounds,
+        args.downsample,
+        parser.dump_batch_plot_args(args)
+    )
