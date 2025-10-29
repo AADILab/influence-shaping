@@ -139,6 +139,11 @@ class CooperativeCoevolutionaryAlgorithm():
         if 'team_formation' in self.config['ccea'] and 'type' in self.config['ccea']['team_formation']:
             self.team_formation_type = self.config['ccea']['team_formation']['type']
 
+        # test team params
+        self.test_adhoc_team_switch = False
+        if 'test_adhoc_team_switch' in self.config['ccea']['evaluation']:
+            self.test_adhoc_team_switch = self.config['ccea']['evaluation']['test_adhoc_team_switch']
+
     def get_individual_uid(self):
         uid = self.individual_uid
         self.individual_uid+=1
@@ -776,10 +781,17 @@ class CooperativeCoevolutionaryAlgorithm():
         self.assign_agent_fitnesses(adhoc_team_packs)
 
         # Re-simulate our test team (pick from all teams)
-        test_team_pack = max(team_packs, key=lambda tp: tp.team.collapsed_team_fitness)
+        if self.test_adhoc_team_switch:
+            test_team_individuals = [
+                max(individuals, key=lambda ind: ind.shaped_fitness) for individuals in agent_populations
+            ]
+        else:
+            test_team_individuals = \
+                max(team_packs, key=lambda tp: tp.team.collapsed_team_fitness).team.individuals
+
         seeds = self.get_rollout_seeds()
         test_rollout_pack_ins = [
-            RolloutPackIn(individuals=test_team_pack.team.individuals, seed=seed) for seed in seeds
+            RolloutPackIn(individuals=test_team_individuals, seed=seed) for seed in seeds
         ]
         test_rollout_pack_outs = self.simulate_rollouts(test_rollout_pack_ins)
         test_team_pack = self.build_team_pack(
