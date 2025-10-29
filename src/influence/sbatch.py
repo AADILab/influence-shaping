@@ -80,7 +80,7 @@ def write_sbatch_sh_file(out_root, sbatch_commands):
         file.write(batch_file_str)
     os.chmod(sbatch_dir, os.stat(sbatch_dir).st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
 
-def write_sbatch_executables_cli(top_dir: str, out_root: str, time: str, seperate_trials: bool):
+def write_sbatch_executables_cli(top_dir: str, out_root: str, time: str, seperate_trials: bool, cnv: bool):
     if len(os.listdir(top_dir)) == 0:
         print("Warning: Specified results directory is empty. Not writing out files.")
         return None
@@ -91,7 +91,7 @@ def write_sbatch_executables_cli(top_dir: str, out_root: str, time: str, seperat
         if 'results' not in top_dir:
             raise ValueError("No 'results' folder found in root_dir. sbatch_directory must be specified so sbatch files can be saved somewhere")
         out_root = top_dir.replace('results', 'sbatch')
-    write_sbatch_executables(Path(top_dir), Path(out_root), time, seperate_trials)
+    write_sbatch_executables(Path(top_dir), Path(out_root), time, seperate_trials, cnv)
     print(f"Successfully wrote top level executable to {out_root}/sbatch.sh")
     return out_root+'/sbatch.sh'
 
@@ -105,8 +105,11 @@ def extract_path_after_results(path: Path):
     except ValueError:
         raise ValueError(f"'results' not found in path: {path}")
 
-def generate_bash_files(config_dirs, out_root, time, seperate_trials):
+def generate_bash_files(config_dirs: List[Path], out_root: Path, time: str, seperate_trials: bool, cnv: bool):
     # Define the string you want to write
+    nodelist = 'cn-v-[1-9],cn-t-1,cn-s-[1-5],cn-r-[1-4]'
+    if cnv:
+        nodelist ='cn-v-[1-9]'
     common_sbatch_directives = [
         "#SBATCH -A kt-lab",
         "#SBATCH --partition=share,preempt",
@@ -115,7 +118,7 @@ def generate_bash_files(config_dirs, out_root, time, seperate_trials):
         "#SBATCH --nodes=1",
         "#SBATCH --time="+time,
         "#SBATCH --requeue",
-        "#SBATCH --nodelist=cn-v-[1-9],cn-t-1,cn-s-[1-5],cn-r-[1-4]"
+        "#SBATCH --nodelist="+nodelist
     ]
     common_slurm_checks = [
         'echo "=== SLURM Directives ==="',
@@ -209,11 +212,11 @@ def write_bash_files(out_root: Path, bash_file_infos: List[FileInfo]):
         with open(os.path.expanduser(bash_file_info.path), 'w') as file:
             file.write(bash_file_info.content)
 
-def write_sbatch_executables(top_dir: Path, out_root: Path, time: str, seperate_trials: bool):
+def write_sbatch_executables(top_dir: Path, out_root: Path, time: str, seperate_trials: bool, cnv: bool):
     top_dir = top_dir.expanduser()
     out_root = out_root.expanduser()
     config_dirs = get_config_dirs(top_dir)
-    bash_file_infos = generate_bash_files(config_dirs, out_root, time, seperate_trials)
+    bash_file_infos = generate_bash_files(config_dirs, out_root, time, seperate_trials, cnv)
     write_bash_files(out_root, bash_file_infos)
 
     sbatch_commands = generate_sbatch_commands(bash_file_infos)

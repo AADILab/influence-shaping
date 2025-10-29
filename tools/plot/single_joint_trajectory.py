@@ -17,7 +17,7 @@ if __name__ == '__main__':
         type=str
     )
     parser.add_argument(
-        '--num_steps',
+        '--num-steps',
         help='number of steps of the joint trajectory to plot',
         type=int
     )

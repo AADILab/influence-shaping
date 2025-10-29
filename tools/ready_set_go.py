@@ -14,10 +14,11 @@ if __name__ == "__main__":
     parser.add_argument("config_directory", help="Directory of yaml file with sweep parameters")
     parser.add_argument('--time', help='time limit for job formatted as D-HH:MM:SS', default='2-00:00:00')
     parser.add_argument("--seperate-trials", help="flag to treat each trial as a seperate job", action='store_true')
+    parser.add_argument('--cnv', help='flag to only request nodes cn-v-[1-9]', action='store_true')
     args = parser.parse_args()
 
     top_write_dir = write_config_tree_cli(args.config_directory, None)
-    sbatch_exec = write_sbatch_executables_cli(top_write_dir, None, args.time, args.seperate_trials)
+    sbatch_exec = write_sbatch_executables_cli(top_write_dir, None, args.time, args.seperate_trials, args.cnv)
 
     print(f"Running {sbatch_exec}...")
     try:
