@@ -409,6 +409,9 @@ class RoverSequenceConstraint(AbstractRoverConstraint):
                 steps.append(self._step_is_satisfied(entity_pack, t))
             return max(steps)
 
+# TODO: Add RoverStepConstraint to complement value tracking for POIs
+# Basically gives a reward at each step based on the value that we're tracking for POIs
+
 def createRoverPOI(value, obs_rad, capture_radius, coupling, is_rover_list, constraint):
     if constraint == 'sequential':
         roverConstraint = RoverSequenceConstraint(coupling, is_rover_list)

@@ -122,14 +122,14 @@ def generate_bash_files(config_dirs: List[Path], out_root: Path, time: str, sepe
     ]
     common_slurm_checks = [
         'echo "=== SLURM Directives ==="',
-        'echo "  SLURM_JOB_ID: \$SLURM_JOB_ID"',
-        'echo "  SLURM_JOB_NAME: \$SLURM_JOB_NAME"',
-        'echo "  SLURM_CPUS_ON_NODE: \$SLURM_CPUS_ON_NODE"',
-        'echo "  SLURM_MEM_PER_NODE: \$SLURM_MEM_PER_NODE"',
-        'echo "  SLURM_JOB_NUM_NODES: \$SLURM_JOB_N,UM_NODES"'
-        'echo "  SLURM_NODELIST: \$SLURM_NODELIST"',
-        'echo "  SLURM_SUBMIT_DIR: \$SLURM_SUBMIT_DIR"',
-        'echo "  SLURM_PARTITION: \$SLURM_JOB_PARTITION"'
+        'echo "  SLURM_JOB_ID: $SLURM_JOB_ID"',
+        'echo "  SLURM_JOB_NAME: $SLURM_JOB_NAME"',
+        'echo "  SLURM_CPUS_ON_NODE: $SLURM_CPUS_ON_NODE"',
+        'echo "  SLURM_MEM_PER_NODE: $SLURM_MEM_PER_NODE"',
+        'echo "  SLURM_JOB_NUM_NODES: $SLURM_JOB_NUM_NODES"',
+        'echo "  SLURM_NODELIST: $SLURM_NODELIST"',
+        'echo "  SLURM_SUBMIT_DIR: $SLURM_SUBMIT_DIR"',
+        'echo "  SLURM_PARTITION: $SLURM_JOB_PARTITION"'
     ]
     common_git_checks = [
         'cd ~/influence-shaping/',

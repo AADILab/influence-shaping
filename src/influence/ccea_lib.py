@@ -436,6 +436,13 @@ class CooperativeCoevolutionaryAlgorithm():
             if type(nn) is NeuralNetwork:
                 nn.setWeights(individual.weights)
 
+        # Setup rover movement constraint
+        rovers_cant_move_without_uav = [False for _ in range(num_rovers)]
+
+        for rover_id, rover_config in enumerate(config['env']['agents']['rovers']):
+            if 'needs_uav_to_move' in rover_config:
+                rovers_cant_move_without_uav[rover_id] = rover_config['needs_uav_to_move']
+
         # Set up the enviornment
         env = createEnv(config)
 
@@ -508,7 +515,9 @@ class CooperativeCoevolutionaryAlgorithm():
                 # If the rover is too far from a uav, it cannot move
 
                 # If this is a rover and it did not sense any uavs, don't move
-                if ind < num_rovers and env.rovers()[ind].m_sensor.m_num_sensed_uavs == 0:
+                if ind < num_rovers \
+                    and env.rovers()[ind].m_sensor.m_num_sensed_uavs == 0 \
+                        and rovers_cant_move_without_uav[ind]:
                     input_action_arr = np.array([0.0,0.0])
 
                 # Save this info for debugging purposes
@@ -517,6 +526,11 @@ class CooperativeCoevolutionaryAlgorithm():
             for action_arr in actions_arrs:
                 action = rovers.tensor(action_arr)
                 actions.append(action)
+            # TODO: Might need to start getting the reward at each timestep rather than once at the end
+            # And then just summing them together
+            # The value tracking for POIs should make this possible
+            # And then I guess we do D or D-Ind at each timestep
+            # Which should make it possible to do influence tracing
             observations = env.step_without_rewards(actions)
 
             # Get all the states and all the actions of all agents
@@ -763,7 +777,8 @@ class CooperativeCoevolutionaryAlgorithm():
 
     def evaluate_populations(self, agent_populations, team_population):
         # Create the teams
-        raw_teams = [team.individuals for team in team_population]+self.form_softmax_teams(agent_populations)
+        # TODO: Swap out form_softmax_teams for form_teams
+        raw_teams = [team.individuals for team in team_population]+self.form_teams(agent_populations)
         rollout_pack_ins = self.build_rollout_pack_ins(raw_teams)
 
         # Now run the rollouts

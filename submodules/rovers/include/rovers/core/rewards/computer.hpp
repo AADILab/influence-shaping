@@ -152,7 +152,7 @@ class RewardComputer {
         return allornothing_influence_array;
     }
 
-    /* Create system influence array that tells us when agent k was influenced 
+    /* Create system influence array that tells us when agent k was influenced
     by any agent in the system at a particular timestep
     Indexing is [t][k] where t is the timestep and k is the agent being influenced
     OPTIONAL: if agent i_ is specified, then we will not consider agent i_'s influence
@@ -274,7 +274,7 @@ class RewardComputer {
 
         // Counters tell us how much each agent was influenced by other agents
         // First index (k) is the agent being influenced
-        // Second index (i) is how much agent i influenced agent k 
+        // Second index (i) is how much agent i influenced agent k
         std::vector<std::vector<int>> counters(m_rovers.size(), std::vector<int>(m_rovers.size(), 0));
         for (int t=0; t < t_final; ++t) {
             // std::cout << "t " << t << std::endl;
@@ -295,7 +295,7 @@ class RewardComputer {
         // std::cout << "RewardComputer::prep_all_or_nothing_influence() Finished creating counters" << std::endl;
         // std::cout << "counters.size() " << counters.size() << std::endl;
         for (int k=0; k < counters.size(); ++k) {
-            // std::cout << "counters[" << k << "]" << std::endl; 
+            // std::cout << "counters[" << k << "]" << std::endl;
             for (int i=0; i < counters.size(); ++i) {
                 // std::cout << "counters[" << k << "][" << i << "] = " << counters[k][i] << std::endl;
             }
@@ -338,7 +338,7 @@ class RewardComputer {
 
         return influence_sets;
     }
-    
+
     // TODO: This is based on position RIGHT NOW of each agent
     // need to make this based on position of agents at A PARTICULAR POINT IN TIME ALONG THEIR PATHS
     int is_influencing(Agent agent0, Agent agent1, int t) const {
@@ -378,7 +378,7 @@ class RewardComputer {
             }
             else if (reward_type == "IndirectDifference") {
                 // std::cout << "Reward::compute() Computing Indirect Difference" << std::endl;
-                // Start simple. 
+                // Start simple.
                 // Assume that only rovers can count as being influenced
                 // Use all or nothing influence assignment. Just remove the entire trajectories.
                 // Refactor for more options later.
@@ -388,8 +388,8 @@ class RewardComputer {
                 else if (m_rovers[i]->indirect_difference_parameters().m_assignment == "automatic") {
                     // Timestep based removal
                     if (m_rovers[i]->indirect_difference_parameters().m_automatic_parameters.m_timescale == "timestep") {
-                        // In this route, create sets at each time step. If someone was influenced, then put a stand-in for their state as 
-                        // a counterfactual. For instance (need to check if this will work), put -1,-1 as the position 
+                        // In this route, create sets at each time step. If someone was influenced, then put a stand-in for their state as
+                        // a counterfactual. For instance (need to check if this will work), put -1,-1 as the position
                         // (or if that doesn't work, add a std::vector<boolean> that has 0 for removed at step i vs 1 for present at step i. Modify G to check this bool)
 
                         // Construct the influence array telling us who to remove when using the specified method
@@ -427,6 +427,15 @@ class RewardComputer {
                         std::vector<Agent> counterfactual_rovers = create_counterfactual_rovers(
                             m_rovers, influence_array
                         );
+
+                        // I guess this is where I can build a trace array? Or modify influence_array to contain
+                        // information about the traces?
+                        // I think I'd be using the same counterfactual removal
+                        // except now we give a partial reward for the traces
+                        // maybe
+                        // m_Global.compute_with_traces()
+                        // remove counterfactual rovers, but provide a partial reward based on the trace
+                        // and remove yourself
 
                         // Now compute d-indirect using these rovers
                         // reward = G - m_Global.compute(AgentPack(0, counterfactual_rovers, m_pois));
