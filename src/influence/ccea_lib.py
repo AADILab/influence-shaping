@@ -38,6 +38,9 @@ class CooperativeCoevolutionaryAlgorithm():
 
         self.n_team_elites = self.config['ccea']['selection']['n_elites_binary_tournament']['n_team_elites']
         self.n_individual_elites = self.config['ccea']['selection']['n_elites_binary_tournament']['n_individual_elites']
+        self.n_individual_elites_based_on_team_fitness = 0
+        if 'n_individual_elites_based_on_team_fitness' in self.config['ccea']['selection']['n_elites_binary_tournament']:
+            self.n_individual_elites_based_on_team_fitness = self.config['ccea']['selection']['n_elites_binary_tournament']['n_individual_elites_based_on_team_fitness']
 
         self.num_rollouts_per_team = self.config["ccea"]["evaluation"]["multi_rollout"]["num_rollouts"]
         self.rpt = self.num_rollouts_per_team
@@ -572,11 +575,13 @@ class CooperativeCoevolutionaryAlgorithm():
             offspring.append(winner)
         return offspring
 
-    def sel_best(self, population: Union[IndividualPopulation, List[TeamPack]], num_best: int):
-        if type(population[0]) == Individual:
+    def sel_best_individuals(self, population: IndividualPopulation, num_best: int, select_based_on_team_fitness=False):
+            if select_based_on_team_fitness:
+                return sorted(population, key=lambda ind: ind.team_fitness, reverse=True)[:num_best]
             return sorted(population, key=lambda ind: ind.shaped_fitness, reverse=True)[:num_best]
-        else:
-            return sorted(population, key=lambda tp: tp.team.collapsed_team_fitness, reverse=True)[:num_best]
+
+    def sel_best_teams(self, population: List[TeamPack], num_best: int):
+        return sorted(population, key=lambda tp: tp.team.collapsed_team_fitness, reverse=True)[:num_best]
 
     def mutate_individual(self, individual):
         """Apply Gaussian mutation to an individual"""
@@ -826,7 +831,7 @@ class CooperativeCoevolutionaryAlgorithm():
             team_packs: List[TeamPack]
         ) -> Tuple[List[IndividualPopulation], TeamPopulation]:
         # Put our best teams into team offspring
-        team_offspring_pop: List[Team] = deepcopy([tp.team for tp in self.sel_best(team_packs, self.n_team_elites)])
+        team_offspring_pop: List[Team] = deepcopy([tp.team for tp in self.sel_best_teams(team_packs, self.n_team_elites)])
 
         # Add individuals from teams back into agent populations for selection
         temp_agent_populations = []
@@ -836,8 +841,25 @@ class CooperativeCoevolutionaryAlgorithm():
         # Get the offspring for agent populations
         agent_offspring_pops: List[IndividualPopulation] = []
         for agent_pop in temp_agent_populations:
-            offspring_pop = deepcopy(self.sel_best(agent_pop, self.n_individual_elites))
-            tourn_select = deepcopy(self.sel_tournament(agent_pop, self.agent_population_size-self.n_individual_elites, 2))
+            offspring_pop = deepcopy(
+                self.sel_best_individuals(
+                    agent_pop,
+                    self.n_individual_elites
+                )
+            ) + deepcopy(
+                self.sel_best_individuals(
+                    agent_pop,
+                    self.n_individual_elites_based_on_team_fitness,
+                    select_based_on_team_fitness=True
+                )
+            )
+            tourn_select = deepcopy(
+                self.sel_tournament(
+                    agent_pop,
+                    self.agent_population_size-self.n_individual_elites-self.n_individual_elites_based_on_team_fitness,
+                    tournsize=2
+                )
+            )
             for individual in tourn_select:
                 self.mutate_individual(individual)
             offspring_pop += tourn_select
