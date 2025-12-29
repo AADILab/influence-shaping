@@ -11,6 +11,22 @@ from pprint import pprint
 from influence.config import load_config
 from influence.parsing import PlotArgs, LinePlotArgs, BatchPlotArgs, BatchLinePlotArgs
 
+# Configure matplotlib to use LaTeX fonts
+# and nice text sizes
+# and a consistent figure size
+plt.rcParams.update({
+    "text.usetex": True,
+    "font.family": "serif",
+    "font.serif": ["Computer Modern Roman"],
+    "font.size": 14,           # Base font size
+    "axes.labelsize": 16,      # x and y labels
+    "axes.titlesize": 18,      # Title
+    "xtick.labelsize": 14,     # x tick labels
+    "ytick.labelsize": 14,     # y tick labels
+    "legend.fontsize": 14,     # Legend
+    "figure.figsize": (6,4.5)    # Figure size
+})
+
 COMPARISON_NAMES = [
     'Global',
     'Difference',
@@ -20,15 +36,75 @@ COMPARISON_NAMES = [
     'D-Indirect-Timestep-System',
     'D-Indirect-Timestep-Difference',
     'D-I-Sys-uavs-D-rovers',
-    'G-uavs-D-rovers'
+    'G-uavs-D-rovers',
+    'D-Indirect-Timestep-No-Archive',
+    'D-Indirect-Traj-No-Archive'
 ]
-COMPARISON_COLORS = list(plt.cm.colors.TABLEAU_COLORS.values())
-
+COMPARISON_COLORS = [
+    'tab:blue',
+    'tab:orange',
+    'tab:green',
+    'tab:red',
+    'tab:purple',
+    'tab:brown',
+    'tab:pink',
+    'tab:gray',
+    'tab:olive',
+    'tab:purple',
+    'tab:olive'
+]
+COMPARISON_MARKER_MAP = {
+    'tab:blue': 's',     # square
+    'tab:orange': '^',   # triangle-up
+    'tab:green': 'o',    # circle
+    'tab:red': 'D',      # diamond
+    'tab:purple': 'P',   # plus (filled)
+    'tab:brown': 'X',    # x (filled)
+    'tab:pink': 'v',     # triangle-down
+    'tab:gray': '*',     # star
+    'tab:olive': 'd',    # thin diamond
+    None: None           # no marker if we don't set the color
+}
 COMPARISON_COLORS_DICT = {
     name: color for name, color in zip(COMPARISON_NAMES, COMPARISON_COLORS)
 }
-
 DEFAULT_FITNESS_NAME = 'fitness.csv'
+
+def compute_markevery(marker_spacing: Union[int, float], num_pts: int) -> int:
+    """
+    Convert a desired marker spacing into an integer `markevery`
+    suitable for matplotlib's index-based marker placement.
+
+    Parameters
+    ----------
+    marker_spacing : int or float
+        - int   -> use directly as markevery
+        - float -> fraction of the x-axis domain (0 < f <= 1)
+    num_pts : int
+        Number of data points in the line
+
+    Returns
+    -------
+    int
+        Integer value for markevery
+    """
+    if isinstance(marker_spacing, int):
+        if marker_spacing <= 0:
+            raise ValueError("marker_spacing integer must be > 0")
+        return marker_spacing
+
+    if isinstance(marker_spacing, float):
+        if not (0.0 < marker_spacing <= 1.0):
+            raise ValueError("marker_spacing float must be in (0, 1]")
+        if num_pts <= 1:
+            raise ValueError("num_pts must be > 1")
+
+        step: int = round(marker_spacing * num_pts)
+
+        # Ensure at least one marker interval
+        return max(1, step)
+
+    raise TypeError("marker_spacing must be int or float")
 
 def sort_fitness_path_list(input_list: List[Path]):
     # Filter into fitness shaping names and non-fitness shaping names
@@ -374,7 +450,12 @@ def plot_joint_trajectory(
     )
     plot_args.finish_figure(fig)
 
-def add_learning_curve(ax: Axes, df: pd.DataFrame, line_plot_args: LinePlotArgs, label: str = 'team'):
+def add_learning_curve(
+        ax: Axes,
+        df: pd.DataFrame,
+        line_plot_args: LinePlotArgs,
+        label: str = 'team'
+    ):
     """Add the team's learning curve from the specified fitness directory to the Axes object"""
 
     # Get the points for plotting team fitness
@@ -385,7 +466,12 @@ def add_learning_curve(ax: Axes, df: pd.DataFrame, line_plot_args: LinePlotArgs,
 
     return gens
 
-def generate_learning_curve_plot(fitness_dir, individual_agents, line_plot_args: LinePlotArgs, plot_args: PlotArgs):
+def generate_learning_curve_plot(
+        fitness_dir,
+        individual_agents,
+        line_plot_args: LinePlotArgs,
+        plot_args: PlotArgs
+    ):
     """Generate plot of the learning curve specified in fitness_dir"""
 
     fig, ax = plt.subplots(1,1)
@@ -421,11 +507,31 @@ def generate_learning_curve_plot(fitness_dir, individual_agents, line_plot_args:
 
     return fig
 
-def plot_learning_curve(fitness_dir: Path, individual_agents: str, line_plot_args: LinePlotArgs, plot_args: PlotArgs):
+def plot_learning_curve(
+        fitness_dir: Path,
+        individual_agents: str,
+        line_plot_args: LinePlotArgs,
+        plot_args: PlotArgs
+    ):
     fig = generate_learning_curve_plot(fitness_dir, individual_agents, line_plot_args, plot_args)
     plot_args.finish_figure(fig)
 
-def add_stat_learning_curve(ax: Axes, individual_trials: bool, csv_name: str, trials_dir: Path, label: str, line_plot_args: LinePlotArgs, color: Optional[Union[str,Tuple[float]]] = None):
+def add_stat_learning_curve(
+        ax: Axes,
+        individual_trials: bool,
+        csv_name: str,
+        trials_dir: Path,
+        label: str,
+        line_plot_args: LinePlotArgs,
+        color: Optional[Union[str,Tuple[float]]] = None,
+        marker: Optional[str] = None
+    ):
+    # Set default color and marker
+    if color is None:
+        color = COMPARISON_COLORS[0]
+    if marker is None:
+        marker = COMPARISON_MARKER_MAP[color]
+
     # Get the directories of trials
     dirs = [trials_dir/dir for dir in os.listdir(trials_dir) if 'trial_' in dir]
 
@@ -465,23 +571,45 @@ def add_stat_learning_curve(ax: Axes, individual_trials: bool, csv_name: str, tr
         gens, avg = line_plot_args.get_pts(gens, avg)
         low_err = line_plot_args.get_ys(low_err)
         upp_err = line_plot_args.get_ys(upp_err)
+        # print('stats for ', trials_dir, ' | avg[1,000]: ', avg[1000], ' | avg[-1]: ', avg[-1])
+
+        # Compute marker spacing
+        markevery=compute_markevery(marker_spacing=0.1, num_pts=len(gens))
 
         # Plot statistics
-        if color is None:
-            ax.plot(gens, avg, label=label)
-            ax.fill_between(gens, low_err, upp_err, alpha=0.2)
-        else:
-            ax.plot(gens, avg, label=label, color=color)
-            ax.fill_between(gens, low_err, upp_err, alpha=0.2, facecolor=color)
+        ax.plot(
+            gens,
+            avg,
+            label=label,
+            color=color,
+            marker=marker,
+            markevery=markevery,
+            markersize=10
+        )
+        ax.fill_between(
+            gens,
+            low_err,
+            upp_err,
+            alpha=0.2,
+            facecolor=color
+        )
 
         # Set ax ylim based on poi values in config
         config = load_config(trials_dir/'config.yaml')
-        high_y = sum(poi_config['value'] for poi_config in config['env']['pois']['hidden_pois']+config['env']['pois']['rover_pois'])
+        high_y = sum(
+            poi_config['value'] for poi_config in config['env']['pois']['hidden_pois']+config['env']['pois']['rover_pois']
+        )
         ax.set_ylim([0, high_y])
 
         return gens
 
-def generate_stat_learning_curve_plot(trials_dir: Path, individual_trials: bool, csv_name: str, line_plot_args: LinePlotArgs, plot_args: PlotArgs):
+def generate_stat_learning_curve_plot(
+        trials_dir: Path,
+        individual_trials: bool,
+        csv_name: str,
+        line_plot_args: LinePlotArgs,
+        plot_args: PlotArgs
+    ):
     """Generate plot of statistics of learning given the parent directoy of trials"""
 
     fig, ax = plt.subplots(1,1)
@@ -501,11 +629,30 @@ def generate_stat_learning_curve_plot(trials_dir: Path, individual_trials: bool,
 
     return fig
 
-def plot_stat_learning_curve(trials_dir, individual_trials, csv_name, line_plot_args, plot_args):
-    fig = generate_stat_learning_curve_plot(trials_dir, individual_trials, csv_name, line_plot_args, plot_args)
+def plot_stat_learning_curve(
+        trials_dir,
+        individual_trials,
+        csv_name,
+        line_plot_args,
+        plot_args
+    ):
+    fig = generate_stat_learning_curve_plot(
+        trials_dir,
+        individual_trials,
+        csv_name,
+        line_plot_args,
+        plot_args
+    )
     plot_args.finish_figure(fig)
 
-def generate_stat_learning_curve_tree_plots(root_dir: Path, out_dir: Optional[Path] = None, individual_trials: bool = False, csv_name: str = DEFAULT_FITNESS_NAME, batch_plot_args: BatchPlotArgs = None, batch_line_plot_args: BatchLinePlotArgs = None):
+def generate_stat_learning_curve_tree_plots(
+        root_dir: Path,
+        out_dir: Optional[Path] = None,
+        individual_trials: bool = False,
+        csv_name: str = DEFAULT_FITNESS_NAME,
+        batch_plot_args: BatchPlotArgs = None,
+        batch_line_plot_args: BatchLinePlotArgs = None
+    ):
     """Generate all the stat learning curve plots in this experiment tree"""
 
     if out_dir is None:
@@ -542,14 +689,89 @@ def generate_stat_learning_curve_tree_plots(root_dir: Path, out_dir: Optional[Pa
             )
         )
 
-def plot_stat_learning_curve_tree(root_dir: Path, out_dir: Optional[Path] = None, individual_trials: bool = False, csv_name: str = DEFAULT_FITNESS_NAME, batch_plot_args: BatchPlotArgs = None, batch_line_plot_args: BatchLinePlotArgs = None):
-    generate_stat_learning_curve_tree_plots(root_dir, out_dir, individual_trials, csv_name, batch_plot_args, batch_line_plot_args)
+def plot_stat_learning_curve_tree(
+        root_dir: Path,
+        out_dir: Optional[Path] = None,
+        individual_trials: bool = False,
+        csv_name: str = DEFAULT_FITNESS_NAME,
+        batch_plot_args: BatchPlotArgs = None,
+        batch_line_plot_args: BatchLinePlotArgs = None
+    ):
+    generate_stat_learning_curve_tree_plots(
+        root_dir,
+        out_dir,
+        individual_trials,
+        csv_name,
+        batch_plot_args,
+        batch_line_plot_args
+    )
 
-def generate_comparison_plot(experiment_dir: Path, use_fitness_colors: bool, csv_name: str, line_plot_args: LinePlotArgs, plot_args: PlotArgs):
+def sort_legend(ax, legend_order):
+    if legend_order is None:
+        handles, labels = ax.get_legend_handles_labels()
+        return handles, labels
+
+    elif legend_order == 'acm-telo':
+        # Define label name mapping
+        label_name_map = {
+            'D-Indirect-Timestep': r'Dynamic Influence, $D^{DYN}$',
+            'D-Indirect-Traj': r'Static Influence, $D^{IND}$',
+            'Global': r'Team Fitness, $G$',
+            'Difference': r'Difference Fitness, $D$',
+            'D-Indirect-Timestep-No-Archive': r'[No Archive] Dynamic Influence',
+            'D-Indirect-Traj-No-Archive': r'[No Archive] Static Influence'
+        }
+
+        # Define desired order
+        desired_order = [
+            'D-Indirect-Timestep',
+            'D-Indirect-Traj',
+            'D-Indirect-Timestep-No-Archive',
+            'D-Indirect-Traj-No-Archive',
+            'Global',
+            'Difference'
+        ]
+
+    # Get handles and labels
+    handles, labels = ax.get_legend_handles_labels()
+
+    # Reorder handles and labels
+    ordered_handles = []
+    ordered_labels = []
+    for desired_label in desired_order:
+        if desired_label in labels:
+            idx = labels.index(desired_label)
+            ordered_handles.append(handles[idx])
+            # Use mapped name if available, otherwise use original
+            ordered_labels.append(label_name_map.get(desired_label, desired_label))
+
+    # Add any remaining labels not in desired_order
+    for handle, label in zip(handles, labels):
+        if label not in desired_order:
+            ordered_handles.append(handle)
+            # Use mapped name if available, otherwise use original
+            ordered_labels.append(label_name_map.get(label, label))
+
+    return ordered_handles, ordered_labels
+
+def generate_comparison_plot(
+        experiment_dir: Path,
+        use_fitness_colors: bool,
+        legend_order: Optional[str],
+        csv_name: str,
+        line_plot_args: LinePlotArgs,
+        plot_args: PlotArgs
+    ):
     """Generate plot of experiment using experiment directory
     experiment_dir is parent of parent of trial directories
     """
+    # print(experiment_dir)
     fig, ax = plt.subplots(1,1)
+
+    # Set background color and grid style
+    ax.set_facecolor('#e6e6e6')
+    ax.grid(True, color='white', linewidth=1.0)
+    ax.set_axisbelow(True)
 
     # Get the parent dirs of trials
     dirs = [experiment_dir/dir for dir in os.listdir(experiment_dir)]
@@ -561,13 +783,26 @@ def generate_comparison_plot(experiment_dir: Path, use_fitness_colors: bool, csv
     for i, trials_dir in enumerate(sorted_dirs):
         color=None
         if use_fitness_colors:
+            # Set color based on fitness shaping method (optional)
+            # Use extra colors for names that have not been reserved
             if trials_dir.name in COMPARISON_NAMES:
                 color=COMPARISON_COLORS_DICT[trials_dir.name]
             else:
-                # Don't use any reserved colors if we are plotting using consistent fitness colors
-                # and this stat curve is not one of the named fitness shaping methods with an assigned color
                 color = COMPARISON_COLORS[(i+len(COMPARISON_NAMES))%len(COMPARISON_COLORS)]
-        gens = add_stat_learning_curve(ax, False, csv_name, trials_dir, label=trials_dir.name, line_plot_args=line_plot_args, color=color)
+
+        # Add the marker associated with this color (if there is one)
+        # print(COMPARISON_MARKER_MAP, color)
+        marker=COMPARISON_MARKER_MAP[color]
+        gens = add_stat_learning_curve(
+            ax,
+            False,
+            csv_name,
+            trials_dir,
+            label=trials_dir.name,
+            line_plot_args=line_plot_args,
+            color=color,
+            marker=marker
+        )
 
         if gens[-1] > xlim:
             xlim = gens[-1]
@@ -575,7 +810,9 @@ def generate_comparison_plot(experiment_dir: Path, use_fitness_colors: bool, csv
     ax.set_xlabel('Generations')
     ax.set_ylabel('Performance')
 
-    ax.legend()
+    # Sort the legend according to the specified order (optional)
+    handles, labels = sort_legend(ax, legend_order)
+    ax.legend(handles, labels)
 
     ax.set_xlim([0, gens[-1]])
 
@@ -583,8 +820,22 @@ def generate_comparison_plot(experiment_dir: Path, use_fitness_colors: bool, csv
 
     return fig
 
-def plot_comparison(experiment_dir: Path, use_fitness_colors: bool, csv_name: str, line_plot_args: LinePlotArgs, plot_args: PlotArgs):
-    fig = generate_comparison_plot(experiment_dir, use_fitness_colors, csv_name, line_plot_args, plot_args)
+def plot_comparison(
+        experiment_dir: Path,
+        use_fitness_colors: bool,
+        legend_order: Optional[str],
+        csv_name: str,
+        line_plot_args: LinePlotArgs,
+        plot_args: PlotArgs
+    ):
+    fig = generate_comparison_plot(
+        experiment_dir=experiment_dir,
+        use_fitness_colors=use_fitness_colors,
+        legend_order=legend_order,
+        csv_name=csv_name,
+        line_plot_args=line_plot_args,
+        plot_args=plot_args
+    )
     plot_args.finish_figure(fig)
 
 def get_example_trial_dirs(parent_dir: Path):
@@ -612,7 +863,15 @@ def get_example_trial_dirs(parent_dir: Path):
 
     return low_trial_dir, med_trial_dir, high_trial_dir
 
-def generate_experiment_tree_plots(root_dir: Path, out_dir: Optional[Path] = None, use_fitness_colors: bool = False, csv_name: str = DEFAULT_FITNESS_NAME, batch_plot_args: BatchPlotArgs = None, batch_line_plot_args: BatchLinePlotArgs = None):
+def generate_experiment_tree_plots(
+        root_dir: Path,
+        out_dir: Optional[Path] = None,
+        use_fitness_colors: bool = False,
+        legend_order: Optional[str] = None,
+        csv_name: str = DEFAULT_FITNESS_NAME,
+        batch_plot_args: BatchPlotArgs = None,
+        batch_line_plot_args: BatchLinePlotArgs = None
+    ):
     """Generate all the plots in this experiment tree"""
 
     if out_dir is None:
@@ -642,6 +901,7 @@ def generate_experiment_tree_plots(root_dir: Path, out_dir: Optional[Path] = Non
         plot_comparison(
             experiment_dir=dir_,
             use_fitness_colors=use_fitness_colors,
+            legend_order=legend_order,
             csv_name=csv_name,
             line_plot_args=batch_line_plot_args.build_line_plot_args(),
             plot_args=batch_plot_args.build_plot_args(
@@ -673,8 +933,24 @@ def sort_jt_dirs_helper(jt_dirs: List[str], level: int):
         jt_dirs.sort(key = lambda x: x.split('/')[level])
         sort_jt_dirs_helper(jt_dirs, level=level+1)
 
-def plot_comparison_tree(root_dir: Path, out_dir: Optional[Path] = None, use_fitness_colors:bool = False, csv_name: str = DEFAULT_FITNESS_NAME, batch_plot_args: BatchPlotArgs = None, batch_line_plot_args: BatchLinePlotArgs = None):
-    generate_experiment_tree_plots(root_dir, out_dir, use_fitness_colors, csv_name, batch_plot_args, batch_line_plot_args)
+def plot_comparison_tree(
+        root_dir: Path,
+        out_dir: Optional[Path] = None,
+        use_fitness_colors: bool = False,
+        legend_order: Optional[str] = None,
+        csv_name: str = DEFAULT_FITNESS_NAME,
+        batch_plot_args: BatchPlotArgs = None,
+        batch_line_plot_args: BatchLinePlotArgs = None
+    ):
+    generate_experiment_tree_plots(
+        root_dir=root_dir,
+        out_dir=out_dir,
+        use_fitness_colors=use_fitness_colors,
+        legend_order=legend_order,
+        csv_name=csv_name,
+        batch_plot_args=batch_plot_args,
+        batch_line_plot_args=batch_line_plot_args
+    )
 
 def generate_joint_trajectory_tree_plots(
         root_dir: Path,
@@ -763,7 +1039,12 @@ def plot_joint_trajectory_tree(
         batch_plot_args
     )
 
-def generate_config_plot(config_dir: Path, individual_colors: bool, no_shading: bool, plot_args: PlotArgs):
+def generate_config_plot(
+        config_dir: Path,
+        individual_colors: bool,
+        no_shading: bool,
+        plot_args: PlotArgs
+    ):
     # Load the config
     config = load_config(config_dir)
 
@@ -802,11 +1083,22 @@ def generate_config_plot(config_dir: Path, individual_colors: bool, no_shading: 
 
     return fig
 
-def plot_config(config_dir: Path, individual_colors: bool, no_shading: bool, plot_args: PlotArgs):
+    def plot_config(
+        config_dir: Path,
+        individual_colors: bool,
+        no_shading: bool,
+        plot_args: PlotArgs
+    ):
     fig = generate_config_plot(config_dir, individual_colors, no_shading, plot_args)
     plot_args.finish_figure(fig)
 
-def generate_learning_curve_tree_plots(root_dir: Path, out_dir: Path, individual_agents: bool, batch_plot_args: BatchPlotArgs, batch_line_plot_args: BatchLinePlotArgs):
+def generate_learning_curve_tree_plots(
+        root_dir: Path,
+        out_dir: Path,
+        individual_agents: bool,
+        batch_plot_args: BatchPlotArgs,
+        batch_line_plot_args: BatchLinePlotArgs
+    ):
     """Generate all the learning curve plots in this experiment tree"""
 
     if out_dir is None:
@@ -840,7 +1132,18 @@ def generate_learning_curve_tree_plots(root_dir: Path, out_dir: Path, individual
             )
         )
 
-def plot_learning_curve_tree(root_dir: Path, out_dir: Path, individual_agents: bool, batch_plot_args: BatchPlotArgs, batch_line_plot_args: BatchLinePlotArgs):
+def plot_learning_curve_tree(
+        root_dir: Path,
+        out_dir: Path,
+        individual_agents: bool,
+        batch_plot_args: BatchPlotArgs,
+        batch_line_plot_args: BatchLinePlotArgs
+    ):
     """Plot learning curves for all fitness.csv files in the directory tree"""
-    generate_learning_curve_tree_plots(root_dir, out_dir, individual_agents, batch_plot_args, batch_line_plot_args)
-
+    generate_learning_curve_tree_plots(
+        root_dir,
+        out_dir,
+        individual_agents,
+        batch_plot_args,
+        batch_line_plot_args
+    )
