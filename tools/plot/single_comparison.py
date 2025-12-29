@@ -38,6 +38,11 @@ if __name__ == '__main__':
         help='specify location of the legend (default: best)'
     )
     parser.add_argument(
+        '--no-legend',
+        action='store_true',
+        help='turn off the legend'
+    )
+    parser.add_argument(
         '--csv-name',
         help='name of csv to use for fitness',
         type=str,
@@ -46,11 +51,12 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     plot_comparison(
-        Path(args.comparison_dir),
-        args.fitness_colors,
-        args.legend_order,
-        args.legend_loc,
-        args.csv_name,
-        parser.dump_line_plot_args(args),
-        parser.dump_plot_args(args)
+        experiment_dir=Path(args.comparison_dir),
+        use_fitness_colors=args.fitness_colors,
+        legend_order=args.legend_order,
+        legend_loc=args.legend_loc,
+        no_legend=args.no_legend,
+        csv_name=args.csv_name,
+        line_plot_args=parser.dump_line_plot_args(args),
+        plot_args=parser.dump_plot_args(args)
     )

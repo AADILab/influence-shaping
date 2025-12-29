@@ -44,6 +44,11 @@ if __name__ == '__main__':
         help='specify location of the legend (default: best)'
     )
     parser.add_argument(
+        '--no-legend',
+        action='store_true',
+        help='turn off the legend'
+    )
+    parser.add_argument(
         '--csv-name',
         help='name of csv to use for fitness',
         default=DEFAULT_FITNESS_NAME
@@ -54,12 +59,13 @@ if __name__ == '__main__':
 
     out_dir = Path(args.out_dir) if args.out_dir is not None else None
     plot_comparison_tree(
-        Path(args.root_dir),
-        out_dir,
-        args.fitness_colors,
-        args.legend_order,
-        args.legend_loc,
-        args.csv_name,
-        parser.dump_batch_plot_args(args),
-        parser.dump_batch_line_plot_args(args)
+        root_dir=Path(args.root_dir),
+        out_dir=out_dir,
+        use_fitness_colors=args.fitness_colors,
+        legend_order=args.legend_order,
+        legend_loc=args.legend_loc,
+        no_legend=args.no_legend,
+        csv_name=args.csv_name,
+        batch_plot_args=parser.dump_batch_plot_args(args),
+        batch_line_plot_args=parser.dump_batch_line_plot_args(args)
     )

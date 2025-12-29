@@ -772,6 +772,7 @@ def generate_comparison_plot(
         use_fitness_colors: bool,
         legend_order: Optional[str],
         legend_loc: Optional[str],
+        no_legend: bool,
         csv_name: str,
         line_plot_args: LinePlotArgs,
         plot_args: PlotArgs
@@ -828,7 +829,8 @@ def generate_comparison_plot(
     handles, labels = sort_legend(ax, legend_order)
 
     # Place the legend
-    ax.legend(handles, labels, loc=legend_loc)
+    if not no_legend:
+        ax.legend(handles, labels, loc=legend_loc)
 
     ax.set_xlim([0, gens[-1]])
 
@@ -841,6 +843,7 @@ def plot_comparison(
         use_fitness_colors: bool,
         legend_order: Optional[str],
         legend_loc: Optional[str],
+        no_legend: bool,
         csv_name: str,
         line_plot_args: LinePlotArgs,
         plot_args: PlotArgs
@@ -850,6 +853,7 @@ def plot_comparison(
         use_fitness_colors=use_fitness_colors,
         legend_order=legend_order,
         legend_loc=legend_loc,
+        no_legend=no_legend,
         csv_name=csv_name,
         line_plot_args=line_plot_args,
         plot_args=plot_args
@@ -887,6 +891,7 @@ def generate_experiment_tree_plots(
         use_fitness_colors: bool = False,
         legend_order: Optional[str] = None,
         legend_loc: Optional[str] = None,
+        no_legend: bool = False,
         csv_name: str = DEFAULT_FITNESS_NAME,
         batch_plot_args: BatchPlotArgs = None,
         batch_line_plot_args: BatchLinePlotArgs = None
@@ -922,6 +927,7 @@ def generate_experiment_tree_plots(
             use_fitness_colors=use_fitness_colors,
             legend_order=legend_order,
             legend_loc=legend_loc,
+            no_legend=no_legend,
             csv_name=csv_name,
             line_plot_args=batch_line_plot_args.build_line_plot_args(),
             plot_args=batch_plot_args.build_plot_args(
@@ -959,6 +965,7 @@ def plot_comparison_tree(
         use_fitness_colors: bool = False,
         legend_order: Optional[str] = None,
         legend_loc: Optional[str] = None,
+        no_legend: bool = False,
         csv_name: str = DEFAULT_FITNESS_NAME,
         batch_plot_args: BatchPlotArgs = None,
         batch_line_plot_args: BatchLinePlotArgs = None
@@ -969,6 +976,7 @@ def plot_comparison_tree(
         use_fitness_colors=use_fitness_colors,
         legend_order=legend_order,
         legend_loc=legend_loc,
+        no_legend=no_legend,
         csv_name=csv_name,
         batch_plot_args=batch_plot_args,
         batch_line_plot_args=batch_line_plot_args
