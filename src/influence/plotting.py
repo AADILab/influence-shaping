@@ -1083,7 +1083,7 @@ def generate_config_plot(
 
     return fig
 
-    def plot_config(
+def plot_config(
         config_dir: Path,
         individual_colors: bool,
         no_shading: bool,

@@ -24,6 +24,13 @@ if __name__ == '__main__':
         action='store_true'
     )
     parser.add_argument(
+        '--legend-order',
+        type=str,
+        choices=['acm-telo'],
+        default=None,
+        help='order the legend (default: no reordering)'
+    )
+    parser.add_argument(
         '--csv-name',
         help='name of csv to use for fitness',
         type=str,
@@ -31,4 +38,11 @@ if __name__ == '__main__':
     )
     args = parser.parse_args()
 
-    plot_comparison(Path(args.comparison_dir), args.fitness_colors, args.csv_name, parser.dump_line_plot_args(args), parser.dump_plot_args(args))
+    plot_comparison(
+        Path(args.comparison_dir),
+        args.fitness_colors,
+        args.legend_order,
+        args.csv_name,
+        parser.dump_line_plot_args(args),
+        parser.dump_plot_args(args)
+    )
