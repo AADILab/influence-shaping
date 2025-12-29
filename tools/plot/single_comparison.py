@@ -3,7 +3,7 @@ and it will plot the statistics of each parameter combination against each other
 '''
 
 from pathlib import Path
-from influence.plotting import plot_comparison, DEFAULT_FITNESS_NAME
+from influence.plotting import plot_comparison, DEFAULT_FITNESS_NAME, LEGEND_LOC_CHOICES
 from influence.parsing import LinePlotParser
 
 if __name__ == '__main__':
@@ -31,6 +31,13 @@ if __name__ == '__main__':
         help='order the legend (default: no reordering)'
     )
     parser.add_argument(
+        '--legend-loc',
+        type=str,
+        choices=LEGEND_LOC_CHOICES,
+        default='best',
+        help='specify location of the legend (default: best)'
+    )
+    parser.add_argument(
         '--csv-name',
         help='name of csv to use for fitness',
         type=str,
@@ -42,6 +49,7 @@ if __name__ == '__main__':
         Path(args.comparison_dir),
         args.fitness_colors,
         args.legend_order,
+        args.legend_loc,
         args.csv_name,
         parser.dump_line_plot_args(args),
         parser.dump_plot_args(args)

@@ -68,6 +68,19 @@ COMPARISON_MARKER_MAP = {
 COMPARISON_COLORS_DICT = {
     name: color for name, color in zip(COMPARISON_NAMES, COMPARISON_COLORS)
 }
+LEGEND_LOC_CHOICES = [
+    'best',
+    'upper right',
+    'upper left',
+    'lower left',
+    'lower right',
+    'right',
+    'center left',
+    'center right',
+    'lower center',
+    'upper center',
+    'center'
+]
 DEFAULT_FITNESS_NAME = 'fitness.csv'
 
 def compute_markevery(marker_spacing: Union[int, float], num_pts: int) -> int:
@@ -758,6 +771,7 @@ def generate_comparison_plot(
         experiment_dir: Path,
         use_fitness_colors: bool,
         legend_order: Optional[str],
+        legend_loc: Optional[str],
         csv_name: str,
         line_plot_args: LinePlotArgs,
         plot_args: PlotArgs
@@ -812,7 +826,9 @@ def generate_comparison_plot(
 
     # Sort the legend according to the specified order (optional)
     handles, labels = sort_legend(ax, legend_order)
-    ax.legend(handles, labels)
+
+    # Place the legend
+    ax.legend(handles, labels, loc=legend_loc)
 
     ax.set_xlim([0, gens[-1]])
 
@@ -824,6 +840,7 @@ def plot_comparison(
         experiment_dir: Path,
         use_fitness_colors: bool,
         legend_order: Optional[str],
+        legend_loc: Optional[str],
         csv_name: str,
         line_plot_args: LinePlotArgs,
         plot_args: PlotArgs
@@ -832,6 +849,7 @@ def plot_comparison(
         experiment_dir=experiment_dir,
         use_fitness_colors=use_fitness_colors,
         legend_order=legend_order,
+        legend_loc=legend_loc,
         csv_name=csv_name,
         line_plot_args=line_plot_args,
         plot_args=plot_args
@@ -868,6 +886,7 @@ def generate_experiment_tree_plots(
         out_dir: Optional[Path] = None,
         use_fitness_colors: bool = False,
         legend_order: Optional[str] = None,
+        legend_loc: Optional[str] = None,
         csv_name: str = DEFAULT_FITNESS_NAME,
         batch_plot_args: BatchPlotArgs = None,
         batch_line_plot_args: BatchLinePlotArgs = None
@@ -902,6 +921,7 @@ def generate_experiment_tree_plots(
             experiment_dir=dir_,
             use_fitness_colors=use_fitness_colors,
             legend_order=legend_order,
+            legend_loc=legend_loc,
             csv_name=csv_name,
             line_plot_args=batch_line_plot_args.build_line_plot_args(),
             plot_args=batch_plot_args.build_plot_args(
@@ -938,6 +958,7 @@ def plot_comparison_tree(
         out_dir: Optional[Path] = None,
         use_fitness_colors: bool = False,
         legend_order: Optional[str] = None,
+        legend_loc: Optional[str] = None,
         csv_name: str = DEFAULT_FITNESS_NAME,
         batch_plot_args: BatchPlotArgs = None,
         batch_line_plot_args: BatchLinePlotArgs = None
@@ -947,6 +968,7 @@ def plot_comparison_tree(
         out_dir=out_dir,
         use_fitness_colors=use_fitness_colors,
         legend_order=legend_order,
+        legend_loc=legend_loc,
         csv_name=csv_name,
         batch_plot_args=batch_plot_args,
         batch_line_plot_args=batch_line_plot_args
