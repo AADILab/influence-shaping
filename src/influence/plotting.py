@@ -797,13 +797,12 @@ def generate_comparison_plot(
     xlim = 0
     for i, trials_dir in enumerate(sorted_dirs):
         color=None
-        if use_fitness_colors:
+        if use_fitness_colors and trials_dir.name in COMPARISON_NAMES:
             # Set color based on fitness shaping method (optional)
             # Use extra colors for names that have not been reserved
-            if trials_dir.name in COMPARISON_NAMES:
-                color=COMPARISON_COLORS_DICT[trials_dir.name]
-            else:
-                color = COMPARISON_COLORS[(i+len(COMPARISON_NAMES))%len(COMPARISON_COLORS)]
+            color=COMPARISON_COLORS_DICT[trials_dir.name]
+        else:
+            color = COMPARISON_COLORS[(i+len(COMPARISON_NAMES))%len(COMPARISON_COLORS)]
 
         # Add the marker associated with this color (if there is one)
         # print(COMPARISON_MARKER_MAP, color)
