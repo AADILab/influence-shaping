@@ -53,6 +53,10 @@ class SmartLidar(rovers.Lidar[rovers.Density]):
             return 1.0 / max([0.001, distance**2])
         elif self.measurement_type[agent_id] == 'exponential_negative_distance':
             return 2.718**(-distance)
+        elif self.measurement_type[agent_id] == 'inverse_distance':
+            return 1.0 / max([0.001, distance])
+        elif self.measurement_type[agent_id] == 'distance_over_observation_radius':
+            return distance/self.observation_radii[agent_id]
         elif self.measurement_type[agent_id] == 'one_minus_inverse_distance_over_observation_radius':
             return 1 - distance/self.observation_radii[agent_id]
         else:
