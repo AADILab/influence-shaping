@@ -69,12 +69,16 @@ class CooperativeCoevolutionaryAlgorithm():
         for i in range(self.num_rovers):
             if self.config["env"]["agents"]["rovers"][i]['sensor']['type'] == 'SmartLidar':
                 self.num_sensors_rovers.append(3*int(360/self.config["env"]["agents"]["rovers"][i]["resolution"]))
+            elif self.config['env']['agents']['rovers'][i]['sensor']['type'] == 'RoverLidar':
+                self.num_sensors_rovers.append(2*int(360/self.config["env"]["agents"]["rovers"][i]["resolution"]))
             elif self.config['env']['agents']['rovers'][i]['sensor']['type'] == 'UavDistanceLidar':
                 self.num_sensors_rovers.append(self.num_uavs)
         self.num_sensors_uavs = []
         for i in range(self.num_uavs):
             if self.config["env"]["agents"]["uavs"][i]['sensor']['type'] == 'SmartLidar':
                 self.num_sensors_uavs.append(3*int(360/self.config["env"]["agents"]["uavs"][i]["resolution"]))
+            elif self.config['env']['agents']['uavs'][i]['sensor']['type'] == 'RoverLidar':
+                self.num_sensors_uavs.append(2*int(360/self.config["env"]["agents"]["uavs"][i]["resolution"]))
             elif self.config['env']['agents']['uavs'][i]['sensor']['type'] == 'UavDistanceLidar':
                 self.num_sensors_uavs.append(self.num_uavs)
 
@@ -187,6 +191,8 @@ class CooperativeCoevolutionaryAlgorithm():
             num_inputs = 3*int(360/agent_config["resolution"])
         elif agent_config['sensor']['type'] == 'UavDistanceLidar':
             num_inputs = self.num_uavs
+        elif agent_config['sensor']['type'] == 'RoverLidar':
+            num_inputs = 2*int(360/agent_config["resolution"])
         # Figure out number of outputs from action
         if agent_config['action']['type'] == 'dxdy':
             num_outputs = 2

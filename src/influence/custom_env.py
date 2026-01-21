@@ -149,6 +149,36 @@ def createAgent(agent_config, agent_types, poi_types, disappear_bools, poi_subty
             ),
             Reward()
         )
+    elif sensor_type == 'RoverLidar':
+        # Convert Python lists to C++ vectors for RoverLidar (no POI-related parameters)
+        cpp_agent_types = cppyy.gbl.std.vector[cppyy.gbl.std.string](agent_types)
+        cpp_accum_type = cppyy.gbl.std.vector[cppyy.gbl.std.string](accum_type)
+        cpp_measurement_type = cppyy.gbl.std.vector[cppyy.gbl.std.string](measurement_type)
+        cpp_observation_radii = cppyy.gbl.std.vector[cppyy.gbl.double](observation_radii)
+        cpp_default_values = cppyy.gbl.std.vector[cppyy.gbl.double](default_values)
+
+        return rovers.Rover[rovers.RoverLidar[rovers.Density], Discrete, Reward](
+            Bounds(
+                low_x=bounds['low_x'],
+                high_x=bounds['high_x'],
+                low_y=bounds['low_y'],
+                high_y=bounds['high_y']
+            ),
+            indirect_difference_parameters,
+            reward_type,
+            type_,
+            obs_radius,
+            rovers.RoverLidar[rovers.Density](
+                resolution,
+                rovers.Density(),
+                cpp_agent_types,
+                cpp_accum_type,
+                cpp_measurement_type,
+                cpp_observation_radii,
+                cpp_default_values
+            ),
+            Reward()
+        )
     elif sensor_type == 'UavDistanceLidar':
         return rovers.Rover[UavDistanceLidar, Discrete, Reward](
             Bounds(
@@ -166,6 +196,8 @@ def createAgent(agent_config, agent_types, poi_types, disappear_bools, poi_subty
             ),
             Reward()
         )
+    else:
+        raise ValueError(f"Unknown sensor_type '{sensor_type}'.")
 
 # Now create a POI constraint where this POI can only be observed by rovers with "rover" type
 class AbstractRoverConstraint(rovers.IConstraint):
