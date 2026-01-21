@@ -519,7 +519,7 @@ class CooperativeCoevolutionaryAlgorithm():
 
                 # If this is a rover and it did not sense any uavs, don't move
                 if ind < num_rovers \
-                    and env.rovers()[ind].m_sensor.m_num_sensed_uavs == 0 \
+                    and env.rovers()[ind].m_sensor.num_sensed_uavs() == 0 \
                         and rovers_cant_move_without_uav[ind]:
                     input_action_arr = np.array([0.0,0.0])
 

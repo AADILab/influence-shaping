@@ -22,205 +22,6 @@ def calculateAngle(position_0, position_1):
         angle += 360.
     return angle
 
-# Agents should be able to distinguish between rovers and uavs...
-# Unfortunately this means writing my own Lidar class that can differentiate between agent types
-class SmartLidar(rovers.Lidar[rovers.Density]):
-    """This low resolution lidar differntiates between agent types
-    (different sectors for rovers and uavs)
-    """
-    def __init__(self, resolution, composition_policy, \
-            agent_types, poi_types, disappear_bools: List[bool], \
-            poi_subtypes: List[str], agent_observable_subtypes: List[List[str]],
-            accum_type: List[str], measurement_type: List[str],
-            observation_radii: List[float], default_values: List[float]
-            ):
-        super().__init__(resolution, composition_policy)
-        self.agent_types = agent_types
-        self.poi_types = poi_types
-        self.disappear_bools = disappear_bools
-        self.poi_subtypes = poi_subtypes
-        self.agent_observable_subtypes = agent_observable_subtypes
-        self.accum_type = accum_type
-        self.measurement_type = measurement_type
-        self.observation_radii = observation_radii
-        self.default_values = default_values
-        self.m_resolution = resolution
-        self.m_composition = composition_policy
-        self.m_num_sensed_uavs = 0
-
-    def measure(self, distance, agent_id):
-        if self.measurement_type[agent_id] == 'inverse_distance_squared':
-            return 1.0 / max([0.001, distance**2])
-        elif self.measurement_type[agent_id] == 'exponential_negative_distance':
-            return 2.718**(-distance)
-        elif self.measurement_type[agent_id] == 'inverse_distance':
-            return 1.0 / max([0.001, distance])
-        elif self.measurement_type[agent_id] == 'distance_over_observation_radius':
-            return distance/self.observation_radii[agent_id]
-        elif self.measurement_type[agent_id] == 'one_minus_inverse_distance_over_observation_radius':
-            return 1 - distance/self.observation_radii[agent_id]
-        else:
-            raise Exception(f'Measurement type for agent {agent_id} is not defined!')
-
-    def scan(self, agent_pack):
-        num_sectors = int(360. / self.m_resolution)
-        poi_values = [[] for _ in range(num_sectors)]
-        rover_values = [[] for _ in range(num_sectors)]
-        uav_values = [[] for _ in range(num_sectors)]
-        agent = agent_pack.agents[agent_pack.agent_index]
-        my_type = self.agent_types[agent_pack.agent_index]
-        self.m_num_sensed_uavs = 0
-
-        # Observe POIs
-        # print("Observe POIs")
-        for poi_ind, sensed_poi in enumerate(agent_pack.entities):
-            # print("Sensing POI")
-            # Get angle and distance to POI
-            angle = calculateAngle(agent.position(), sensed_poi.position())
-            distance = calculateDistance(agent.position(), sensed_poi.position())
-            # print("angle: ", angle)
-            # print("distance: ", distance)
-            # Skip this POI if it is out of range
-            if distance > agent.obs_radius():
-                # print("continue, out of range")
-                continue
-            # Skip this POI if I am not capable of observing this POI
-            if self.poi_types[poi_ind] == "hidden":
-                if my_type == "rover":
-                    # Rovers cannot observe these
-                    # But they can capture them. So here we will mark POIs as captured if
-                    # the rover gets close enough. Of course, the language is confusing here
-                    # but "set_observed" actually means "set as captured"
-                    if distance <= 1 and self.disappear_bools[poi_ind]:
-                        sensed_poi.set_observed(True)
-                    continue
-                elif my_type == "uav":
-                    # Uav may be able to observe this poi
-                    # print(self.poi_subtypes[poi_ind],' in ',self.agent_observable_subtypes[agent_pack.agent_index])
-                    if self.poi_subtypes[poi_ind] != '' and \
-                        self.poi_subtypes[poi_ind] not in self.agent_observable_subtypes[agent_pack.agent_index]:
-                        # If its not the correct match up, then skip
-                        # print('do not pass Go, do not collect $200')
-                        continue
-                    else:
-                        # print('pass')
-                        pass
-
-            # TODO: I need to know what the subtype of this hidden pois is
-            # I need to know what subtypes this uav can observe
-            # Bin the POI according to where it was sensed
-            # print('angle sensed at: ', angle)
-            # print('distance away: ', distance)
-            # print('agent position: [', agent.position().x, ', ', agent.position().y,']')
-            # print('poi position: [', sensed_poi.position().x,', ', sensed_poi.position().y,']')
-            if angle < 360.0:
-                sector = int( angle / self.m_resolution )
-            else:
-                sector = 0
-            # print("sector: ", sector, type(sector))
-            # print('poi value:' , sensed_poi.value() / max([0.001, distance**2]))
-            # This if statement only evaluates to False if this
-            # poi was made to dissapear. Otherwise, it will never be 'observed'
-            # and this statement will always evaluate to True
-            # (If pois don't dissapear, then 'not sensed_poi.observed()' is always True)
-            if not sensed_poi.observed():
-                poi_values[sector].append(sensed_poi.value() * self.measure(distance, agent_pack.agent_index))
-
-            # print('poi_values[sector]: ', poi_values[sector])
-        # print("Finished POI sensing")
-
-        # print("Observe Agents")
-        # Observe agents
-        # print('agent_pack.agents.size() | ', agent_pack.agents.size())
-        # print('len(self.agent_types) | ', len(self.agent_types))
-        for i in range(agent_pack.agents.size()):
-            # print("Sensing agent")
-            # print('i | ', i)
-            # Do not observe yourself
-            if i == agent_pack.agent_index:
-                # print("Nope, that one is me")
-                continue
-            # Get angle and distance to sensed agent
-            sensed_agent = agent_pack.agents[i]
-            # print('sensed_agent | ', sensed_agent)
-            angle = calculateAngle(agent.position(), sensed_agent.position())
-            # print("angle: ", angle)
-            distance = calculateDistance(agent.position(), sensed_agent.position())
-            # print("distance: ", distance)
-            # Skip the agent if the sensed agent is out of range
-            if distance > agent.obs_radius():
-                # print("continue, out of range")
-                continue
-            # Get the bin for this agent
-            if angle < 360.0:
-                sector = int( angle / self.m_resolution )
-            else:
-                sector = 0
-            # print("Got bin for this agent")
-            # Bin the agent according to type
-            if self.agent_types[i] == "rover":
-                rover_values[sector].append(self.measure(distance, agent_pack.agent_index))
-            elif self.agent_types[i] == "uav":
-                uav_values[sector].append(self.measure(distance, agent_pack.agent_index))
-                self.m_num_sensed_uavs+=1
-            # print("Finished binning agent")
-        # print("Finished agent sensing")
-
-        # print("rover_values: ", rover_values)
-        # print("uav_values: ", uav_values)
-        # print("poi_values: ", poi_values)
-
-        # Encode the state
-        # print("Encoding state")
-        state = np.array([self.default_values[agent_pack.agent_index] for _ in range(num_sectors*3)])
-        # print("state: ", state)
-        for i in range(num_sectors):
-            # print("Building sector ", i)
-            num_rovers = len(rover_values[i])
-            num_uavs = len(uav_values[i])
-            num_pois = len(poi_values[i])
-
-            if num_rovers > 0:
-                # print("num_rovers > 0")
-                # print("rover_values["+str(i)+"]: ", rover_values[i], type(rover_values[i]), type(rover_values[i][0]))
-                # print("num_rovers: ", type(num_rovers))
-                cpp_vector = cppyy.gbl.std.vector[cppyy.gbl.double]()
-                for r in rover_values[i]:
-                    cpp_vector.push_back(r)
-                if self.accum_type[agent_pack.agent_index] == 'average':
-                    state[i] = self.m_composition.compose(cpp_vector, 0.0, num_rovers)
-                elif self.accum_type[agent_pack.agent_index] == 'sum':
-                    state[i] = self.m_composition.compose(cpp_vector, 0.0, 1)
-            if num_uavs > 0:
-                # print("num_uavs > 0")
-                # print("uav_values["+str(i)+"]: ", uav_values[i], type(uav_values[i]), type(uav_values[i][0]))
-                # print("num_uavs: ", type(num_uavs))
-                cpp_vector = cppyy.gbl.std.vector[cppyy.gbl.double]()
-                for u in uav_values[i]:
-                    cpp_vector.push_back(u)
-                if self.accum_type[agent_pack.agent_index] == 'average':
-                    state[num_sectors + i] = self.m_composition.compose(cpp_vector, 0.0, num_uavs)
-                elif self.accum_type[agent_pack.agent_index] == 'sum':
-                    state[num_sectors + i] = self.m_composition.compose(cpp_vector, 0.0, 1)
-            if num_pois > 0:
-                # print("num_pois > 0")
-                # print("poi_values["+str(i)+"]: ", poi_values[i], type(poi_values[i]), type(poi_values[i][0]))
-                # print("num_pois: ", type(num_pois))
-                # Convert poi_values[i] to a std::vector<double> to satisfy cppyy
-                # Not sure why this is necessary sometimes and other times not necessary
-                cpp_vector = cppyy.gbl.std.vector[cppyy.gbl.double]()
-                for p in poi_values[i]:
-                    cpp_vector.push_back(p)
-                if self.accum_type[agent_pack.agent_index] == 'average':
-                    state[num_sectors*2 + i] = self.m_composition.compose(cpp_vector, 0.0, num_pois)
-                elif self.accum_type[agent_pack.agent_index] == 'sum':
-                    state[num_sectors*2 + i] = self.m_composition.compose(cpp_vector, 0.0, 1)
-
-        return rovers.tensor(state)
-
-    def num_sensed_uavs(self):
-        return self.m_num_sensed_uavs
-
 class UavDistanceLidar(rovers.ISensor):
     """This lidar gives distance to each uav in the environment"""
     def __init__(self, agent_types):
@@ -242,6 +43,9 @@ class UavDistanceLidar(rovers.ISensor):
                     distances.append(-1.0)
 
         return rovers.tensor(distances)
+
+    def num_sensed_uavs(self):
+        return self.m_num_sensed_uavs
 
 def createAgent(agent_config, agent_types, poi_types, disappear_bools, poi_subtypes, agent_observable_subtypes, accum_type, measurement_type, type_, observation_radii, default_values, map_size):
     """Create an agent using the agent's config and type"""
@@ -302,7 +106,24 @@ def createAgent(agent_config, agent_types, poi_types, disappear_bools, poi_subty
     Bounds = rovers.Bounds
 
     if sensor_type == 'SmartLidar':
-        return rovers.Rover[SmartLidar, Discrete, Reward](
+        # Convert Python lists to C++ vectors for SmartLidar
+        cpp_agent_types = cppyy.gbl.std.vector[cppyy.gbl.std.string](agent_types)
+        cpp_poi_types = cppyy.gbl.std.vector[cppyy.gbl.std.string](poi_types)
+        cpp_disappear_bools = cppyy.gbl.std.vector[cppyy.gbl.bool](disappear_bools)
+        cpp_poi_subtypes = cppyy.gbl.std.vector[cppyy.gbl.std.string](poi_subtypes)
+
+        # Convert nested list to C++ vector of vectors
+        cpp_agent_observable_subtypes = cppyy.gbl.std.vector['std::vector<std::string>']()
+        for subtype_list in agent_observable_subtypes:
+            cpp_subtype_vec = cppyy.gbl.std.vector[cppyy.gbl.std.string](subtype_list)
+            cpp_agent_observable_subtypes.push_back(cpp_subtype_vec)
+
+        cpp_accum_type = cppyy.gbl.std.vector[cppyy.gbl.std.string](accum_type)
+        cpp_measurement_type = cppyy.gbl.std.vector[cppyy.gbl.std.string](measurement_type)
+        cpp_observation_radii = cppyy.gbl.std.vector[cppyy.gbl.double](observation_radii)
+        cpp_default_values = cppyy.gbl.std.vector[cppyy.gbl.double](default_values)
+
+        return rovers.Rover[rovers.SmartLidar[rovers.Density], Discrete, Reward](
             Bounds(
                 low_x=bounds['low_x'],
                 high_x=bounds['high_x'],
@@ -313,18 +134,18 @@ def createAgent(agent_config, agent_types, poi_types, disappear_bools, poi_subty
             reward_type,
             type_,
             obs_radius,
-            SmartLidar(
-                resolution=resolution,
-                composition_policy=rovers.Density(),
-                agent_types=agent_types,
-                poi_types=poi_types,
-                disappear_bools=disappear_bools,
-                poi_subtypes=poi_subtypes,
-                agent_observable_subtypes=agent_observable_subtypes,
-                accum_type=accum_type,
-                measurement_type=measurement_type,
-                observation_radii=observation_radii,
-                default_values=default_values
+            rovers.SmartLidar[rovers.Density](
+                resolution,
+                rovers.Density(),
+                cpp_agent_types,
+                cpp_poi_types,
+                cpp_disappear_bools,
+                cpp_poi_subtypes,
+                cpp_agent_observable_subtypes,
+                cpp_accum_type,
+                cpp_measurement_type,
+                cpp_observation_radii,
+                cpp_default_values
             ),
             Reward()
         )
