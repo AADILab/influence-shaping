@@ -81,14 +81,9 @@ thyme.includes
 debugging/
 env_backup/
 prototyping/configs/trial_*
-results/
-results
+/results/
 sbatch/
 tree_gen/
 outfigs
 temp.sh
-example/result/trial_*
 **/trial_*
-# scratch
-# scratch/
-example/mountain/result
