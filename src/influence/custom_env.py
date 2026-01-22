@@ -174,83 +174,13 @@ def createAgent(agent_config, agent_types, poi_types, disappear_bools, poi_subty
     else:
         raise ValueError(f"Unknown sensor_type '{sensor_type}'.")
 
-# Now create a POI constraint where this POI can only be observed by rovers with "rover" type
-class AbstractRoverConstraint(rovers.IConstraint):
-    def __init__(self, coupling, is_rover_list):
-        super().__init__()
-        self.coupling = coupling
-        self.is_rover_list = is_rover_list
-
-    def captured(self, dist, agent, entity):
-        """Tell us if the agent observed the poi (entity) from specified distance (dist)"""
-        if entity.capture_radius() != -1.0 and dist <= entity.capture_radius():
-            return True
-        elif dist <= agent.obs_radius() and dist <= entity.obs_radius():
-            return True
-        else:
-            return False
-
-    def _step_is_satisfied(self, entity_pack, t):
-        count = 0
-        dists = []
-        constraint_satisfied = False
-        for agent in entity_pack.agents:
-            if agent.type() == 'rover':
-                if agent.path()[t].x == -1 and agent.path()[t].y == -1:
-                    # [-1, -1] means this rover was counterfactually removed
-                    dist = np.inf
-                else:
-                    dist = calculateDistance(agent.path()[t], entity_pack.entity.position())
-                dists.append(dist)
-                if self.captured(dist, agent, entity_pack.entity):
-                    count += 1
-                    if count >= self.coupling:
-                        constraint_satisfied = True
-        if constraint_satisfied:
-            dists.sort()
-            dists = [max(1.0, dist) for dist in dists]
-            constraint_value = float(self.coupling)
-            for dist in dists[:self.coupling]:
-                constraint_value = constraint_value*1.0/dist
-            # print("constraint_value: ", constraint_value)
-            return constraint_value
-        return 0.0
-
-class RoverConstraint(AbstractRoverConstraint):
-    """Constraint based on final positions"""
-    def is_satisfied(self, entity_pack):
-        # print("RoverConstraint.is_satisfied()")
-        # print(f"RoverConstraint.is_satisfied() | entity_pack.agents.size() | {entity_pack.agents.size()}")
-        # No agents means constraint is not satisfied
-        if entity_pack.agents.size() == 0:
-            return 0.0
-        else:
-            t_final = entity_pack.agents[0].path().size()-1
-            # print(f"RoverConstraint.is_satisfied() | t_final | {t_final}")
-            # print(f"RoverConstraint.is_satisfied() | ")
-            return self._step_is_satisfied(entity_pack, t=t_final)
-
-class RoverSequenceConstraint(AbstractRoverConstraint):
-    """Constraint based on closest positions in paths"""
-    def is_satisfied(self, entity_pack):
-        if entity_pack.agents.size() == 0:
-            return 0.0
-        else:
-            steps = []
-            for t in range(entity_pack.agents[0].path().size()):
-                steps.append(self._step_is_satisfied(entity_pack, t))
-            return max(steps)
-
-# TODO: Add RoverStepConstraint to complement value tracking for POIs
-# Basically gives a reward at each step based on the value that we're tracking for POIs
-
 def createRoverPOI(value, obs_rad, capture_radius, coupling, is_rover_list, constraint):
     if constraint == 'sequential':
-        roverConstraint = RoverSequenceConstraint(coupling, is_rover_list)
-        poi = rovers.POI[RoverSequenceConstraint](value, obs_rad, capture_radius, roverConstraint)
+        roverConstraint = rovers.RoverSequenceConstraint(coupling, is_rover_list)
+        poi = rovers.POI[rovers.RoverSequenceConstraint](value, obs_rad, capture_radius, roverConstraint)
     elif constraint == 'final':
-        roverConstraint = RoverConstraint(coupling, is_rover_list)
-        poi = rovers.POI[RoverConstraint](value, obs_rad, capture_radius, roverConstraint)
+        roverConstraint = rovers.RoverConstraint(coupling, is_rover_list)
+        poi = rovers.POI[rovers.RoverConstraint](value, obs_rad, capture_radius, roverConstraint)
     return poi
 
 # This is just to help me track which POIs are nominally hidden from rovers
@@ -374,16 +304,6 @@ def createEnv(config):
         )
         for rover_config in config['env']['agents']['rovers']
     ]
-    # uavs = [
-    #     createUAV(
-    #         obs_radius=uav["observation_radius"],
-    #         reward_type=uav["reward_type"],
-    #         resolution=uav["resolution"],
-    #         agent_types=agent_types,
-    #         poi_types=poi_types
-    #     )
-    #     for uav in config["env"]["agents"]["uavs"]
-    # ]
     uavs = [
         createAgent(
             agent_config=uav_config,
