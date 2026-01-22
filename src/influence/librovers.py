@@ -10,6 +10,7 @@ Create a shared library with make and link to it for production.
 
 import cppyy
 import os
+import platform
 
 # os.environ["EXTRA_CLING_ARGS"] = "-g"
 
@@ -24,6 +25,8 @@ libs_dir = os.path.join(source_dir, 'libs')
 # include paths
 cppyy.add_include_path(include_dir)
 cppyy.add_include_path(libs_dir)
+if platform.machine() in ['arm64', 'aarch64']:
+    cppyy.cppdef("#define EIGEN_DONT_VECTORIZE")
 
 # Headers used in the python examples. A makefile will replace this.
 cppyy.include(os.path.join(include_dir, 'rovers/environment.hpp'))
