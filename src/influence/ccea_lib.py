@@ -478,14 +478,10 @@ class CooperativeCoevolutionaryAlgorithm():
             actions_arrs = []
             actions = []
             for ind, (observation, agent_nn) in enumerate(zip(observations, agent_policies)):
-                # observation_arr = []
-                # for i in range(len(observation)):
-                #     observation_arr.append(observation(i))
-                # observation_arr = np.array(observation_arr, dtype=np.float64)
-                slist = str(observation.transpose()).split(" ")
-                flist = list(filter(None, slist))
-                nlist = [float(s) for s in flist]
-                observation_arr = np.array(nlist, dtype=np.float64)
+                observation_arr = []
+                for i in range(len(observation)):
+                    observation_arr.append(observation(i))
+                observation_arr = np.array(observation_arr, dtype=np.float64)
                 # print("observation_arr:", observation_arr)
                 action_arr = agent_nn.forward(observation_arr)
                 if (config['env']['agents']['rovers']+config['env']['agents']['uavs'])[ind]['action']['type'] == 'dxdy':

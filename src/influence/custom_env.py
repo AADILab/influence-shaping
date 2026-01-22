@@ -469,9 +469,9 @@ def createEnv(config):
         rovers.CustomInit(agent_positions, poi_positions),
         agents,
         pois,
-        width=cppyy.gbl.ulong(config["env"]["map_size"][0]),
-        height=cppyy.gbl.ulong(config["env"]["map_size"][1]),
-        debug_reward_equals_G = debug_reward_equals_G
+        int(config["env"]["map_size"][0]),
+        int(config["env"]["map_size"][1]),
+        debug_reward_equals_G
     )
     return env
 

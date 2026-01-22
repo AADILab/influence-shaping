@@ -6,5 +6,6 @@ dependencies = [
     "PyYAML==6.0.2",
     "tqdm==4.66.5",
     "pandas",
-    "matplotlib"
+    "matplotlib",
+    "setuptools<70"
 ]
