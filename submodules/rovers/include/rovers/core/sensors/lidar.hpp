@@ -455,6 +455,60 @@ class RoverLidar : public ISensor {
     mutable int m_num_sensed_uavs;
 };
 
+/*
+ *
+ * UavDistanceLidar - returns distance to each UAV in the environment
+ *
+ */
+class UavDistanceLidar : public ISensor {
+   public:
+    // Default constructor
+    UavDistanceLidar()
+        : m_num_sensed_uavs(0) {}
+
+    UavDistanceLidar(const std::vector<std::string>& agent_types)
+        : m_agent_types(agent_types),
+          m_num_sensed_uavs(0) {}
+
+    [[nodiscard]] Eigen::MatrixXd scan(const AgentPack& pack) const {
+        auto& agent = pack.agents[pack.agent_index];
+        m_num_sensed_uavs = 0;
+        std::vector<double> distances;
+
+        // Iterate through all agents
+        for (std::size_t i = 0; i < pack.agents.size(); ++i) {
+            // Only process UAVs
+            if (m_agent_types[i] == "uav") {
+                auto& sensed_agent = pack.agents[i];
+                double distance = thyme::math::l2_norm(agent->position(), sensed_agent->position());
+
+                if (distance <= agent->obs_radius()) {
+                    distances.push_back(distance / agent->obs_radius());
+                    m_num_sensed_uavs++;
+                } else {
+                    distances.push_back(-1.0);
+                }
+            }
+        }
+
+        // Convert to Eigen column vector
+        Eigen::MatrixXd state(distances.size(), 1);
+        for (std::size_t i = 0; i < distances.size(); ++i) {
+            state(i) = distances[i];
+        }
+
+        return state;
+    }
+
+    [[nodiscard]] inline int num_sensed_uavs() const {
+        return m_num_sensed_uavs;
+    }
+
+   private:
+    std::vector<std::string> m_agent_types;
+    mutable int m_num_sensed_uavs;
+};
+
 }  // namespace rovers
 
 #endif

@@ -22,31 +22,6 @@ def calculateAngle(position_0, position_1):
         angle += 360.
     return angle
 
-class UavDistanceLidar(rovers.ISensor):
-    """This lidar gives distance to each uav in the environment"""
-    def __init__(self, agent_types):
-        super().__init__()
-        self.agent_types = agent_types
-        self.m_num_sensed_uavs = 0
-
-    def scan(self, agent_pack):
-        self.m_num_sensed_uavs = 0
-        agent = agent_pack.agents[agent_pack.agent_index]
-        distances = []
-        for i in range(agent_pack.agents.size()):
-            if self.agent_types[i] == "uav":
-                distance = calculateDistance(agent.position(), agent_pack.agents[i].position())
-                if distance <= agent.obs_radius():
-                    distances.append( distance / agent.obs_radius() )
-                    self.m_num_sensed_uavs+=1
-                else:
-                    distances.append(-1.0)
-
-        return rovers.tensor(distances)
-
-    def num_sensed_uavs(self):
-        return self.m_num_sensed_uavs
-
 def createAgent(agent_config, agent_types, poi_types, disappear_bools, poi_subtypes, agent_observable_subtypes, accum_type, measurement_type, type_, observation_radii, default_values, map_size):
     """Create an agent using the agent's config and type"""
     # unpack config
@@ -180,7 +155,7 @@ def createAgent(agent_config, agent_types, poi_types, disappear_bools, poi_subty
             Reward()
         )
     elif sensor_type == 'UavDistanceLidar':
-        return rovers.Rover[UavDistanceLidar, Discrete, Reward](
+        return rovers.Rover[rovers.UavDistanceLidar, Discrete, Reward](
             Bounds(
                 low_x=bounds['low_x'],
                 high_x=bounds['high_x'],
@@ -191,7 +166,7 @@ def createAgent(agent_config, agent_types, poi_types, disappear_bools, poi_subty
             reward_type,
             type_,
             obs_radius,
-            UavDistanceLidar(
+            rovers.UavDistanceLidar(
                 agent_types=agent_types,
             ),
             Reward()
