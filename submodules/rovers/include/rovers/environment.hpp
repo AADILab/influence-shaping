@@ -9,6 +9,7 @@
 #include <rovers/core/sensors/lidar.hpp>
 #include <rovers/utilities/spaces/discrete.hpp>
 #include <rovers/core/rewards/computer.hpp>
+#include <rovers/core/setup/init_corners.hpp>
 #include <tuple>
 #include <vector>
 
