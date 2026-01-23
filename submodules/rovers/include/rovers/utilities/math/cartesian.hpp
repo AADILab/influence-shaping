@@ -6,8 +6,8 @@
 
 namespace thyme::math {
 
-inline static constexpr double to_degrees = 180.0 / M_PI;
-inline static constexpr double two_pi = 2 * M_PI;
+inline static const double to_degrees = 180.0 / M_PI;
+inline static const double two_pi = 2 * M_PI;
 
 struct Point {
     double x;

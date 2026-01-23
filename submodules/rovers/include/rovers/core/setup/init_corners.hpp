@@ -9,6 +9,7 @@ namespace rovers {
 /*
  *
  * agent/entity initialization policy for corner initialization
+ * Agents are generally clustered around the center while POIs are placed in corners
  *
  */
 class CornersInit {

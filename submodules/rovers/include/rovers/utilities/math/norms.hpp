@@ -7,9 +7,10 @@
 namespace thyme::math {
 
 inline double l2_norm(const Point& a, const Point& b) {
-    auto x = b.x - a.x;
-    auto y = b.y - a.y;
-    return sqrt(x * x + y * y);
+    double x = b.x - a.x;
+    double y = b.y - a.y;
+    // Static cast to <long double> is to make intellisense happy
+    return std::sqrt(static_cast<long double>(x * x + y * y));
 }
 
 inline std::pair<double, double> l2a(const Point& a, const Point& b) {

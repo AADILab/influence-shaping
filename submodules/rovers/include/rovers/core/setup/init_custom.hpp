@@ -2,6 +2,7 @@
 #define THYME_ENVIRONMENTS_ROVERS_INIT_CUSTOM
 
 #include <cmath>
+#include <vector>
 
 namespace rovers {
 

@@ -1,0 +1,24 @@
+{
+    "configurations": [
+        {
+            "name": "Mac",
+            "includePath": [
+                "${workspaceFolder}/src",
+                "${workspaceFolder}/submodules/rovers/include",
+                "${workspaceFolder}/submodules/rovers/libs",
+                "/Users/ever/miniconda3/envs/influence/include",
+                "/Users/ever/miniconda3/envs/influence/include/c++/v1"
+            ],
+            "defines": [],
+            "macFrameworkPath": [
+                "/System/Library/Frameworks",
+                "/Library/Frameworks"
+            ],
+            "compilerPath": "/Users/ever/miniconda3/envs/influence/bin/clang++",
+            "cStandard": "c11",
+            "cppStandard": "c++17",
+            "intelliSenseMode": "macos-clang-arm64"
+        }
+    ],
+    "version": 4
+}

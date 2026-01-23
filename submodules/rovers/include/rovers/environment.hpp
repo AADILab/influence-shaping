@@ -7,7 +7,6 @@
 #include <rovers/core/poi/type_constraint.hpp>
 #include <rovers/core/rover/rover.hpp>
 #include <rovers/core/sensors/lidar.hpp>
-#include <rovers/core/setup/init_random.hpp>
 #include <rovers/utilities/spaces/discrete.hpp>
 #include <rovers/core/rewards/computer.hpp>
 #include <tuple>
@@ -20,7 +19,7 @@ namespace rovers {
  * Default Rovers environment
  *
  */
-template <typename InitPolicy = RandomInit>
+template <typename InitPolicy = CornersInit>
 class Environment {
    public:
     using Action = Eigen::MatrixXd;
