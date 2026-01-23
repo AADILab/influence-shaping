@@ -2,6 +2,8 @@
 #define THYME_ENVIRONMENTS_ROVERS_POI_ICONSTRAINT
 
 #include <rovers/core/detail/pack.hpp>
+#include <rovers/core/rover/rover.hpp>
+#include <rovers/core/poi/poi.hpp>
 #include <rovers/utilities/math/norms.hpp>
 #include <algorithm>
 #include <vector>
