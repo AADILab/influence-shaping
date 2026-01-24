@@ -2,7 +2,6 @@
 #define THYME_ENVIRONMENTS_ROVER_DOMAIN_INIT_CORNERS
 
 #include <cmath>
-// #include <ranges>
 
 namespace rover_domain {
 

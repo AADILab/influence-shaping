@@ -5,7 +5,6 @@
 #include <iostream>
 #include <rover_domain/core/detail/agent_types.hpp>
 #include <rover_domain/core/detail/entity_types.hpp>
-#include <rover_domain/core/detail/pack.hpp>
 #include <rover_domain/core/rewards/global.hpp>
 #include <rover_domain/utilities/math/cartesian.hpp>
 #include <vector>
@@ -28,16 +27,16 @@ class Rover final : public IAgent {
     // NOTE: This is commented out because I couldn't get it to work properly, but left as dead code to help me later if I need to get it working
     // Rover(const Rover& rover)
     //     : IAgent(rover.indirect_difference_parameters(), rover.reward_type(), rover.type(), rover.obs_radius()), m_sensor(SensorType()), m_reward(RewardType()) {}
-    [[nodiscard]] virtual Eigen::MatrixXd scan(const AgentPack& pack) const override {
+    [[nodiscard]] virtual Eigen::MatrixXd scan(const Agents& agents, const POIs& pois, int agent_idx) const override {
         // std::cout << "Rover::scan()" << std::endl;
-        return m_sensor->scan(pack);
+        return m_sensor->scan(agents, pois, agent_idx);
     }
-    [[nodiscard]] virtual double reward(const AgentPack& pack) const override {
+    [[nodiscard]] virtual double reward(const Agents& agents, const POIs& pois, int agent_idx) const override {
         // each aget gets a reward set here but only nominally so the reward computer knows
         // what to do
         // but each agent is not comjputing its own reward
         // std::cout << "Rover::reward()" << std::endl;
-        return m_reward->compute(pack);
+        return m_reward->compute(agents, pois, agent_idx);
     }
     void act(const ActionType& action) override {
         // default, move in x and y

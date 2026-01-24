@@ -6,6 +6,8 @@
 #include <rover_domain/core/rover/rover.hpp>
 #include <rover_domain/utilities/math/norms.hpp>
 #include <rover_domain/core/sensors/lidar.hpp>
+#include <rover_domain/core/detail/agent_types.hpp>
+#include <rover_domain/core/detail/entity_types.hpp>
 
 namespace rover_domain {
 
@@ -13,9 +15,9 @@ class RewardComputer {
     public:
     using Reward = std::vector<double>;
 
-    RewardComputer(std::vector<Agent> rovers, std::vector<POI> pois, bool debug_reward_equals_G) {
+    RewardComputer(std::vector<Agent> agents, std::vector<POI> pois, bool debug_reward_equals_G) {
         // std::cout << "RewardComputer::RewardComputer()" << std::endl;
-        m_rovers = rovers;
+        m_agents = agents;
         m_pois = pois;
         m_debug_reward_equals_G = debug_reward_equals_G;
     }
@@ -26,22 +28,22 @@ class RewardComputer {
     */
     std::vector<std::vector<std::vector<bool>>> create_complete_influence_array() const {
         // Figure out how many timesteps are in the paths
-        int t_final = m_rovers[0]->path().size();
+        int t_final = m_agents[0]->path().size();
 
         // initialize this array with all zeros
         std::vector<std::vector<std::vector<bool>>> complete_influence_array(
             t_final, std::vector<std::vector<bool>>(
-                m_rovers.size(), std::vector<bool>(m_rovers.size(), 0)
+                m_agents.size(), std::vector<bool>(m_agents.size(), 0)
             )
         );
 
         // populate the 1s where agents are influenced
         for (int t=0; t < t_final; ++t) { // outer loop is time
-            for (int i=0; i < m_rovers.size(); ++i) { // middle loop is agent that is exerting influence
-                for (int k=0; k < m_rovers.size(); ++k) { // inner loop is agent that is being influenced
+            for (int i=0; i < m_agents.size(); ++i) { // middle loop is agent that is exerting influence
+                for (int k=0; k < m_agents.size(); ++k) { // inner loop is agent that is being influenced
                     // Check that agent i is influencing agent k, and set the influence value to 1 if this is the case
                     if (
-                        i != k && m_rovers[i]->type() == "uav" && m_rovers[k]->type() == "rover" && is_influencing(m_rovers[i], m_rovers[k], t)
+                        i != k && m_agents[i]->type() == "uav" && m_agents[k]->type() == "rover" && is_influencing(m_agents[i], m_agents[k], t)
                     ) {
                         complete_influence_array[t][i][k] = 1;
                     }
@@ -60,18 +62,18 @@ class RewardComputer {
         int i
     ) const {
         // Figure out how many timesteps are in the paths
-        int t_final = m_rovers[0]->path().size();
+        int t_final = m_agents[0]->path().size();
 
         // Give us an empty array to start
         std::vector<std::vector<bool>> local_influence_array(
             t_final, std::vector<bool>(
-                m_rovers.size(), 0
+                m_agents.size(), 0
             )
         );
 
         // Now populate based on the complete influence array
         for (int t=0; t < t_final; ++t) { // Iterate through time
-            for (int k=0; k < m_rovers.size(); ++k) { // Iterate through agents that are being influenced
+            for (int k=0; k < m_agents.size(); ++k) { // Iterate through agents that are being influenced
                 if (complete_influence_array[t][i][k] == 1) {
                     local_influence_array[t][k] = 1;
                 }
@@ -89,24 +91,24 @@ class RewardComputer {
         int i
     ) const {
         // Figure out how many timesteps are in the paths
-        int t_final = m_rovers[0]->path().size();
+        int t_final = m_agents[0]->path().size();
 
         // Give us an empty array to start
         std::vector<std::vector<bool>> allornothing_influence_array(
             t_final, std::vector<bool>(
-                m_rovers.size(), 0
+                m_agents.size(), 0
             )
         );
 
         // Now populate based on the complete influence array
         for (int t=0; t < t_final; ++t) { // Iterate through time
-            for (int k=0; k < m_rovers.size(); ++k) { // Iterate through agents that are being influenced
+            for (int k=0; k < m_agents.size(); ++k) { // Iterate through agents that are being influenced
                 // Iterate through agents that are exerting influence and only give this agent credit if it is the
                 // leftmost agent to exert an influence.
                 // (Yes, this is overly complicated for now, but this infrastructure will be helpful when this becomes more complicated)
                 int i_credit = -1;
                 int highest_influence = -1;
-                for (int i_=0; i_ < m_rovers.size(); ++i_) {
+                for (int i_=0; i_ < m_agents.size(); ++i_) {
                     if (complete_influence_array[t][i_][k] > highest_influence) {
                         i_credit = i_;
                         highest_influence = complete_influence_array[t][i_][k];
@@ -130,7 +132,7 @@ class RewardComputer {
                 //             found = true;
                 //             resolved = true;
                 //         }
-                //         if (i_ >= m_rovers.size()-1) {
+                //         if (i_ >= m_agents.size()-1) {
                 //             resolved = true;
                 //         }
                 //     }
@@ -143,7 +145,7 @@ class RewardComputer {
 
         // std::cout << "allornothing_influence_array for agent i : " << i << std::endl;
         // for (int t=0; t<t_final; ++t) {
-        //     for (int k=0; k<m_rovers.size(); ++k) {
+        //     for (int k=0; k<m_agents.size(); ++k) {
         //         std::cout << "[t][k] : value " << "["<<t<<"]["<<k<<"] : "<<allornothing_influence_array[t][k] << std::endl;
         //     }
         // }
@@ -162,21 +164,21 @@ class RewardComputer {
         int i_ = -1
     ) const {
         // Figure out how many timesteps in the path
-        int t_final = m_rovers[0]->path().size();
+        int t_final = m_agents[0]->path().size();
 
         // Start with empty array
         std::vector<std::vector<bool>> system_influence_array(
             t_final, std::vector<bool>(
-                m_rovers.size(), 0
+                m_agents.size(), 0
             )
         );
 
         // Populate the array
         for (int t=0; t < t_final; ++t) { // Iterate through time
-            for (int k=0; k < m_rovers.size(); ++k) { // Iterate through agents that were influenced this step
+            for (int k=0; k < m_agents.size(); ++k) { // Iterate through agents that were influenced this step
                 // If this agent was actually influenced this step, put a 1 for system influence. Else, leave it as 0
                 bool k_was_influenced = false;
-                for (int i=0; i < m_rovers.size(); ++i) {
+                for (int i=0; i < m_agents.size(); ++i) {
                     if (complete_influence_array[t][i][k] == 1 && (i_ == -1 || i_ != i)) {
                         k_was_influenced = true;
                     }
@@ -198,18 +200,18 @@ class RewardComputer {
         std::vector<std::vector<bool>> arr_y
     ) const {
         // Get timesteps
-        int t_final = m_rovers[0]->path().size();
+        int t_final = m_agents[0]->path().size();
 
         // Initialize this array with all zeros
         std::vector<std::vector<bool>> difference_influence_array(
             t_final, std::vector<bool>(
-                m_rovers.size(), 0
+                m_agents.size(), 0
             )
         );
 
         // Now populate based on input influence arrays
         for (int t=0; t < t_final; ++t) { // Iterate through time
-            for (int k=0; k < m_rovers.size(); ++k) { // Iterate through agents being influenced
+            for (int k=0; k < m_agents.size(); ++k) { // Iterate through agents being influenced
                 if (arr_x[t][k] == 1 && arr_y[t][k] == 0) {
                     difference_influence_array[t][k] = 1;
                 }
@@ -222,7 +224,7 @@ class RewardComputer {
     influence array */
     std::vector<Agent> create_counterfactual_rovers(std::vector<Agent> rovers, std::vector<std::vector<bool>> influence_array) const {
         // Figure out how many timesteps are in the paths
-        int t_final = m_rovers[0]->path().size();
+        int t_final = m_agents[0]->path().size();
 
         // empty vector of counterfactual rovers
         std::vector<Agent> counterfactual_rovers;
@@ -243,14 +245,14 @@ class RewardComputer {
 
         // Now populate the paths, but use the influence array to counterfactually put the position at [-1, -1] if that agent was influenced
         for (int t=0; t < t_final; ++t) {
-            for (int k=0; k < m_rovers.size(); ++k) {
+            for (int k=0; k < m_agents.size(); ++k) {
                 if (influence_array[t][k] == 1) {
                     counterfactual_rovers[k]->set_position(-1, -1);
                 }
                 else {
                     counterfactual_rovers[k]->set_position(
-                        m_rovers[k]->path()[t].x,
-                        m_rovers[k]->path()[t].y
+                        m_agents[k]->path()[t].x,
+                        m_agents[k]->path()[t].y
                     );
                 }
             }
@@ -267,23 +269,23 @@ class RewardComputer {
 
         // std::cout << "RewardComputer::prep_all_or_nothing_influence()" << std::endl;
 
-        int t_final = m_rovers[0]->path().size();
+        int t_final = m_agents[0]->path().size();
 
         // std::cout << "RewardComputer::prep_all_or_nothing_influence() t_final | " << t_final << std::endl;
 
         // Counters tell us how much each agent was influenced by other agents
         // First index (k) is the agent being influenced
         // Second index (i) is how much agent i influenced agent k
-        std::vector<std::vector<int>> counters(m_rovers.size(), std::vector<int>(m_rovers.size(), 0));
+        std::vector<std::vector<int>> counters(m_agents.size(), std::vector<int>(m_agents.size(), 0));
         for (int t=0; t < t_final; ++t) {
             // std::cout << "t " << t << std::endl;
             // agent i is the influencing agent
-            for (int i=0; i < m_rovers.size(); ++i) {
+            for (int i=0; i < m_agents.size(); ++i) {
                 // std::cout << "i " << i << std::endl;
                 // agent k is the agent being influenced
-                for (int k=0; k < m_rovers.size(); ++k) {
+                for (int k=0; k < m_agents.size(); ++k) {
                     // std::cout << "k " << k << std::endl;
-                    if (i != k && m_rovers[i]->type() == "uav" && m_rovers[k]->type() == "rover" && is_influencing(m_rovers[i], m_rovers[k], t) ) {
+                    if (i != k && m_agents[i]->type() == "uav" && m_agents[k]->type() == "rover" && is_influencing(m_agents[i], m_agents[k], t) ) {
                         // std::cout << "Increasing counter at counters["<<k<<"]["<<i<<"]" << std::endl;
                         counters[k][i]++;
                     }
@@ -304,7 +306,7 @@ class RewardComputer {
         // Create the sets of agents to remove for each agent
         // Index is the agent being influenced (k)
         // This index gives a vector of indicies of agents that agent k influenced
-        std::vector<std::vector<int>> influence_sets(m_rovers.size(), std::vector<int>({}));
+        std::vector<std::vector<int>> influence_sets(m_agents.size(), std::vector<int>({}));
         // Include yourself in your influence set
         // std::cout << "RewardComputer::prep_all_or_nothing_influence() Insert yourself into your influence set (start)" << std::endl;
         for (int i=0; i < influence_sets.size(); ++i) {
@@ -312,7 +314,7 @@ class RewardComputer {
             // std::cout << "RewardComputer::prep_all_or_nothing_influence() Ran influence_sets[i].push_back(i) with i = " << i << std::endl;
         }
         // std::cout << "RewardComputer::prep_all_or_nothing_influence() Adding other agents to influence sets" << std::endl;
-        for (int k=0; k < m_rovers.size(); ++k) {
+        for (int k=0; k < m_agents.size(); ++k) {
             // std::cout << "RewardComputer::prep_all_or_nothing_influence() on agent k = " << k << std::endl;
             int highest_ind = -1;
             int num_influence = 0;
@@ -353,7 +355,7 @@ class RewardComputer {
         // std::cout << "Reward::compute()" << std::endl;
         Reward rewards;
         // Compute G
-        double G = m_Global.compute(AgentPack(0, m_rovers, m_pois));
+        double G = m_Global.compute(m_agents, m_pois, 0);
         // std::cout << "Reward::compute() Computed G" << std::endl;
         // Prep for computing Indirect D
         std::vector<std::vector<int>> influence_sets = prep_all_or_nothing_influence();
@@ -361,11 +363,11 @@ class RewardComputer {
 
         // Now compute the rewards for each agent
         // std::cout << "Reward::compute() Computing rewards for each agent" << std::endl;
-        for (int i = 0; i < m_rovers.size(); ++i) {
+        for (int i = 0; i < m_agents.size(); ++i) {
             // std::cout << "Reward::compute() Computing reward for agent " << i << std::endl;
             double reward = 0.0;
             // Get the reward type
-            std::string reward_type = m_rovers[i]->reward_type();
+            std::string reward_type = m_agents[i]->reward_type();
             // Compute the reward for this agent based on the reward type
             if (reward_type == "Global") {
                 // std::cout << "Reward::compute() Computing Global reward" << std::endl;
@@ -373,7 +375,7 @@ class RewardComputer {
             }
             else if (reward_type == "Difference") {
                 // std::cout << "Reward::compute() Computing Difference reward" << std::endl;
-                reward = G - m_Global.compute_without_me(AgentPack(0, m_rovers, m_pois), i);
+                reward = G - m_Global.compute_without_me(m_agents, m_pois, i);
             }
             else if (reward_type == "IndirectDifference") {
                 // std::cout << "Reward::compute() Computing Indirect Difference" << std::endl;
@@ -381,12 +383,12 @@ class RewardComputer {
                 // Assume that only rovers can count as being influenced
                 // Use all or nothing influence assignment. Just remove the entire trajectories.
                 // Refactor for more options later.
-                if (m_rovers[i]->indirect_difference_parameters().m_assignment == "manual") {
-                    reward = G - m_Global.compute_without_inds(AgentPack(0, m_rovers, m_pois), m_rovers[i]->indirect_difference_parameters().m_manual);
+                if (m_agents[i]->indirect_difference_parameters().m_assignment == "manual") {
+                    reward = G - m_Global.compute_without_inds(m_agents, m_pois, m_agents[i]->indirect_difference_parameters().m_manual);
                 }
-                else if (m_rovers[i]->indirect_difference_parameters().m_assignment == "automatic") {
+                else if (m_agents[i]->indirect_difference_parameters().m_assignment == "automatic") {
                     // Timestep based removal
-                    if (m_rovers[i]->indirect_difference_parameters().m_automatic_parameters.m_timescale == "timestep") {
+                    if (m_agents[i]->indirect_difference_parameters().m_automatic_parameters.m_timescale == "timestep") {
                         // In this route, create sets at each time step. If someone was influenced, then put a stand-in for their state as
                         // a counterfactual. For instance (need to check if this will work), put -1,-1 as the position
                         // (or if that doesn't work, add a std::vector<boolean> that has 0 for removed at step i vs 1 for present at step i. Modify G to check this bool)
@@ -396,22 +398,22 @@ class RewardComputer {
                         //         create_complete_influence_array(), i
                         //     )
                         std::vector<std::vector<bool>> influence_array;
-                        if (m_rovers[i]->indirect_difference_parameters().m_automatic_parameters.m_credit == "Local") {
+                        if (m_agents[i]->indirect_difference_parameters().m_automatic_parameters.m_credit == "Local") {
                             influence_array = create_local_influence_array(
                                 create_complete_influence_array(), i
                             );
                         }
-                        else if (m_rovers[i]->indirect_difference_parameters().m_automatic_parameters.m_credit == "AllOrNothing") {
+                        else if (m_agents[i]->indirect_difference_parameters().m_automatic_parameters.m_credit == "AllOrNothing") {
                             influence_array = create_allornothing_influence_array(
                                 create_complete_influence_array(), i
                             );
                         }
-                        else if (m_rovers[i]->indirect_difference_parameters().m_automatic_parameters.m_credit == "System") {
+                        else if (m_agents[i]->indirect_difference_parameters().m_automatic_parameters.m_credit == "System") {
                             influence_array = create_system_influence_array(
                                 create_complete_influence_array()
                             );
                         }
-                        else if (m_rovers[i]->indirect_difference_parameters().m_automatic_parameters.m_credit == "Difference") {
+                        else if (m_agents[i]->indirect_difference_parameters().m_automatic_parameters.m_credit == "Difference") {
                             // Start with the complete influence array
                             std::vector<std::vector<std::vector<bool>>> complete_influence_array = create_complete_influence_array();
                             // Figure out the system influence array
@@ -424,7 +426,7 @@ class RewardComputer {
 
                         // Construct a set of counterfactual agents that have paths where that agent is at [-1, -1] if it was influenced by another agent
                         std::vector<Agent> counterfactual_rovers = create_counterfactual_rovers(
-                            m_rovers, influence_array
+                            m_agents, influence_array
                         );
 
                         // I guess this is where I can build a trace array? Or modify influence_array to contain
@@ -440,18 +442,18 @@ class RewardComputer {
                         // reward = G - m_Global.compute(AgentPack(0, counterfactual_rovers, m_pois));
                         // Now compute d-indirect using these rovers.
                         // Make sure to entirely remove the agent we are computing d-indirect for
-                        reward = G - m_Global.compute_without_inds(AgentPack(0, counterfactual_rovers, m_pois), std::vector<int>(1, i));
+                        reward = G - m_Global.compute_without_inds(m_agents, m_pois, std::vector<int>(1, i));
                         // std::cout << "reward : " << reward << " for agent i : " << i << std::endl;
                     }
 
                     // Trajectory based removal
-                    else if (m_rovers[i]->indirect_difference_parameters().m_automatic_parameters.m_timescale == "trajectory") {
+                    else if (m_agents[i]->indirect_difference_parameters().m_automatic_parameters.m_timescale == "trajectory") {
                         // In this route, just tally it all up into one big influence set for each agent, and do the removal
-                        reward = G - m_Global.compute_without_inds(AgentPack(0, m_rovers, m_pois), influence_sets[i]);
+                        reward = G - m_Global.compute_without_inds(m_agents, m_pois, influence_sets[i]);
                     }
                 }
             }
-            if (m_rovers[i]->indirect_difference_parameters().m_add_G) {
+            if (m_agents[i]->indirect_difference_parameters().m_add_G) {
                 reward = reward + G;
             }
             if (m_debug_reward_equals_G && reward != G) {
@@ -467,7 +469,7 @@ class RewardComputer {
     }
 
     Global m_Global;
-    std::vector<Agent> m_rovers;
+    std::vector<Agent> m_agents;
     std::vector<POI> m_pois;
 
     private:

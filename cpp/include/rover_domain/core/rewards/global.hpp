@@ -1,7 +1,7 @@
 #ifndef THYME_ENVIRONMENTS_ROVER_DOMAIN_GLOBAL
 #define THYME_ENVIRONMENTS_ROVER_DOMAIN_GLOBAL
 
-#include <rover_domain/core/detail/pack.hpp>
+#include <rover_domain/core/rover/irover.hpp>
 #include <rover_domain/core/poi/ipoi.hpp>
 
 namespace rover_domain {
@@ -13,48 +13,34 @@ namespace rover_domain {
  */
 class Global {
    public:
-    [[nodiscard]] double compute(const AgentPack& pack) const {
-        // std::cout << "Global::compute()" << std::endl;
-        // TODO pass in a view of POIContainer filtered by observed()
-        // TODO Keep filtering over this view for speed-up
+    [[nodiscard]] double compute(const Agents& agents, const POIs& pois, int unused_idx) const {
         double reward = 0.0;
-        for (int i = 0; i < pack.entities.size(); ++i) {
-            reward = reward + pack.entities[i]->value()*pack.entities[i]->constraint_satisfied({pack.entities[i], pack.agents, pack.entities});
+        for (int i = 0; i < pois.size(); ++i) {
+            reward = reward + pois[i]->value()*pois[i]->constraint_satisfied(pois, agents, i);
         }
-        // for (const auto& poi : pack.entities) {
-        //     // if (poi->observed()) continue;
-        //     reward = reward + poi->value()*poi->constraint_satisfied({poi, pack.agents, pack.entities});
-        // }
-        // std::cout << "Global::compute() | Finished poi iteration" << std::endl;
-        // reset pois
-        // for (const auto& poi : pack.entities) poi->set_observed(false);
         return reward;
     }
-    [[nodiscard]] double compute_without_me(const AgentPack& pack, int idx) const {
-        // std::cout << "Reward::compute_without_me()" << std::endl;
+    [[nodiscard]] double compute_without_me(const Agents& agents, const POIs& pois, int idx) const {
         // Build vector of agents without me
-        std::vector<Agent> agents_without_me;
-        for (int i=0; i < pack.agents.size(); ++i) {
+        Agents agents_without_me;
+        for (int i=0; i < agents.size(); ++i) {
             if (i != idx) {
-                agents_without_me.push_back(pack.agents[i]);
+                agents_without_me.push_back(agents[i]);
             }
         }
-        const AgentPack& pack_without_me = AgentPack(0, agents_without_me, pack.entities);
-        double reward_without_me = compute(pack_without_me);
+        double reward_without_me = compute(agents_without_me, pois, 0);
         return reward_without_me;
     }
-    [[nodiscard]] double compute_without_inds(const AgentPack& pack, std::vector<int> inds) const {
-        // std::cout << "Reward::compute_without_inds()" << std::endl;
+    [[nodiscard]] double compute_without_inds(const Agents& agents, const POIs& pois, std::vector<int> inds) const {
         // Build a vector of agents that excludes the specified inds
         std::vector<Agent> agents_without_inds;
-        for (int i=0; i < pack.agents.size(); ++i) {
+        for (int i=0; i < agents.size(); ++i) {
             // Check that i is not an ind that we are removing
             if (std::find(inds.begin(), inds.end(), i) == inds.end()) {
-                agents_without_inds.push_back(pack.agents[i]);
+                agents_without_inds.push_back(agents[i]);
             }
         }
-        const AgentPack& pack_without_inds = AgentPack(0, agents_without_inds, pack.entities);
-        double reward_without_inds = compute(pack_without_inds);
+        double reward_without_inds = compute(agents_without_inds, pois, 0);
         return reward_without_inds;
     }
 };

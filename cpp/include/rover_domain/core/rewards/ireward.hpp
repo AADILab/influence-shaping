@@ -1,7 +1,8 @@
 #ifndef THYME_ENVIRONMENTS_ROVER_DOMAIN_IREWARD
 #define THYME_ENVIRONMENTS_ROVER_DOMAIN_IREWARD
 
-#include <rover_domain/core/detail/pack.hpp>
+#include <rover_domain/core/detail/agent_types.hpp>
+#include <rover_domain/core/detail/entity_types.hpp>
 
 namespace rover_domain {
 
@@ -12,7 +13,7 @@ namespace rover_domain {
  */
 class IReward {
    public:
-    [[nodiscard]] virtual double compute(const AgentPack&) const = 0;
+    [[nodiscard]] virtual double compute(const Agents& agents, const POIs& pois, int unused_idx) const = 0;
     virtual ~IReward() = default;
 };
 

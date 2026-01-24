@@ -2,6 +2,11 @@
 #define THYME_ENVIRONMENTS_ROVER_DOMAIN_DIFFERENCE
 
 #include <rover_domain/core/rewards/global.hpp>
+#include <functional>
+#include <rover_domain/core/detail/agent_types.hpp>
+#include <rover_domain/core/detail/entity_types.hpp>
+#include <rover_domain/core/rover/irover.hpp>
+#include <rover_domain/core/poi/ipoi.hpp>
 
 namespace rover_domain {
 
@@ -12,32 +17,20 @@ namespace rover_domain {
  */
 class Difference {
    public:
-    [[nodiscard]] double compute(const AgentPack& pack) const {
+    [[nodiscard]] double compute(const Agents& agents, const POIs& pois, int idx) const {
         // std::cout << "Difference::compute()" << std::endl;
-        double reward = Global().compute(pack);
+        double reward = Global().compute(agents, pois, 0);
         // Make a vector of agents with the appropriate agent removed
         std::vector<Agent> agents_without_me;
-        for (int i = 0; i < pack.agents.size(); ++i) {
-            if (i != pack.agent_index) {
-                agents_without_me.push_back(pack.agents[i]);
+        for (int i = 0; i < agents.size(); ++i) {
+            if (i != idx) {
+                agents_without_me.push_back(agents[i]);
             }
         }
-        // std::cout << "Difference::compute() | Built pack_without_me" << std::endl;
-        // Make a new agentpack. Use dummy variable for agent index.
-        const AgentPack& pack_without_me = AgentPack(0, agents_without_me, pack.entities);
-        double reward_without_me = Global().compute(pack_without_me);
+        double reward_without_me = Global().compute(agents_without_me, pois, 0);
         return reward - reward_without_me;
     }
 };
-
-// class IndirectDifference {
-//     public:
-//     [[nodiscard]] double compute(const AgentPack& pack) const {
-//         double reward = Global().compute(pack)
-//         // Figure out
-//         return reward;
-//     }
-// };
 
 }  // namespace rover_domain
 

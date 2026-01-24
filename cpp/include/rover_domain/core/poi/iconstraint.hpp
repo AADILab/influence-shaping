@@ -1,8 +1,8 @@
 #ifndef THYME_ENVIRONMENTS_ROVER_DOMAIN_POI_ICONSTRAINT
 #define THYME_ENVIRONMENTS_ROVER_DOMAIN_POI_ICONSTRAINT
 
-#include <rover_domain/core/detail/pack.hpp>
 #include <rover_domain/core/rover/rover.hpp>
+#include <rover_domain/core/rover/irover.hpp>
 #include <rover_domain/core/poi/default_poi.hpp>
 #include <rover_domain/utilities/math/norms.hpp>
 #include <algorithm>
@@ -18,7 +18,7 @@ namespace rover_domain {
  */
 class IConstraint {
    public:
-    [[nodiscard]] virtual double is_satisfied(const POIPack& entity_pack) const = 0;
+    [[nodiscard]] virtual double is_satisfied(const POIs& pois, const Agents& agents, int idx) const = 0;
     virtual ~IConstraint() = default;
 };
 
@@ -36,34 +36,34 @@ class AbstractRoverConstraint : public IConstraint {
     AbstractRoverConstraint(int coupling, const std::vector<bool>& is_rover_list)
         : m_coupling(coupling), m_is_rover_list(is_rover_list) {}
 
-    [[nodiscard]] bool captured(double dist, const Agent& agent, const POI& entity) const {
+    [[nodiscard]] bool captured(double dist, const Agent& agent, const POI& poi) const {
         // Check if captured by capture radius or observation radii
-        if (entity->capture_radius() != -1.0 && dist <= entity->capture_radius()) {
+        if (poi->capture_radius() != -1.0 && dist <= poi->capture_radius()) {
             return true;
-        } else if (dist <= agent->obs_radius() && dist <= entity->obs_radius()) {
+        } else if (dist <= agent->obs_radius() && dist <= poi->obs_radius()) {
             return true;
         }
         return false;
     }
 
-    [[nodiscard]] double step_is_satisfied(const POIPack& entity_pack, std::size_t t) const {
+    [[nodiscard]] double step_is_satisfied(const POI& poi, const Agents& agents, std::size_t t) const {
         int count = 0;
         std::vector<double> dists;
         bool constraint_satisfied = false;
 
-        for (const auto& agent : entity_pack.agents) {
+        for (const auto& agent : agents) {
             if (agent->type() == "rover") {
                 double dist;
                 // Check for counterfactual removal (position [-1, -1])
                 if (agent->path()[t].x == -1 && agent->path()[t].y == -1) {
                     dist = std::numeric_limits<double>::infinity();
                 } else {
-                    dist = thyme::math::l2_norm(agent->path()[t], entity_pack.entity->position());
+                    dist = thyme::math::l2_norm(agent->path()[t], poi->position());
                 }
 
                 dists.push_back(dist);
 
-                if (captured(dist, agent, entity_pack.entity)) {
+                if (captured(dist, agent, poi)) {
                     count++;
                     if (count >= m_coupling) {
                         constraint_satisfied = true;
@@ -110,15 +110,15 @@ class RoverConstraint : public AbstractRoverConstraint {
 
     using AbstractRoverConstraint::AbstractRoverConstraint;
 
-    [[nodiscard]] double is_satisfied(const POIPack& entity_pack) const override {
+    [[nodiscard]] double is_satisfied(const POIs& pois, const Agents& agents, int idx) const override {
         // No agents means constraint is not satisfied
-        if (entity_pack.agents.size() == 0) {
+        if (agents.size() == 0) {
             return 0.0;
         }
 
         // Get final timestep
-        std::size_t t_final = entity_pack.agents[0]->path().size() - 1;
-        return step_is_satisfied(entity_pack, t_final);
+        std::size_t t_final = agents[0]->path().size() - 1;
+        return step_is_satisfied(pois[idx], agents, t_final);
     }
 };
 
@@ -134,18 +134,18 @@ class RoverSequenceConstraint : public AbstractRoverConstraint {
 
     using AbstractRoverConstraint::AbstractRoverConstraint;
 
-    [[nodiscard]] double is_satisfied(const POIPack& entity_pack) const override {
+    [[nodiscard]] double is_satisfied(const POIs& pois, const Agents& agents, int idx) const override {
         // No agents means constraint is not satisfied
-        if (entity_pack.agents.size() == 0) {
+        if (agents.size() == 0) {
             return 0.0;
         }
 
         // Find maximum satisfaction across all timesteps
         std::vector<double> steps;
-        std::size_t path_size = entity_pack.agents[0]->path().size();
+        std::size_t path_size = agents[0]->path().size();
 
         for (std::size_t t = 0; t < path_size; ++t) {
-            steps.push_back(step_is_satisfied(entity_pack, t));
+            steps.push_back(step_is_satisfied(pois[idx], agents, t));
         }
 
         return *std::max_element(steps.begin(), steps.end());

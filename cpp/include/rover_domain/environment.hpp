@@ -2,9 +2,7 @@
 #define THYME_ENVIRONMENTS_ROVER_DOMAIN_ENVIRONMENT
 
 #include <Eigen/Dense>
-#include <rover_domain/core/poi/count_constraint.hpp>
 #include <rover_domain/core/poi/default_poi.hpp>
-#include <rover_domain/core/poi/type_constraint.hpp>
 #include <rover_domain/core/rover/rover.hpp>
 #include <rover_domain/core/sensors/lidar.hpp>
 #include <rover_domain/core/rewards/computer.hpp>
@@ -23,29 +21,29 @@ template <typename InitPolicy = CornersInit>
 class Environment {
    public:
     using Action = Eigen::MatrixXd;
-    using State = std::vector<Eigen::MatrixXd>;
+    using Observations = std::vector<Eigen::MatrixXd>;
     using Reward = std::vector<double>;
 
     Environment(InitPolicy initPolicy = InitPolicy(), std::vector<Agent> rovers = {},
                 std::vector<POI> pois = {}, size_t width = 10.0, size_t height = 10.0,
                 bool debug_reward_equals_G = false)
         : m_initPolicy(initPolicy),
-          m_rovers(std::move(rovers)),
+          m_agents(std::move(rovers)),
           m_pois(std::move(pois)),
           m_width(width),
           m_height(height),
-          m_reward_computer(m_rovers, m_pois, debug_reward_equals_G) {}
+          m_reward_computer(m_agents, m_pois, debug_reward_equals_G) {}
 
     // helpers to set rovers/pois after the fact
-    void set_rovers(std::vector<Agent> rovers) { m_rovers = std::move(rovers); }
+    void set_rovers(std::vector<Agent> rovers) { m_agents = std::move(rovers); }
     void set_pois(std::vector<POI> pois) { m_pois = std::move(pois); }
 
-    const std::vector<Agent>& rovers() { return m_rovers; }
+    const std::vector<Agent>& rovers() { return m_agents; }
     const std::vector<POI>& pois() { return m_pois; }
 
     void perform_step(std::vector<Action> actions) {
-        for (size_t i = 0; i < m_rovers.size(); ++i) {
-            auto& rover = m_rovers[i];
+        for (size_t i = 0; i < m_agents.size(); ++i) {
+            auto& rover = m_agents[i];
             // call update for all rovers
             rover->update();
             // take actions
@@ -57,39 +55,34 @@ class Environment {
         for (auto& poi : m_pois) poi->update();
     }
 
-    std::tuple<State, Reward> step(std::vector<Action> actions) {
+    std::tuple<Observations, Reward> step(std::vector<Action> actions) {
         perform_step(actions);
         // return next observations and rewards
         return status();
     }
 
-    State step_without_rewards(std::vector<Action> actions) {
+    Observations step_without_rewards(std::vector<Action> actions) {
         perform_step(actions);
         // Just return observations
         return observations();
     }
 
-    State observations() {
-        State state;
-        for (int i = 0; i < m_rovers.size(); ++i) {
-            // std::cout << "Environment::status() | i | " << i << std::endl;
-            // Construct the AgentPack on the fly
-            const AgentPack pack = {i, m_rovers, m_pois};
-            // std::cout << "pack" << std::endl;
-            state.push_back(m_rovers[i]->scan(pack));
-            // rewards.push_back(m_rovers[i]->reward(pack));
+    Observations observations() {
+        Observations observations;
+        for (int i = 0; i < m_agents.size(); ++i) {
+            observations.push_back(m_agents[i]->scan(m_agents, m_pois, i));
         }
-        return state;
+        return observations;
     }
 
-    std::tuple<State, Reward> reset() {
+    std::tuple<Observations, Reward> reset() {
         // std::cout << "Environment::reset()" << std::endl;
         // clear agents
-        for (auto& r : m_rovers) r->reset();
+        for (auto& r : m_agents) r->reset();
         // reset pois
         for (auto& poi : m_pois) poi->set_observed(false);
         // initialize
-        m_initPolicy.initialize(m_rovers, m_pois);
+        m_initPolicy.initialize(m_agents, m_pois);
         // return next observations and rewards
         return status();
     }
@@ -105,7 +98,7 @@ class Environment {
         return m_reward_computer.compute();
     }
 
-    std::tuple<State, Reward> status() {
+    std::tuple<Observations, Reward> status() {
         // Give us the full status of the environment,
         // including what every agent observes, and the rewards for each agent
         return {observations(), rewards()};
@@ -121,7 +114,7 @@ class Environment {
                             std::clamp(rover->position().y, 0.0, 1.0 * m_height));
     }
     InitPolicy m_initPolicy;
-    std::vector<Agent> m_rovers;
+    std::vector<Agent> m_agents;
     std::vector<POI> m_pois;
     RewardComputer m_reward_computer;
 
@@ -134,8 +127,6 @@ class Environment {
  * Syntactic sugar for agents/entities
  *
  */
-using Agents = std::vector<Agent>;
-using POIs = std::vector<POI>;
 using Actions = std::vector<Eigen::MatrixXd>;
 
 Eigen::MatrixXd tensor(std::vector<double> list) {

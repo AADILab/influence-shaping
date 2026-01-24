@@ -116,4 +116,4 @@ experiment:
   num_trials: 50
 processing:
   num_threads: 15
-  use_multiprocessing: true
+  use_multiprocessing: false

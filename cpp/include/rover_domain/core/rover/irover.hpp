@@ -10,8 +10,6 @@
 
 namespace rover_domain {
 
-struct AgentPack;
-
 class AutomaticParameters {
     public:
     AutomaticParameters() = default;
@@ -62,8 +60,7 @@ class Bounds {
  */
 class IAgent {
     using Point = thyme::math::Point;
-    using ActionType = Eigen::MatrixXd;
-    using StateType = Eigen::MatrixXd;
+    using Matrix = Eigen::MatrixXd;
 
    public:
     IAgent(Bounds bounds, IndirectDifferenceParameters indirect_difference_parameters, std::string reward_type, std::string type_, double obs_radius = 1.0) : m_bounds(bounds), m_indirect_difference_parameters(indirect_difference_parameters), m_reward_type(reward_type), m_type(type_), m_obs_radius(obs_radius) {};
@@ -96,8 +93,8 @@ class IAgent {
         tick();
     }
 
-    [[nodiscard]] virtual StateType scan(const AgentPack&) const = 0;
-    [[nodiscard]] virtual double reward(const AgentPack&) const = 0;
+    [[nodiscard]] virtual Matrix scan(const Agents&, const POIs&, int agent_idx) const = 0;
+    [[nodiscard]] virtual double reward(const Agents&, const POIs&, int agent_idx) const = 0;
 
     std::string type() {
         // Give me the nominal type of this rover
@@ -116,7 +113,7 @@ class IAgent {
     }
 
     // [TODO] temp cppyy super().__init__() fix
-    virtual void act(const ActionType&) {}
+    virtual void act(const Matrix&) {}
 
    protected:
     virtual void tick() {}
