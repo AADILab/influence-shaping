@@ -7,7 +7,6 @@
 #include <rover_domain/core/poi/type_constraint.hpp>
 #include <rover_domain/core/rover/rover.hpp>
 #include <rover_domain/core/sensors/lidar.hpp>
-#include <rover_domain/utilities/spaces/discrete.hpp>
 #include <rover_domain/core/rewards/computer.hpp>
 #include <rover_domain/core/setup/init_corners.hpp>
 #include <tuple>

@@ -76,7 +76,6 @@ def createAgent(agent_config, agent_types, poi_types, disappear_bools, poi_subty
     if 'bounds' in agent_config:
         bounds = agent_config['bounds']
 
-    Discrete = thyme.spaces.Discrete
     Reward = rovers.Global
     Bounds = rovers.Bounds
 
@@ -98,7 +97,7 @@ def createAgent(agent_config, agent_types, poi_types, disappear_bools, poi_subty
         cpp_observation_radii = cppyy.gbl.std.vector[cppyy.gbl.double](observation_radii)
         cpp_default_values = cppyy.gbl.std.vector[cppyy.gbl.double](default_values)
 
-        return rovers.Rover[rovers.SmartLidar[rovers.Density], Discrete, Reward](
+        return rovers.Rover[rovers.SmartLidar[rovers.Density], Reward](
             Bounds(
                 low_x=bounds['low_x'],
                 high_x=bounds['high_x'],
@@ -132,7 +131,7 @@ def createAgent(agent_config, agent_types, poi_types, disappear_bools, poi_subty
         cpp_observation_radii = cppyy.gbl.std.vector[cppyy.gbl.double](observation_radii)
         cpp_default_values = cppyy.gbl.std.vector[cppyy.gbl.double](default_values)
 
-        return rovers.Rover[rovers.RoverLidar[rovers.Density], Discrete, Reward](
+        return rovers.Rover[rovers.RoverLidar[rovers.Density], Reward](
             Bounds(
                 low_x=bounds['low_x'],
                 high_x=bounds['high_x'],
@@ -155,7 +154,7 @@ def createAgent(agent_config, agent_types, poi_types, disappear_bools, poi_subty
             Reward()
         )
     elif sensor_type == 'UavDistanceLidar':
-        return rovers.Rover[rovers.UavDistanceLidar, Discrete, Reward](
+        return rovers.Rover[rovers.UavDistanceLidar, Reward](
             Bounds(
                 low_x=bounds['low_x'],
                 high_x=bounds['high_x'],

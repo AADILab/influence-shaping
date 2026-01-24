@@ -2,7 +2,6 @@
 #define THYME_ENVIRONMENTS_ROVER_DOMAIN_DIFFERENCE
 
 #include <rover_domain/core/rewards/global.hpp>
-#include <rover_domain/utilities/ranges.hpp>
 
 namespace rover_domain {
 

@@ -4,10 +4,8 @@
 #include <rover_domain/core/rewards/global.hpp>
 #include <rover_domain/core/rewards/difference.hpp>
 #include <rover_domain/core/rover/rover.hpp>
-#include <rover_domain/utilities/ranges.hpp>
 #include <rover_domain/utilities/math/norms.hpp>
 #include <rover_domain/core/sensors/lidar.hpp>
-#include <rover_domain/utilities/spaces/discrete.hpp>
 
 namespace rover_domain {
 
@@ -232,7 +230,7 @@ class RewardComputer {
         // Populate counterfactual rovers with copies of the rovers
         // Clear the path of each one
         for (int k=0; k < rovers.size(); ++k) {
-            Rover<Lidar<Density>, thyme::spaces::Discrete, Global> rover(
+            Rover<Lidar<Density>, Global> rover(
                 rovers[k]->bounds(),
                 rovers[k]->indirect_difference_parameters(),
                 rovers[k]->reward_type(),
