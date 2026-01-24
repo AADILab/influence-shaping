@@ -1,7 +1,7 @@
-#ifndef THYME_ENVIRONMENTS_ROVERS_GLOBAL
-#define THYME_ENVIRONMENTS_ROVERS_GLOBAL
+#ifndef THYME_ENVIRONMENTS_ROVER_DOMAIN_GLOBAL
+#define THYME_ENVIRONMENTS_ROVER_DOMAIN_GLOBAL
 
-#include <rovers/core/detail/pack.hpp>
+#include <roverdomain/core/detail/pack.hpp>
 
 namespace rovers::rewards {
 

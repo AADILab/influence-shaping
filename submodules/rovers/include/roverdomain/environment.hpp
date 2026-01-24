@@ -1,15 +1,15 @@
-#ifndef THYME_ENVIRONMENTS_ROVERS_ENVIRONMENT
-#define THYME_ENVIRONMENTS_ROVERS_ENVIRONMENT
+#ifndef THYME_ENVIRONMENTS_ROVER_DOMAIN_ENVIRONMENT
+#define THYME_ENVIRONMENTS_ROVER_DOMAIN_ENVIRONMENT
 
 #include <Eigen/Dense>
-#include <rovers/core/poi/count_constraint.hpp>
-#include <rovers/core/poi/poi.hpp>
-#include <rovers/core/poi/type_constraint.hpp>
-#include <rovers/core/rover/rover.hpp>
-#include <rovers/core/sensors/lidar.hpp>
-#include <rovers/utilities/spaces/discrete.hpp>
-#include <rovers/core/rewards/computer.hpp>
-#include <rovers/core/setup/init_corners.hpp>
+#include <roverdomain/core/poi/count_constraint.hpp>
+#include <roverdomain/core/poi/poi.hpp>
+#include <roverdomain/core/poi/type_constraint.hpp>
+#include <roverdomain/core/rover/rover.hpp>
+#include <roverdomain/core/sensors/lidar.hpp>
+#include <roverdomain/utilities/spaces/discrete.hpp>
+#include <roverdomain/core/rewards/computer.hpp>
+#include <roverdomain/core/setup/init_corners.hpp>
 #include <tuple>
 #include <vector>
 

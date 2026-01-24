@@ -1,8 +1,8 @@
-#ifndef THYME_ENVIRONMENTS_ROVERS_ISENSOR
-#define THYME_ENVIRONMENTS_ROVERS_ISENSOR
+#ifndef THYME_ENVIRONMENTS_ROVER_DOMAIN_ISENSOR
+#define THYME_ENVIRONMENTS_ROVER_DOMAIN_ISENSOR
 
 #include <Eigen/Dense>
-#include <rovers/core/detail/pack.hpp>
+#include <roverdomain/core/detail/pack.hpp>
 
 namespace rovers {
 

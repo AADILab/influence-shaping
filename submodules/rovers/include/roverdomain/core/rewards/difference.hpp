@@ -1,8 +1,8 @@
-#ifndef THYME_ENVIRONMENTS_ROVERS_DIFFERENCE
-#define THYME_ENVIRONMENTS_ROVERS_DIFFERENCE
+#ifndef THYME_ENVIRONMENTS_ROVER_DOMAIN_DIFFERENCE
+#define THYME_ENVIRONMENTS_ROVER_DOMAIN_DIFFERENCE
 
-#include <rovers/core/rewards/global.hpp>
-#include <rovers/utilities/ranges.hpp>
+#include <roverdomain/core/rewards/global.hpp>
+#include <roverdomain/utilities/ranges.hpp>
 
 namespace rovers::rewards {
 

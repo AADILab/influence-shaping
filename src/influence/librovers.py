@@ -29,13 +29,13 @@ if platform.machine() in ['arm64', 'aarch64']:
     cppyy.cppdef("#define EIGEN_DONT_VECTORIZE")
 
 # Headers used in the python examples. A makefile will replace this.
-cppyy.include(os.path.join(include_dir, 'rovers/environment.hpp'))
-cppyy.include(os.path.join(include_dir, 'rovers/core/rewards/ireward.hpp'))
-cppyy.include(os.path.join(include_dir, 'rovers/core/rewards/difference.hpp'))
-cppyy.include(os.path.join(include_dir, 'rovers/core/setup/init_corners.hpp'))
-cppyy.include(os.path.join(include_dir, 'rovers/core/setup/init_custom.hpp'))
-cppyy.include(os.path.join(include_dir, 'rovers/core/poi/iconstraint.hpp'))
-cppyy.include(os.path.join(include_dir, 'rovers/core/sensors/isensor.hpp'))
+cppyy.include(os.path.join(include_dir, 'roverdomain/environment.hpp'))
+cppyy.include(os.path.join(include_dir, 'roverdomain/core/rewards/ireward.hpp'))
+cppyy.include(os.path.join(include_dir, 'roverdomain/core/rewards/difference.hpp'))
+cppyy.include(os.path.join(include_dir, 'roverdomain/core/setup/init_corners.hpp'))
+cppyy.include(os.path.join(include_dir, 'roverdomain/core/setup/init_custom.hpp'))
+cppyy.include(os.path.join(include_dir, 'roverdomain/core/poi/iconstraint.hpp'))
+cppyy.include(os.path.join(include_dir, 'roverdomain/core/sensors/isensor.hpp'))
 
 # making c++ namespaces visible
 rovers = cppyy.gbl.rovers

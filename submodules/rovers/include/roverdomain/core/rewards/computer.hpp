@@ -1,12 +1,11 @@
-#ifndef THYME_ENVIRONMENTS_ROVERS_REWARD_COMPUTER
+#ifndef THYME_ENVIRONMENTS_ROVER_DOMAIN_REWARD_COMPUTER
+#define THYME_ENVIRONMENTS_ROVER_DOMAIN_REWARD_COMPUTER
 
-#define THYME_ENVIRONMENTS_ROVERS_REWARD_COMPUTER
-
-#include <rovers/core/rewards/global.hpp>
-#include <rovers/core/rewards/difference.hpp>
-#include <rovers/core/rover/rover.hpp>
-#include <rovers/utilities/ranges.hpp>
-#include <rovers/utilities/math/norms.hpp>
+#include <roverdomain/core/rewards/global.hpp>
+#include <roverdomain/core/rewards/difference.hpp>
+#include <roverdomain/core/rover/rover.hpp>
+#include <roverdomain/utilities/ranges.hpp>
+#include <roverdomain/utilities/math/norms.hpp>
 
 namespace rovers::rewards {
 

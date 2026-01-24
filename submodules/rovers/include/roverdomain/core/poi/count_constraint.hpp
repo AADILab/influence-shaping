@@ -1,9 +1,9 @@
-#ifndef THYME_ENVIRONMENTS_ROVERS_POI_COUNT_CONSTRAINT
-#define THYME_ENVIRONMENTS_ROVERS_POI_COUNT_CONSTRAINT
+#ifndef THYME_ENVIRONMENTS_ROVER_DOMAIN_POI_COUNT_CONSTRAINT
+#define THYME_ENVIRONMENTS_ROVER_DOMAIN_POI_COUNT_CONSTRAINT
 
-#include <rovers/core/poi/poi.hpp>
-#include <rovers/core/rover/rover.hpp>
-#include <rovers/utilities/math/norms.hpp>
+#include <roverdomain/core/poi/poi.hpp>
+#include <roverdomain/core/rover/rover.hpp>
+#include <roverdomain/utilities/math/norms.hpp>
 
 namespace rovers {
 
@@ -17,7 +17,7 @@ class CountConstraint {
     explicit CountConstraint(size_t count = 3) : count_constraint(count) {}
 
     [[nodiscard]] double is_satisfied(const EntityPack& entity_pack) const {
-        std::cout << "CountConstraint::is_satisfied()" << std::endl; 
+        std::cout << "CountConstraint::is_satisfied()" << std::endl;
         bool constraint_satisfied = false;
         size_t count = 0;
         std::vector<double> dists;

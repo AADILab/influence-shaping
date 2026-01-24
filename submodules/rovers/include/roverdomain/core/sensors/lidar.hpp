@@ -1,13 +1,13 @@
-#ifndef THYME_ENVIRONMENTS_ROVERS_LIDAR
-#define THYME_ENVIRONMENTS_ROVERS_LIDAR
+#ifndef THYME_ENVIRONMENTS_ROVER_DOMAIN_LIDAR
+#define THYME_ENVIRONMENTS_ROVER_DOMAIN_LIDAR
 
 #include <Eigen/Dense>
 #include <numeric>
-#include <rovers/core/detail/pack.hpp>
-#include <rovers/core/poi/poi.hpp>
-#include <rovers/core/rover/rover.hpp>
-#include <rovers/utilities/math/norms.hpp>
-#include <rovers/core/sensors/isensor.hpp>
+#include <roverdomain/core/detail/pack.hpp>
+#include <roverdomain/core/poi/poi.hpp>
+#include <roverdomain/core/rover/rover.hpp>
+#include <roverdomain/utilities/math/norms.hpp>
+#include <roverdomain/core/sensors/isensor.hpp>
 // #include <ranges> // changed for python branch
 #include <vector>
 

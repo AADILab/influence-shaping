@@ -1,13 +1,13 @@
-#ifndef THYME_ENVIRONMENTS_ROVERS_ROVER
-#define THYME_ENVIRONMENTS_ROVERS_ROVER
+#ifndef THYME_ENVIRONMENTS_ROVER_DOMAIN_ROVER
+#define THYME_ENVIRONMENTS_ROVER_DOMAIN_ROVER
 
 #include <Eigen/Dense>
 #include <iostream>
-#include <rovers/core/detail/agent_types.hpp>
-#include <rovers/core/detail/entity_types.hpp>
-#include <rovers/core/detail/pack.hpp>
-#include <rovers/core/rewards/global.hpp>
-#include <rovers/utilities/math/cartesian.hpp>
+#include <roverdomain/core/detail/agent_types.hpp>
+#include <roverdomain/core/detail/entity_types.hpp>
+#include <roverdomain/core/detail/pack.hpp>
+#include <roverdomain/core/rewards/global.hpp>
+#include <roverdomain/utilities/math/cartesian.hpp>
 #include <vector>
 
 namespace rovers {

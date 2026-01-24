@@ -1,8 +1,8 @@
-#ifndef THYME_ENVIRONMENTS_ROVERS_POI
-#define THYME_ENVIRONMENTS_ROVERS_POI
+#ifndef THYME_ENVIRONMENTS_ROVER_DOMAIN_POI
+#define THYME_ENVIRONMENTS_ROVER_DOMAIN_POI
 
-#include <rovers/core/detail/pack.hpp>
-#include <rovers/utilities/math/cartesian.hpp>
+#include <roverdomain/core/detail/pack.hpp>
+#include <roverdomain/utilities/math/cartesian.hpp>
 
 namespace rovers {
 

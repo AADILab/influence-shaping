@@ -1,10 +1,10 @@
-#ifndef THYME_ENVIRONMENTS_ROVERS_PACK
-#define THYME_ENVIRONMENTS_ROVERS_PACK
+#ifndef THYME_ENVIRONMENTS_ROVER_DOMAIN_PACK
+#define THYME_ENVIRONMENTS_ROVER_DOMAIN_PACK
 
 #include <functional>
-#include <rovers/core/detail/agent_types.hpp>
-#include <rovers/core/detail/entity_types.hpp>
-#include <rovers/utilities/ranges.hpp>
+#include <roverdomain/core/detail/agent_types.hpp>
+#include <roverdomain/core/detail/entity_types.hpp>
+#include <roverdomain/utilities/ranges.hpp>
 
 /*
  *
