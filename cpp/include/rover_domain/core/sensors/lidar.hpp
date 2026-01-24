@@ -3,11 +3,11 @@
 
 #include <Eigen/Dense>
 #include <numeric>
-#include <roverdomain/core/detail/pack.hpp>
-#include <roverdomain/core/poi/poi.hpp>
-#include <roverdomain/core/rover/rover.hpp>
-#include <roverdomain/utilities/math/norms.hpp>
-#include <roverdomain/core/sensors/isensor.hpp>
+#include <rover_domain/core/detail/pack.hpp>
+#include <rover_domain/core/poi/poi.hpp>
+#include <rover_domain/core/rover/rover.hpp>
+#include <rover_domain/utilities/math/norms.hpp>
+#include <rover_domain/core/sensors/isensor.hpp>
 // #include <ranges> // changed for python branch
 #include <vector>
 

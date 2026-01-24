@@ -2,14 +2,14 @@
 #define THYME_ENVIRONMENTS_ROVER_DOMAIN_ENVIRONMENT
 
 #include <Eigen/Dense>
-#include <roverdomain/core/poi/count_constraint.hpp>
-#include <roverdomain/core/poi/poi.hpp>
-#include <roverdomain/core/poi/type_constraint.hpp>
-#include <roverdomain/core/rover/rover.hpp>
-#include <roverdomain/core/sensors/lidar.hpp>
-#include <roverdomain/utilities/spaces/discrete.hpp>
-#include <roverdomain/core/rewards/computer.hpp>
-#include <roverdomain/core/setup/init_corners.hpp>
+#include <rover_domain/core/poi/count_constraint.hpp>
+#include <rover_domain/core/poi/poi.hpp>
+#include <rover_domain/core/poi/type_constraint.hpp>
+#include <rover_domain/core/rover/rover.hpp>
+#include <rover_domain/core/sensors/lidar.hpp>
+#include <rover_domain/utilities/spaces/discrete.hpp>
+#include <rover_domain/core/rewards/computer.hpp>
+#include <rover_domain/core/setup/init_corners.hpp>
 #include <tuple>
 #include <vector>
 
@@ -124,7 +124,7 @@ class Environment {
     InitPolicy m_initPolicy;
     std::vector<Agent> m_rovers;
     std::vector<Entity> m_pois;
-    rewards::RewardComputer m_reward_computer;
+    RewardComputer m_reward_computer;
 
     size_t m_width;
     size_t m_height;

@@ -1,10 +1,10 @@
 #ifndef THYME_ENVIRONMENTS_ROVER_DOMAIN_POI_ICONSTRAINT
 #define THYME_ENVIRONMENTS_ROVER_DOMAIN_POI_ICONSTRAINT
 
-#include <roverdomain/core/detail/pack.hpp>
-#include <roverdomain/core/rover/rover.hpp>
-#include <roverdomain/core/poi/poi.hpp>
-#include <roverdomain/utilities/math/norms.hpp>
+#include <rover_domain/core/detail/pack.hpp>
+#include <rover_domain/core/rover/rover.hpp>
+#include <rover_domain/core/poi/poi.hpp>
+#include <rover_domain/utilities/math/norms.hpp>
 #include <algorithm>
 #include <vector>
 #include <limits>

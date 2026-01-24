@@ -2,9 +2,11 @@
 #define THYME_ENVIRONMENTS_ROVER_DOMAIN_PACK
 
 #include <functional>
-#include <roverdomain/core/detail/agent_types.hpp>
-#include <roverdomain/core/detail/entity_types.hpp>
-#include <roverdomain/utilities/ranges.hpp>
+#include <rover_domain/core/detail/agent_types.hpp>
+#include <rover_domain/core/detail/entity_types.hpp>
+#include <rover_domain/core/rover/irover.hpp>
+#include <rover_domain/core/poi/ipoi.hpp>
+#include <rover_domain/utilities/ranges.hpp>
 
 /*
  *

@@ -1,9 +1,9 @@
 #ifndef THYME_ENVIRONMENTS_ROVER_DOMAIN_POI_TYPE_CONSTRAINT
 #define THYME_ENVIRONMENTS_ROVER_DOMAIN_POI_TYPE_CONSTRAINT
 
-#include <roverdomain/core/poi/poi.hpp>
-#include <roverdomain/core/rover/rover.hpp>
-#include <roverdomain/utilities/math/norms.hpp>
+#include <rover_domain/core/poi/poi.hpp>
+#include <rover_domain/core/rover/rover.hpp>
+#include <rover_domain/utilities/math/norms.hpp>
 
 namespace rovers {
 

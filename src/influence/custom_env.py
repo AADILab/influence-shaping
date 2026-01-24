@@ -77,7 +77,7 @@ def createAgent(agent_config, agent_types, poi_types, disappear_bools, poi_subty
         bounds = agent_config['bounds']
 
     Discrete = thyme.spaces.Discrete
-    Reward = rovers.rewards.Global
+    Reward = rovers.Global
     Bounds = rovers.Bounds
 
     if sensor_type == 'SmartLidar':

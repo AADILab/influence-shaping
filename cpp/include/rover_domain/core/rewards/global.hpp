@@ -1,9 +1,10 @@
 #ifndef THYME_ENVIRONMENTS_ROVER_DOMAIN_GLOBAL
 #define THYME_ENVIRONMENTS_ROVER_DOMAIN_GLOBAL
 
-#include <roverdomain/core/detail/pack.hpp>
+#include <rover_domain/core/detail/pack.hpp>
+#include <rover_domain/core/poi/ipoi.hpp>
 
-namespace rovers::rewards {
+namespace rovers {
 
 /*
  *
@@ -58,6 +59,6 @@ class Global {
     }
 };
 
-}  // namespace rovers::rewards
+}  // namespace rovers
 
 #endif

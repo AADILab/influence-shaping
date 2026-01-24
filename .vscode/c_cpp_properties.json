@@ -4,8 +4,8 @@
             "name": "Mac",
             "includePath": [
                 "${workspaceFolder}/src",
-                "${workspaceFolder}/submodules/rovers/include",
-                "${workspaceFolder}/submodules/rovers/libs",
+                "${workspaceFolder}/cpp/include",
+                "${workspaceFolder}/cpp/libs",
                 "/Users/ever/miniconda3/envs/influence/include",
                 "/Users/ever/miniconda3/envs/influence/include/c++/v1"
             ],

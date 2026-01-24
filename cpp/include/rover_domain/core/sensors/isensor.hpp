@@ -2,7 +2,7 @@
 #define THYME_ENVIRONMENTS_ROVER_DOMAIN_ISENSOR
 
 #include <Eigen/Dense>
-#include <roverdomain/core/detail/pack.hpp>
+#include <rover_domain/core/detail/pack.hpp>
 
 namespace rovers {
 

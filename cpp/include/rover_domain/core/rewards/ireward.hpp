@@ -1,9 +1,9 @@
 #ifndef THYME_ENVIRONMENTS_ROVER_DOMAIN_IREWARD
 #define THYME_ENVIRONMENTS_ROVER_DOMAIN_IREWARD
 
-#include <roverdomain/core/detail/pack.hpp>
+#include <rover_domain/core/detail/pack.hpp>
 
-namespace rovers::rewards {
+namespace rovers {
 
 /*
  *
@@ -16,6 +16,6 @@ class IReward {
     virtual ~IReward() = default;
 };
 
-}  // namespace rovers::rewards
+}  // namespace rovers
 
 #endif

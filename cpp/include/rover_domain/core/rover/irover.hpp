@@ -1,16 +1,16 @@
-#ifndef THYME_ENVIRONMENTS_ROVER_DOMAIN_ROVER
-#define THYME_ENVIRONMENTS_ROVER_DOMAIN_ROVER
+#ifndef THYME_ENVIRONMENTS_ROVER_DOMAIN_IROVER
+#define THYME_ENVIRONMENTS_ROVER_DOMAIN_IROVER
 
 #include <Eigen/Dense>
 #include <iostream>
-#include <roverdomain/core/detail/agent_types.hpp>
-#include <roverdomain/core/detail/entity_types.hpp>
-#include <roverdomain/core/detail/pack.hpp>
-#include <roverdomain/core/rewards/global.hpp>
-#include <roverdomain/utilities/math/cartesian.hpp>
+#include <rover_domain/core/detail/agent_types.hpp>
+#include <rover_domain/core/detail/entity_types.hpp>
+#include <rover_domain/utilities/math/cartesian.hpp>
 #include <vector>
 
 namespace rovers {
+
+struct AgentPack;
 
 class AutomaticParameters {
     public:
@@ -131,60 +131,6 @@ class IRover {
     Bounds m_bounds;
 };
 
-/*
- *
- * Default boilerplate rover
- *
- */
-template <typename SensorType, typename ActionSpace, typename RewardType = rewards::Global>
-class Rover final : public IRover {
-    using SType = thyme::utilities::SharedWrap<SensorType>;
-    using RType = thyme::utilities::SharedWrap<RewardType>;
-    using ActionType = Eigen::MatrixXd;
-   public:
-    Rover(Bounds bounds, IndirectDifferenceParameters indirect_difference_parameters, std::string reward_type, std::string type_, double obs_radius = 1.0, SType sensor = SensorType(), RType reward = RewardType())
-        : IRover(bounds, indirect_difference_parameters, reward_type, type_, obs_radius), m_sensor(sensor), m_reward(reward) {}
-    // NOTE: This is commented out because I couldn't get it to work properly, but left as dead code to help me later if I need to get it working
-    // Rover(const Rover& rover)
-    //     : IRover(rover.indirect_difference_parameters(), rover.reward_type(), rover.type(), rover.obs_radius()), m_sensor(SensorType()), m_reward(RewardType()) {}
-    [[nodiscard]] virtual Eigen::MatrixXd scan(const AgentPack& pack) const override {
-        // std::cout << "Rover::scan()" << std::endl;
-        return m_sensor->scan(pack);
-    }
-    [[nodiscard]] virtual double reward(const AgentPack& pack) const override {
-        // each aget gets a reward set here but only nominally so the reward computer knows
-        // what to do
-        // but each agent is not comjputing its own reward
-        // std::cout << "Rover::reward()" << std::endl;
-        return m_reward->compute(pack);
-    }
-    void act(const ActionType& action) override {
-        // default, move in x and y
-        assert(action.rows() >= 2);
-        auto act = static_cast<Eigen::Vector2d>(action);
-        update_position(act[0], act[1]);
-    }
-
-
-   public:
-    SType m_sensor;
-    RType m_reward;
-};
-
-/*
- *
- * Example of bringing in a new Rover from the python bindings
- *
- */
-// class Drone final : public IRover {
-//    public:
-//     Drone(double obs_radius = 1.0) : IRover(obs_radius) {}
-
-//     [[nodiscard]] virtual Eigen::MatrixXd scan(const AgentPack&) const override { return {}; }
-//     [[nodiscard]] virtual double reward(const AgentPack&) const override { return 0; }
-//     void act(const Eigen::MatrixXd&) override { }
-// };
-
-}  // namespace rovers
+} // namespace rovers
 
 #endif

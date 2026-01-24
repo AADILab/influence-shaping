@@ -18,7 +18,7 @@ try:
     current_dir = os.path.dirname(__file__)
 except NameError:
     current_dir = os.getcwd()
-source_dir = os.path.abspath(os.path.join(current_dir, os.pardir, os.pardir,"submodules", "rovers"))
+source_dir = os.path.abspath(os.path.join(current_dir, os.pardir, os.pardir, "cpp"))
 include_dir = os.path.join(source_dir, 'include')
 libs_dir = os.path.join(source_dir, 'libs')
 

@@ -1,13 +1,15 @@
 #ifndef THYME_ENVIRONMENTS_ROVER_DOMAIN_REWARD_COMPUTER
 #define THYME_ENVIRONMENTS_ROVER_DOMAIN_REWARD_COMPUTER
 
-#include <roverdomain/core/rewards/global.hpp>
-#include <roverdomain/core/rewards/difference.hpp>
-#include <roverdomain/core/rover/rover.hpp>
-#include <roverdomain/utilities/ranges.hpp>
-#include <roverdomain/utilities/math/norms.hpp>
+#include <rover_domain/core/rewards/global.hpp>
+#include <rover_domain/core/rewards/difference.hpp>
+#include <rover_domain/core/rover/rover.hpp>
+#include <rover_domain/utilities/ranges.hpp>
+#include <rover_domain/utilities/math/norms.hpp>
+#include <rover_domain/core/sensors/lidar.hpp>
+#include <rover_domain/utilities/spaces/discrete.hpp>
 
-namespace rovers::rewards {
+namespace rovers {
 
 class RewardComputer {
     public:
@@ -230,7 +232,7 @@ class RewardComputer {
         // Populate counterfactual rovers with copies of the rovers
         // Clear the path of each one
         for (int k=0; k < rovers.size(); ++k) {
-            Rover<Lidar<Density>, thyme::spaces::Discrete, rewards::Global> rover(
+            Rover<Lidar<Density>, thyme::spaces::Discrete, Global> rover(
                 rovers[k]->bounds(),
                 rovers[k]->indirect_difference_parameters(),
                 rovers[k]->reward_type(),
@@ -474,6 +476,6 @@ class RewardComputer {
     bool m_debug_reward_equals_G; // private so you can't change it after the class has been initialized
 };
 
-}  // namespace rovers::rewards
+}  // namespace rovers
 
 #endif

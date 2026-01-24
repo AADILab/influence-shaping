@@ -1,10 +1,10 @@
 #ifndef THYME_ENVIRONMENTS_ROVER_DOMAIN_DIFFERENCE
 #define THYME_ENVIRONMENTS_ROVER_DOMAIN_DIFFERENCE
 
-#include <roverdomain/core/rewards/global.hpp>
-#include <roverdomain/utilities/ranges.hpp>
+#include <rover_domain/core/rewards/global.hpp>
+#include <rover_domain/utilities/ranges.hpp>
 
-namespace rovers::rewards {
+namespace rovers {
 
 /*
  *
@@ -40,6 +40,6 @@ class Difference {
 //     }
 // };
 
-}  // namespace rovers::rewards
+}  // namespace rovers
 
 #endif
