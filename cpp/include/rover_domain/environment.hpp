@@ -13,7 +13,7 @@
 #include <tuple>
 #include <vector>
 
-namespace rovers {
+namespace rover_domain {
 
 /*
  *
@@ -152,6 +152,6 @@ Entities& operator<<(Entities& vector, Entity&& poi) {
     return vector;
 }
 
-}  // namespace rovers
+}  // namespace rover_domain
 
 #endif

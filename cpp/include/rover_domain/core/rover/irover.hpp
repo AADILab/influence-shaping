@@ -8,7 +8,7 @@
 #include <rover_domain/utilities/math/cartesian.hpp>
 #include <vector>
 
-namespace rovers {
+namespace rover_domain {
 
 struct AgentPack;
 
@@ -131,6 +131,6 @@ class IRover {
     Bounds m_bounds;
 };
 
-} // namespace rovers
+} // namespace rover_domain
 
 #endif

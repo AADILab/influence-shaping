@@ -4,7 +4,7 @@
 #include <rover_domain/core/detail/pack.hpp>
 #include <rover_domain/core/poi/ipoi.hpp>
 
-namespace rovers {
+namespace rover_domain {
 
 /*
  *
@@ -59,6 +59,6 @@ class Global {
     }
 };
 
-}  // namespace rovers
+}  // namespace rover_domain
 
 #endif

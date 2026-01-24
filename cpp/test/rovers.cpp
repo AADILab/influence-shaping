@@ -7,7 +7,7 @@
 #include <rovers/utilities/spaces/discrete.hpp>
 
 int main() {
-    using namespace rovers;
+    using namespace rover_domain;
 
     using Dense = Lidar<Density>;
     using Close = Lidar<Closest>;

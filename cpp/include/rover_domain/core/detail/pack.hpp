@@ -13,7 +13,7 @@
  * Parameter packs for common aggregations
  *
  */
-namespace rovers {
+namespace rover_domain {
 
 struct AgentPack {
     AgentPack(int agent_index, const std::vector<Agent>& agents,
@@ -40,6 +40,6 @@ struct EntityPack {
 EntityPack from_filter(const EntityPack& pack, std::function<bool(const Entity&)> predicate) {
     return {pack.entity, pack.agents, thyme::utilities::filter(pack.entities, predicate)};
 }
-}  // namespace rovers
+}  // namespace rover_domain
 
 #endif

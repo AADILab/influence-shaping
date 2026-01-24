@@ -11,7 +11,7 @@
 // #include <ranges> // changed for python branch
 #include <vector>
 
-namespace rovers {
+namespace rover_domain {
 
 /*
  *
@@ -509,6 +509,6 @@ class UavDistanceLidar : public ISensor {
     mutable int m_num_sensed_uavs;
 };
 
-}  // namespace rovers
+}  // namespace rover_domain
 
 #endif

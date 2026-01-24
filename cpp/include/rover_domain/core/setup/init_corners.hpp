@@ -4,7 +4,7 @@
 #include <cmath>
 // #include <ranges>
 
-namespace rovers {
+namespace rover_domain {
 
 /*
  *
@@ -78,6 +78,6 @@ class CornersInit {
    private:
     double m_span;
 };
-}  // namespace rovers
+}  // namespace rover_domain
 
 #endif

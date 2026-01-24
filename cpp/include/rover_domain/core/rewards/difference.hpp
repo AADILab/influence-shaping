@@ -4,7 +4,7 @@
 #include <rover_domain/core/rewards/global.hpp>
 #include <rover_domain/utilities/ranges.hpp>
 
-namespace rovers {
+namespace rover_domain {
 
 /*
  *
@@ -40,6 +40,6 @@ class Difference {
 //     }
 // };
 
-}  // namespace rovers
+}  // namespace rover_domain
 
 #endif

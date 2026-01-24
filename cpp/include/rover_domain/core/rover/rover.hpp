@@ -10,7 +10,7 @@
 #include <rover_domain/utilities/math/cartesian.hpp>
 #include <vector>
 
-namespace rovers {
+namespace rover_domain {
 
 /*
  *
@@ -66,6 +66,6 @@ class Rover final : public IRover {
 //     void act(const Eigen::MatrixXd&) override { }
 // };
 
-}  // namespace rovers
+}  // namespace rover_domain
 
 #endif

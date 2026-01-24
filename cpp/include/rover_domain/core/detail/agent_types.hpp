@@ -8,9 +8,9 @@
 * Agent abstraction
 *
 */
-namespace rovers {
+namespace rover_domain {
 class IRover;
 using Agent = thyme::utilities::SharedWrap<IRover>;
-}  // namespace rovers
+}  // namespace rover_domain
 
 #endif

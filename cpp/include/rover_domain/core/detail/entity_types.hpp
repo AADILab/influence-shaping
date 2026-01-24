@@ -8,9 +8,9 @@
  * Entity abstraction
  *
  */
-namespace rovers {
+namespace rover_domain {
 class IPOI;
 using Entity = thyme::utilities::SharedWrap<IPOI>;
-}  // namespace rovers
+}  // namespace rover_domain
 
 #endif

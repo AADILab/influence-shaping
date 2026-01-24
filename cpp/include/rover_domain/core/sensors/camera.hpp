@@ -11,7 +11,7 @@ removed for python branch
 #include <ranges>
 #include <vector>
 
-namespace rovers {
+namespace rover_domain {
 
 template <typename StackingPolicy>
 class Camera {

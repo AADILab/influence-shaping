@@ -4,7 +4,7 @@
 #include <Eigen/Dense>
 #include <rover_domain/core/detail/pack.hpp>
 
-namespace rovers {
+namespace rover_domain {
 
 /*
  *
@@ -17,5 +17,5 @@ class ISensor {
     virtual ~ISensor() = default;
 };
 
-}  // namespace rovers
+}  // namespace rover_domain
 #endif

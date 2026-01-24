@@ -9,7 +9,7 @@
 #include <rover_domain/core/sensors/lidar.hpp>
 #include <rover_domain/utilities/spaces/discrete.hpp>
 
-namespace rovers {
+namespace rover_domain {
 
 class RewardComputer {
     public:
@@ -476,6 +476,6 @@ class RewardComputer {
     bool m_debug_reward_equals_G; // private so you can't change it after the class has been initialized
 };
 
-}  // namespace rovers
+}  // namespace rover_domain
 
 #endif

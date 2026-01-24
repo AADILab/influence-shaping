@@ -4,7 +4,7 @@
 #include <cmath>
 #include <vector>
 
-namespace rovers {
+namespace rover_domain {
 
 /*
  *
@@ -46,6 +46,6 @@ class CustomInit {
     std::vector<std::vector<double>> m_rover_positions;
     std::vector<std::vector<double>> m_poi_positions;
 };
-}  // namespace rovers
+}  // namespace rover_domain
 
 #endif

@@ -3,7 +3,7 @@
 
 #include <rover_domain/core/detail/pack.hpp>
 
-namespace rovers {
+namespace rover_domain {
 
 /*
  *
@@ -16,6 +16,6 @@ class IReward {
     virtual ~IReward() = default;
 };
 
-}  // namespace rovers
+}  // namespace rover_domain
 
 #endif

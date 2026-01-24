@@ -5,7 +5,7 @@
 #include <rover_domain/core/rover/rover.hpp>
 #include <rover_domain/utilities/math/norms.hpp>
 
-namespace rovers {
+namespace rover_domain {
 
 /*
  *
@@ -33,6 +33,6 @@ class TypeConstraint {
     size_t count_constraint;
 };
 
-}  // namespace rovers
+}  // namespace rover_domain
 
 #endif

@@ -3,7 +3,7 @@
 
 #include <rover_domain/utilities/math/cartesian.hpp>
 
-namespace rovers {
+namespace rover_domain {
 
 struct EntityPack;
 
@@ -66,6 +66,6 @@ class IPOI {
     // Then we compute a stepwise reward based on the delta between the two variables
 };
 
-} // namespace rovers
+} // namespace rover_domain
 
 #endif

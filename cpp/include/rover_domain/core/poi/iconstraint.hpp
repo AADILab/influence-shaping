@@ -9,7 +9,7 @@
 #include <vector>
 #include <limits>
 
-namespace rovers {
+namespace rover_domain {
 
 /*
  *
@@ -152,6 +152,6 @@ class RoverSequenceConstraint : public AbstractRoverConstraint {
     }
 };
 
-}  // namespace rovers
+}  // namespace rover_domain
 
 #endif

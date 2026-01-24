@@ -4,7 +4,7 @@
 #include <rover_domain/core/detail/pack.hpp>
 #include <rover_domain/utilities/math/cartesian.hpp>
 
-namespace rovers {
+namespace rover_domain {
 
 /*
  *
@@ -26,6 +26,6 @@ class POI final : public IPOI {
    private:
     ConstraintPolicy m_constraint;
 };
-}  // namespace rovers
+}  // namespace rover_domain
 
 #endif
