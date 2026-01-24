@@ -12,13 +12,13 @@ namespace rover_domain {
  *
  */
 template <typename ConstraintPolicy>
-class POI final : public IPOI {
+class DefaultPOI final : public IPOI {
    public:
-    POI(double value = 1.0, double obs_radius = 1.0, double capture_radius = -1.0,
+    DefaultPOI(double value = 1.0, double obs_radius = 1.0, double capture_radius = -1.0,
         ConstraintPolicy constraint = ConstraintPolicy())
         : IPOI(value, obs_radius, capture_radius), m_constraint(constraint) {}
 
-    [[nodiscard]] double constraint_satisfied(const EntityPack& entity_pack) const override {
+    [[nodiscard]] double constraint_satisfied(const POIPack& entity_pack) const override {
         // std::cout << "POI::constraint_satisfied()" << std::endl;
         return m_constraint.is_satisfied(entity_pack);
     }

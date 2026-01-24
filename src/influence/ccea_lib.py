@@ -13,7 +13,7 @@ import yaml
 import pandas as pd
 
 from influence.evo_network import NeuralNetwork
-from influence.librovers import rovers
+from influence.librovers import rover_domain
 from influence.custom_env import createEnv
 from influence.ccea_utils import  bound_velocity_arr, getRandomWeights, build_rollout_packs
 from influence.ccea_utils import FollowPolicy, JointTrajectory, RolloutPackOut, RolloutPackIn, RolloutPack, Individual, TeamPack
@@ -529,7 +529,7 @@ class CooperativeCoevolutionaryAlgorithm():
                 observation_arrs.append(observation_arr)
                 actions_arrs.append(input_action_arr)
             for action_arr in actions_arrs:
-                action = rovers.tensor(action_arr)
+                action = rover_domain.tensor(action_arr)
                 actions.append(action)
             # TODO: Might need to start getting the reward at each timestep rather than once at the end
             # And then just summing them together
@@ -547,12 +547,12 @@ class CooperativeCoevolutionaryAlgorithm():
             joint_state_trajectory.append(agent_positions+poi_positions)
 
         # Create an agent pack to pass to reward function
-        agent_pack = rovers.AgentPack(
+        agent_pack = rover_domain.AgentPack(
             agent_index = 0,
             agents = env.rovers(),
             entities = env.pois()
         )
-        team_fitness = rovers.Global().compute(agent_pack)
+        team_fitness = rover_domain.Global().compute(agent_pack)
         rewards = env.rewards()
         shaped_fitnesses = [r for r in rewards]
 

@@ -2,7 +2,7 @@ import unittest
 import numpy as np
 from copy import deepcopy
 from typing import Any
-from influence.librovers import rovers, eigen
+from influence.librovers import rover_domain, eigen
 from influence.custom_env import createEnv
 
 class InfluenceTestCase(unittest.TestCase):
@@ -30,11 +30,11 @@ class InfluenceTestCase(unittest.TestCase):
 
     @staticmethod
     def compute_G(env):
-        return env.rovers()[0].reward(rovers.AgentPack(0, env.rovers(), env.pois()))
+        return env.rovers()[0].reward(rover_domain.AgentPack(0, env.rovers(), env.pois()))
 
     @staticmethod
     def compute_agent_reward(env, agent_id):
-        return env.rovers()[agent_id].reward(rovers.AgentPack(agent_id, env.rovers(), env.pois()))
+        return env.rovers()[agent_id].reward(rover_domain.AgentPack(agent_id, env.rovers(), env.pois()))
 
     @staticmethod
     def extract_observation(cppyy_observation):

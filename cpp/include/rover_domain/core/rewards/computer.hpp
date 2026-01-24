@@ -13,7 +13,7 @@ class RewardComputer {
     public:
     using Reward = std::vector<double>;
 
-    RewardComputer(std::vector<Agent> rovers, std::vector<Entity> pois, bool debug_reward_equals_G) {
+    RewardComputer(std::vector<Agent> rovers, std::vector<POI> pois, bool debug_reward_equals_G) {
         // std::cout << "RewardComputer::RewardComputer()" << std::endl;
         m_rovers = rovers;
         m_pois = pois;
@@ -468,7 +468,7 @@ class RewardComputer {
 
     Global m_Global;
     std::vector<Agent> m_rovers;
-    std::vector<Entity> m_pois;
+    std::vector<POI> m_pois;
 
     private:
     bool m_debug_reward_equals_G; // private so you can't change it after the class has been initialized

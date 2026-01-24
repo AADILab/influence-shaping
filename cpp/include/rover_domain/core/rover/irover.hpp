@@ -57,22 +57,22 @@ class Bounds {
 
 /*
  *
- * rover interface
+ * agent interface
  *
  */
-class IRover {
+class IAgent {
     using Point = thyme::math::Point;
     using ActionType = Eigen::MatrixXd;
     using StateType = Eigen::MatrixXd;
 
    public:
-    IRover(Bounds bounds, IndirectDifferenceParameters indirect_difference_parameters, std::string reward_type, std::string type_, double obs_radius = 1.0) : m_bounds(bounds), m_indirect_difference_parameters(indirect_difference_parameters), m_reward_type(reward_type), m_type(type_), m_obs_radius(obs_radius) {};
-    IRover(IRover&&) = default;
-    IRover(const IRover&) = default;
-    virtual ~IRover() = default;
+    IAgent(Bounds bounds, IndirectDifferenceParameters indirect_difference_parameters, std::string reward_type, std::string type_, double obs_radius = 1.0) : m_bounds(bounds), m_indirect_difference_parameters(indirect_difference_parameters), m_reward_type(reward_type), m_type(type_), m_obs_radius(obs_radius) {};
+    IAgent(IAgent&&) = default;
+    IAgent(const IAgent&) = default;
+    virtual ~IAgent() = default;
 
     void reset() {
-        // std::cout << "IRover::reset()" << std::endl;
+        // std::cout << "IAgent::reset()" << std::endl;
         m_path.clear();
         }
 

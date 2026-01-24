@@ -1,7 +1,7 @@
 #ifndef THYME_ENVIRONMENTS_ROVER_DOMAIN_POI_COUNT_CONSTRAINT
 #define THYME_ENVIRONMENTS_ROVER_DOMAIN_POI_COUNT_CONSTRAINT
 
-#include <rover_domain/core/poi/poi.hpp>
+#include <rover_domain/core/poi/default_poi.hpp>
 #include <rover_domain/core/rover/rover.hpp>
 #include <rover_domain/utilities/math/norms.hpp>
 
@@ -16,7 +16,7 @@ class CountConstraint {
    public:
     explicit CountConstraint(size_t count = 3) : count_constraint(count) {}
 
-    [[nodiscard]] double is_satisfied(const EntityPack& entity_pack) const {
+    [[nodiscard]] double is_satisfied(const POIPack& entity_pack) const {
         std::cout << "CountConstraint::is_satisfied()" << std::endl;
         bool constraint_satisfied = false;
         size_t count = 0;

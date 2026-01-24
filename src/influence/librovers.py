@@ -38,7 +38,7 @@ cppyy.include(os.path.join(include_dir, 'rover_domain/core/poi/iconstraint.hpp')
 cppyy.include(os.path.join(include_dir, 'rover_domain/core/sensors/isensor.hpp'))
 
 # making c++ namespaces visible
-rovers = cppyy.gbl.rover_domain
+rover_domain = cppyy.gbl.rover_domain
 thyme = cppyy.gbl.thyme
 std = cppyy.gbl.std
 eigen = cppyy.gbl.Eigen

@@ -3,7 +3,7 @@
 
 #include <Eigen/Dense>
 #include <rover_domain/core/poi/count_constraint.hpp>
-#include <rover_domain/core/poi/poi.hpp>
+#include <rover_domain/core/poi/default_poi.hpp>
 #include <rover_domain/core/poi/type_constraint.hpp>
 #include <rover_domain/core/rover/rover.hpp>
 #include <rover_domain/core/sensors/lidar.hpp>
@@ -27,7 +27,7 @@ class Environment {
     using Reward = std::vector<double>;
 
     Environment(InitPolicy initPolicy = InitPolicy(), std::vector<Agent> rovers = {},
-                std::vector<Entity> pois = {}, size_t width = 10.0, size_t height = 10.0,
+                std::vector<POI> pois = {}, size_t width = 10.0, size_t height = 10.0,
                 bool debug_reward_equals_G = false)
         : m_initPolicy(initPolicy),
           m_rovers(std::move(rovers)),
@@ -38,10 +38,10 @@ class Environment {
 
     // helpers to set rovers/pois after the fact
     void set_rovers(std::vector<Agent> rovers) { m_rovers = std::move(rovers); }
-    void set_pois(std::vector<Entity> pois) { m_pois = std::move(pois); }
+    void set_pois(std::vector<POI> pois) { m_pois = std::move(pois); }
 
     const std::vector<Agent>& rovers() { return m_rovers; }
-    const std::vector<Entity>& pois() { return m_pois; }
+    const std::vector<POI>& pois() { return m_pois; }
 
     void perform_step(std::vector<Action> actions) {
         for (size_t i = 0; i < m_rovers.size(); ++i) {
@@ -122,7 +122,7 @@ class Environment {
     }
     InitPolicy m_initPolicy;
     std::vector<Agent> m_rovers;
-    std::vector<Entity> m_pois;
+    std::vector<POI> m_pois;
     RewardComputer m_reward_computer;
 
     size_t m_width;
@@ -135,7 +135,7 @@ class Environment {
  *
  */
 using Agents = std::vector<Agent>;
-using Entities = std::vector<Entity>;
+using POIs = std::vector<POI>;
 using Actions = std::vector<Eigen::MatrixXd>;
 
 Eigen::MatrixXd tensor(std::vector<double> list) {
@@ -146,7 +146,7 @@ Agents& operator<<(Agents& vector, Agent&& rover) {
     vector.push_back(std::move(rover));
     return vector;
 }
-Entities& operator<<(Entities& vector, Entity&& poi) {
+POIs& operator<<(POIs& vector, POI&& poi) {
     vector.push_back(std::move(poi));
     return vector;
 }

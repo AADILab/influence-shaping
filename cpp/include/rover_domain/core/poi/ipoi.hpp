@@ -5,7 +5,7 @@
 
 namespace rover_domain {
 
-struct EntityPack;
+struct POIPack;
 
 /*
  *
@@ -41,7 +41,7 @@ class IPOI {
         tick();
     }
 
-    [[nodiscard]] virtual double constraint_satisfied(const EntityPack&) const = 0;
+    [[nodiscard]] virtual double constraint_satisfied(const POIPack&) const = 0;
 
    protected:
     virtual void tick() {}

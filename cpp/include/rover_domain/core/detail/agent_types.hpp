@@ -4,13 +4,13 @@
 #include <rover_domain/utilities/shared_wrapper.hpp>
 
 /*
-*
-* Agent abstraction
-*
-*/
+ *
+ * Agent abstraction
+ *
+ */
 namespace rover_domain {
-class IRover;
-using Agent = thyme::utilities::SharedWrap<IRover>;
+class IAgent;
+using Agent = thyme::utilities::SharedWrap<IAgent>;
 }  // namespace rover_domain
 
 #endif

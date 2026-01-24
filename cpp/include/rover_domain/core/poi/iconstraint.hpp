@@ -3,7 +3,7 @@
 
 #include <rover_domain/core/detail/pack.hpp>
 #include <rover_domain/core/rover/rover.hpp>
-#include <rover_domain/core/poi/poi.hpp>
+#include <rover_domain/core/poi/default_poi.hpp>
 #include <rover_domain/utilities/math/norms.hpp>
 #include <algorithm>
 #include <vector>
@@ -18,7 +18,7 @@ namespace rover_domain {
  */
 class IConstraint {
    public:
-    [[nodiscard]] virtual double is_satisfied(const EntityPack& entity_pack) const = 0;
+    [[nodiscard]] virtual double is_satisfied(const POIPack& entity_pack) const = 0;
     virtual ~IConstraint() = default;
 };
 
@@ -36,7 +36,7 @@ class AbstractRoverConstraint : public IConstraint {
     AbstractRoverConstraint(int coupling, const std::vector<bool>& is_rover_list)
         : m_coupling(coupling), m_is_rover_list(is_rover_list) {}
 
-    [[nodiscard]] bool captured(double dist, const Agent& agent, const Entity& entity) const {
+    [[nodiscard]] bool captured(double dist, const Agent& agent, const POI& entity) const {
         // Check if captured by capture radius or observation radii
         if (entity->capture_radius() != -1.0 && dist <= entity->capture_radius()) {
             return true;
@@ -46,7 +46,7 @@ class AbstractRoverConstraint : public IConstraint {
         return false;
     }
 
-    [[nodiscard]] double step_is_satisfied(const EntityPack& entity_pack, std::size_t t) const {
+    [[nodiscard]] double step_is_satisfied(const POIPack& entity_pack, std::size_t t) const {
         int count = 0;
         std::vector<double> dists;
         bool constraint_satisfied = false;
@@ -110,7 +110,7 @@ class RoverConstraint : public AbstractRoverConstraint {
 
     using AbstractRoverConstraint::AbstractRoverConstraint;
 
-    [[nodiscard]] double is_satisfied(const EntityPack& entity_pack) const override {
+    [[nodiscard]] double is_satisfied(const POIPack& entity_pack) const override {
         // No agents means constraint is not satisfied
         if (entity_pack.agents.size() == 0) {
             return 0.0;
@@ -134,7 +134,7 @@ class RoverSequenceConstraint : public AbstractRoverConstraint {
 
     using AbstractRoverConstraint::AbstractRoverConstraint;
 
-    [[nodiscard]] double is_satisfied(const EntityPack& entity_pack) const override {
+    [[nodiscard]] double is_satisfied(const POIPack& entity_pack) const override {
         // No agents means constraint is not satisfied
         if (entity_pack.agents.size() == 0) {
             return 0.0;

@@ -13,7 +13,6 @@ python -m unittest tests.env.complete.TestComplete.test_complete
 
 import unittest
 import numpy as np
-from influence.librovers import rovers
 from influence.custom_env import createEnv
 from influence.testing import InfluenceTestCase
 

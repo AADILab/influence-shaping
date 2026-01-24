@@ -1,5 +1,5 @@
 from typing import List
-from influence.librovers import rovers, thyme
+from influence.librovers import rover_domain, thyme
 import numpy as np
 import cppyy
 import random
@@ -37,8 +37,8 @@ def createAgent(agent_config, agent_types, poi_types, disappear_bools, poi_subty
     # print(sensor_type)
 
     # repackage indirect difference parameters
-    IndirectDifferenceParameters = rovers.IndirectDifferenceParameters
-    AutomaticParameters = rovers.AutomaticParameters
+    IndirectDifferenceParameters = rover_domain.IndirectDifferenceParameters
+    AutomaticParameters = rover_domain.AutomaticParameters
     if 'IndirectDifference' in agent_config:
         indirect_difference_config = agent_config['IndirectDifference']
         auto_params_config = indirect_difference_config['automatic']
@@ -76,8 +76,8 @@ def createAgent(agent_config, agent_types, poi_types, disappear_bools, poi_subty
     if 'bounds' in agent_config:
         bounds = agent_config['bounds']
 
-    Reward = rovers.Global
-    Bounds = rovers.Bounds
+    Reward = rover_domain.Global
+    Bounds = rover_domain.Bounds
 
     if sensor_type == 'SmartLidar':
         # Convert Python lists to C++ vectors for SmartLidar
@@ -97,7 +97,7 @@ def createAgent(agent_config, agent_types, poi_types, disappear_bools, poi_subty
         cpp_observation_radii = cppyy.gbl.std.vector[cppyy.gbl.double](observation_radii)
         cpp_default_values = cppyy.gbl.std.vector[cppyy.gbl.double](default_values)
 
-        return rovers.Rover[rovers.SmartLidar[rovers.Density], Reward](
+        return rover_domain.Rover[rover_domain.SmartLidar[rover_domain.Density], Reward](
             Bounds(
                 low_x=bounds['low_x'],
                 high_x=bounds['high_x'],
@@ -108,9 +108,9 @@ def createAgent(agent_config, agent_types, poi_types, disappear_bools, poi_subty
             reward_type,
             type_,
             obs_radius,
-            rovers.SmartLidar[rovers.Density](
+            rover_domain.SmartLidar[rover_domain.Density](
                 resolution,
-                rovers.Density(),
+                rover_domain.Density(),
                 cpp_agent_types,
                 cpp_poi_types,
                 cpp_disappear_bools,
@@ -131,7 +131,7 @@ def createAgent(agent_config, agent_types, poi_types, disappear_bools, poi_subty
         cpp_observation_radii = cppyy.gbl.std.vector[cppyy.gbl.double](observation_radii)
         cpp_default_values = cppyy.gbl.std.vector[cppyy.gbl.double](default_values)
 
-        return rovers.Rover[rovers.RoverLidar[rovers.Density], Reward](
+        return rover_domain.Rover[rover_domain.RoverLidar[rover_domain.Density], Reward](
             Bounds(
                 low_x=bounds['low_x'],
                 high_x=bounds['high_x'],
@@ -142,9 +142,9 @@ def createAgent(agent_config, agent_types, poi_types, disappear_bools, poi_subty
             reward_type,
             type_,
             obs_radius,
-            rovers.RoverLidar[rovers.Density](
+            rover_domain.RoverLidar[rover_domain.Density](
                 resolution,
-                rovers.Density(),
+                rover_domain.Density(),
                 cpp_agent_types,
                 cpp_accum_type,
                 cpp_measurement_type,
@@ -154,7 +154,7 @@ def createAgent(agent_config, agent_types, poi_types, disappear_bools, poi_subty
             Reward()
         )
     elif sensor_type == 'UavDistanceLidar':
-        return rovers.Rover[rovers.UavDistanceLidar, Reward](
+        return rover_domain.Rover[rover_domain.UavDistanceLidar, Reward](
             Bounds(
                 low_x=bounds['low_x'],
                 high_x=bounds['high_x'],
@@ -165,7 +165,7 @@ def createAgent(agent_config, agent_types, poi_types, disappear_bools, poi_subty
             reward_type,
             type_,
             obs_radius,
-            rovers.UavDistanceLidar(
+            rover_domain.UavDistanceLidar(
                 agent_types=agent_types,
             ),
             Reward()
@@ -175,11 +175,11 @@ def createAgent(agent_config, agent_types, poi_types, disappear_bools, poi_subty
 
 def createRoverPOI(value, obs_rad, capture_radius, coupling, is_rover_list, constraint):
     if constraint == 'sequential':
-        roverConstraint = rovers.RoverSequenceConstraint(coupling, is_rover_list)
-        poi = rovers.POI[rovers.RoverSequenceConstraint](value, obs_rad, capture_radius, roverConstraint)
+        roverConstraint = rover_domain.RoverSequenceConstraint(coupling, is_rover_list)
+        poi = rover_domain.DefaultPOI[rover_domain.RoverSequenceConstraint](value, obs_rad, capture_radius, roverConstraint)
     elif constraint == 'final':
-        roverConstraint = rovers.RoverConstraint(coupling, is_rover_list)
-        poi = rovers.POI[rovers.RoverConstraint](value, obs_rad, capture_radius, roverConstraint)
+        roverConstraint = rover_domain.RoverConstraint(coupling, is_rover_list)
+        poi = rover_domain.DefaultPOI[rover_domain.RoverConstraint](value, obs_rad, capture_radius, roverConstraint)
     return poi
 
 # This is just to help me track which POIs are nominally hidden from rovers
@@ -189,8 +189,8 @@ def createHiddenPOI(*args, **kwargs):
 # Running into errors setting up the environment
 # Let's try it with regular POIs
 def createPOI(value, obs_rad, coupling, is_rover_list):
-    countConstraint = rovers.CountConstraint(coupling)
-    poi = rovers.POI[rovers.CountConstraint](value, obs_rad, countConstraint)
+    countConstraint = rover_domain.CountConstraint(coupling)
+    poi = rover_domain.DefaultPOI[rover_domain.CountConstraint](value, obs_rad, countConstraint)
     return poi
 
 def resolvePositionSpawnRule(position_dict):
@@ -214,7 +214,7 @@ def resolvePositionSpawnRule(position_dict):
 
 # Let's have a function that builds out the environment
 def createEnv(config):
-    Env = rovers.Environment[rovers.CustomInit]
+    Env = rover_domain.Environment[rover_domain.CustomInit]
 
     # Aggregate all of the positions of agents
     agent_positions = []
@@ -360,7 +360,7 @@ def createEnv(config):
         debug_reward_equals_G = config['debug']['reward_equals_G']
 
     env = Env(
-        rovers.CustomInit(agent_positions, poi_positions),
+        rover_domain.CustomInit(agent_positions, poi_positions),
         agents,
         pois,
         int(config["env"]["map_size"][0]),

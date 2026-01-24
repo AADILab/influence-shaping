@@ -4,7 +4,7 @@
 #include <Eigen/Dense>
 #include <numeric>
 #include <rover_domain/core/detail/pack.hpp>
-#include <rover_domain/core/poi/poi.hpp>
+#include <rover_domain/core/poi/default_poi.hpp>
 #include <rover_domain/core/rover/rover.hpp>
 #include <rover_domain/utilities/math/norms.hpp>
 #include <rover_domain/core/sensors/isensor.hpp>

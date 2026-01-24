@@ -18,16 +18,16 @@ namespace rover_domain {
  *
  */
 template <typename SensorType, typename ActionSpace, typename RewardType = Global>
-class Rover final : public IRover {
+class Rover final : public IAgent {
     using SType = thyme::utilities::SharedWrap<SensorType>;
     using RType = thyme::utilities::SharedWrap<RewardType>;
     using ActionType = Eigen::MatrixXd;
    public:
     Rover(Bounds bounds, IndirectDifferenceParameters indirect_difference_parameters, std::string reward_type, std::string type_, double obs_radius = 1.0, SType sensor = SensorType(), RType reward = RewardType())
-        : IRover(bounds, indirect_difference_parameters, reward_type, type_, obs_radius), m_sensor(sensor), m_reward(reward) {}
+        : IAgent(bounds, indirect_difference_parameters, reward_type, type_, obs_radius), m_sensor(sensor), m_reward(reward) {}
     // NOTE: This is commented out because I couldn't get it to work properly, but left as dead code to help me later if I need to get it working
     // Rover(const Rover& rover)
-    //     : IRover(rover.indirect_difference_parameters(), rover.reward_type(), rover.type(), rover.obs_radius()), m_sensor(SensorType()), m_reward(RewardType()) {}
+    //     : IAgent(rover.indirect_difference_parameters(), rover.reward_type(), rover.type(), rover.obs_radius()), m_sensor(SensorType()), m_reward(RewardType()) {}
     [[nodiscard]] virtual Eigen::MatrixXd scan(const AgentPack& pack) const override {
         // std::cout << "Rover::scan()" << std::endl;
         return m_sensor->scan(pack);
@@ -57,9 +57,9 @@ class Rover final : public IRover {
  * Example of bringing in a new Rover from the python bindings
  *
  */
-// class Drone final : public IRover {
+// class Drone final : public IAgent {
 //    public:
-//     Drone(double obs_radius = 1.0) : IRover(obs_radius) {}
+//     Drone(double obs_radius = 1.0) : IAgent(obs_radius) {}
 
 //     [[nodiscard]] virtual Eigen::MatrixXd scan(const AgentPack&) const override { return {}; }
 //     [[nodiscard]] virtual double reward(const AgentPack&) const override { return 0; }

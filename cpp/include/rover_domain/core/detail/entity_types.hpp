@@ -5,12 +5,12 @@
 
 /*
  *
- * Entity abstraction
+ * POI abstraction
  *
  */
 namespace rover_domain {
 class IPOI;
-using Entity = thyme::utilities::SharedWrap<IPOI>;
+using POI = thyme::utilities::SharedWrap<IPOI>;
 }  // namespace rover_domain
 
 #endif

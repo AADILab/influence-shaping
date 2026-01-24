@@ -16,20 +16,20 @@ namespace rover_domain {
 
 struct AgentPack {
     AgentPack(int agent_index, const std::vector<Agent>& agents,
-              const std::vector<Entity>& entities)
+              const std::vector<POI>& entities)
         : agent_index(agent_index), agents(agents), entities(entities) {}
     int agent_index;
     std::vector<Agent> agents;
-    std::vector<Entity> entities;
+    std::vector<POI> entities;
 };
 
-struct EntityPack {
-    EntityPack(const Entity& entity, const std::vector<Agent>& agents,
-               const std::vector<Entity>& entities)
+struct POIPack {
+    POIPack(const POI& entity, const std::vector<Agent>& agents,
+               const std::vector<POI>& entities)
         : entity(entity), agents(agents), entities(entities) {}
-    Entity entity;
+    POI entity;
     std::vector<Agent> agents;
-    std::vector<Entity> entities;
+    std::vector<POI> entities;
 };
 
 }  // namespace rover_domain
