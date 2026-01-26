@@ -1,7 +1,6 @@
 #ifndef THYME_ENVIRONMENTS_ROVER_DOMAIN_REWARD_COMPUTER
 #define THYME_ENVIRONMENTS_ROVER_DOMAIN_REWARD_COMPUTER
 
-#include <rover_domain/core/rewards/global.hpp>
 #include <rover_domain/core/rewards/difference.hpp>
 #include <rover_domain/core/rover/rover.hpp>
 #include <rover_domain/utilities/math/norms.hpp>
@@ -351,11 +350,44 @@ class RewardComputer {
         }
     }
 
+    [[nodiscard]] double global(const Agents& agents, const POIs& pois) const {
+        double reward = 0.0;
+        for (int i = 0; i < pois.size(); ++i) {
+            reward = reward + pois[i]->value()*pois[i]->constraint_satisfied(pois, agents, i);
+        }
+        return reward;
+    }
+
+    [[nodiscard]] double global_without_me(const Agents& agents, const POIs& pois, int idx) const {
+        // Build vector of agents without me
+        Agents agents_without_me;
+        for (int i=0; i < agents.size(); ++i) {
+            if (i != idx) {
+                agents_without_me.push_back(agents[i]);
+            }
+        }
+        double reward_without_me = global(agents_without_me, pois);
+        return reward_without_me;
+    }
+
+    [[nodiscard]] double global_without_inds(const Agents& agents, const POIs& pois, std::vector<int> inds) const {
+        // Build a vector of agents that excludes the specified inds
+        std::vector<Agent> agents_without_inds;
+        for (int i=0; i < agents.size(); ++i) {
+            // Check that i is not an ind that we are removing
+            if (std::find(inds.begin(), inds.end(), i) == inds.end()) {
+                agents_without_inds.push_back(agents[i]);
+            }
+        }
+        double reward_without_inds = global(agents_without_inds, pois);
+        return reward_without_inds;
+    }
+
     [[nodiscard]] Reward compute() const {
         // std::cout << "Reward::compute()" << std::endl;
         Reward rewards;
         // Compute G
-        double G = m_Global.compute(m_agents, m_pois, 0);
+        double G = global(m_agents, m_pois);
         // std::cout << "Reward::compute() Computed G" << std::endl;
         // Prep for computing Indirect D
         std::vector<std::vector<int>> influence_sets = prep_all_or_nothing_influence();
@@ -375,7 +407,7 @@ class RewardComputer {
             }
             else if (reward_type == "Difference") {
                 // std::cout << "Reward::compute() Computing Difference reward" << std::endl;
-                reward = G - m_Global.compute_without_me(m_agents, m_pois, i);
+                reward = G - global_without_me(m_agents, m_pois, i);
             }
             else if (reward_type == "IndirectDifference") {
                 // std::cout << "Reward::compute() Computing Indirect Difference" << std::endl;
@@ -384,7 +416,7 @@ class RewardComputer {
                 // Use all or nothing influence assignment. Just remove the entire trajectories.
                 // Refactor for more options later.
                 if (m_agents[i]->indirect_difference_parameters().m_assignment == "manual") {
-                    reward = G - m_Global.compute_without_inds(m_agents, m_pois, m_agents[i]->indirect_difference_parameters().m_manual);
+                    reward = G - global_without_inds(m_agents, m_pois, m_agents[i]->indirect_difference_parameters().m_manual);
                 }
                 else if (m_agents[i]->indirect_difference_parameters().m_assignment == "automatic") {
                     // Timestep based removal
@@ -442,14 +474,14 @@ class RewardComputer {
                         // reward = G - m_Global.compute(AgentPack(0, counterfactual_rovers, m_pois));
                         // Now compute d-indirect using these rovers.
                         // Make sure to entirely remove the agent we are computing d-indirect for
-                        reward = G - m_Global.compute_without_inds(m_agents, m_pois, std::vector<int>(1, i));
+                        reward = G - global_without_inds(m_agents, m_pois, std::vector<int>(1, i));
                         // std::cout << "reward : " << reward << " for agent i : " << i << std::endl;
                     }
 
                     // Trajectory based removal
                     else if (m_agents[i]->indirect_difference_parameters().m_automatic_parameters.m_timescale == "trajectory") {
                         // In this route, just tally it all up into one big influence set for each agent, and do the removal
-                        reward = G - m_Global.compute_without_inds(m_agents, m_pois, influence_sets[i]);
+                        reward = G - global_without_inds(m_agents, m_pois, influence_sets[i]);
                     }
                 }
             }
@@ -468,7 +500,6 @@ class RewardComputer {
         return m_debug_reward_equals_G;
     }
 
-    Global m_Global;
     std::vector<Agent> m_agents;
     std::vector<POI> m_pois;
 
