@@ -23,15 +23,6 @@ struct AgentPack {
     std::vector<POI> entities;
 };
 
-struct POIPack {
-    POIPack(const POI& entity, const std::vector<Agent>& agents,
-               const std::vector<POI>& entities)
-        : entity(entity), agents(agents), entities(entities) {}
-    POI entity;
-    std::vector<Agent> agents;
-    std::vector<POI> entities;
-};
-
 }  // namespace rover_domain
 
 #endif
