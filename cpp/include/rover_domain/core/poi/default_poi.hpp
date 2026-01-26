@@ -21,7 +21,7 @@ class DefaultPOI final : public IPOI {
 
     [[nodiscard]] double constraint_satisfied(const POIs& pois, const Agents& agents, int poi_idx) const override {
         // std::cout << "POI::constraint_satisfied()" << std::endl;
-        return m_constraint.is_satisfied(POIPack(pois[poi_idx], agents, pois));
+        return m_constraint.is_satisfied(pois, agents, poi_idx);
     }
 
    private:

@@ -19,7 +19,7 @@ namespace rover_domain {
  */
 class IConstraint {
    public:
-    [[nodiscard]] virtual double is_satisfied(const POIPack& entity_pack) const = 0;
+    [[nodiscard]] virtual double is_satisfied(const POIs& pois, const Agents& agents, int poi_idx) const = 0;
     virtual ~IConstraint() = default;
 };
 
@@ -111,15 +111,15 @@ class RoverConstraint : public AbstractRoverConstraint {
 
     using AbstractRoverConstraint::AbstractRoverConstraint;
 
-    [[nodiscard]] double is_satisfied(const POIPack& entity_pack) const override {
+    [[nodiscard]] double is_satisfied(const POIs& pois, const Agents& agents, int poi_idx) const override {
         // No agents means constraint is not satisfied
-        if (entity_pack.agents.size() == 0) {
+        if (agents.size() == 0) {
             return 0.0;
         }
 
         // Get final timestep
-        std::size_t t_final = entity_pack.agents[0]->path().size() - 1;
-        return step_is_satisfied(entity_pack, t_final);
+        std::size_t t_final = agents[0]->path().size() - 1;
+        return step_is_satisfied(POIPack(pois[poi_idx], agents, pois), t_final);
     }
 };
 
@@ -135,18 +135,18 @@ class RoverSequenceConstraint : public AbstractRoverConstraint {
 
     using AbstractRoverConstraint::AbstractRoverConstraint;
 
-    [[nodiscard]] double is_satisfied(const POIPack& entity_pack) const override {
+    [[nodiscard]] double is_satisfied(const POIs& pois, const Agents& agents, int poi_idx) const override {
         // No agents means constraint is not satisfied
-        if (entity_pack.agents.size() == 0) {
+        if (agents.size() == 0) {
             return 0.0;
         }
 
         // Find maximum satisfaction across all timesteps
         std::vector<double> steps;
-        std::size_t path_size = entity_pack.agents[0]->path().size();
+        std::size_t path_size = agents[0]->path().size();
 
         for (std::size_t t = 0; t < path_size; ++t) {
-            steps.push_back(step_is_satisfied(entity_pack, t));
+            steps.push_back(step_is_satisfied(POIPack(pois[poi_idx], agents, pois), t));
         }
 
         return *std::max_element(steps.begin(), steps.end());
