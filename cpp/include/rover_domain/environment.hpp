@@ -2,9 +2,7 @@
 #define THYME_ENVIRONMENTS_ROVER_DOMAIN_ENVIRONMENT
 
 #include <Eigen/Dense>
-#include <rover_domain/core/poi/count_constraint.hpp>
 #include <rover_domain/core/poi/default_poi.hpp>
-#include <rover_domain/core/poi/type_constraint.hpp>
 #include <rover_domain/core/rover/rover.hpp>
 #include <rover_domain/core/sensors/lidar.hpp>
 #include <rover_domain/core/rewards/computer.hpp>
