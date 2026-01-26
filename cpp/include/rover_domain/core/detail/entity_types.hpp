@@ -11,6 +11,7 @@
 namespace rover_domain {
 class IPOI;
 using POI = thyme::utilities::SharedWrap<IPOI>;
+using POIs = std::vector<POI>;
 }  // namespace rover_domain
 
 #endif

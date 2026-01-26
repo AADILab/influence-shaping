@@ -2,10 +2,10 @@
 #define THYME_ENVIRONMENTS_ROVER_DOMAIN_IPOI
 
 #include <rover_domain/utilities/math/cartesian.hpp>
+#include <rover_domain/core/detail/agent_types.hpp>
+#include <rover_domain/core/detail/entity_types.hpp>
 
 namespace rover_domain {
-
-struct POIPack;
 
 /*
  *
@@ -41,7 +41,7 @@ class IPOI {
         tick();
     }
 
-    [[nodiscard]] virtual double constraint_satisfied(const POIPack&) const = 0;
+    [[nodiscard]] virtual double constraint_satisfied(const POIs&, const Agents&, int poi_idx) const = 0;
 
    protected:
     virtual void tick() {}

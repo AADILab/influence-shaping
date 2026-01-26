@@ -1,9 +1,10 @@
 #ifndef THYME_ENVIRONMENTS_ROVER_DOMAIN_POI_ICONSTRAINT
 #define THYME_ENVIRONMENTS_ROVER_DOMAIN_POI_ICONSTRAINT
 
-#include <rover_domain/core/detail/pack.hpp>
+// #include <rover_domain/core/detail/pack.hpp>
 #include <rover_domain/core/rover/rover.hpp>
-#include <rover_domain/core/poi/default_poi.hpp>
+#include <rover_domain/core/detail/agent_types.hpp>
+#include <rover_domain/core/detail/entity_types.hpp>
 #include <rover_domain/utilities/math/norms.hpp>
 #include <algorithm>
 #include <vector>

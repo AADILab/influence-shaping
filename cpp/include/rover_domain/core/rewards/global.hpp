@@ -19,7 +19,7 @@ class Global {
         // TODO Keep filtering over this view for speed-up
         double reward = 0.0;
         for (int i = 0; i < pack.entities.size(); ++i) {
-            reward = reward + pack.entities[i]->value()*pack.entities[i]->constraint_satisfied({pack.entities[i], pack.agents, pack.entities});
+            reward = reward + pack.entities[i]->value()*pack.entities[i]->constraint_satisfied(pack.entities, pack.agents, i);
         }
         // for (const auto& poi : pack.entities) {
         //     // if (poi->observed()) continue;

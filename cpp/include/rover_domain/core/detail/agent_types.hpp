@@ -11,6 +11,7 @@
 namespace rover_domain {
 class IAgent;
 using Agent = thyme::utilities::SharedWrap<IAgent>;
+using Agents = std::vector<Agent>;
 }  // namespace rover_domain
 
 #endif

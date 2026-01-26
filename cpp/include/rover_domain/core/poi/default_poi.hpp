@@ -1,6 +1,7 @@
 #ifndef THYME_ENVIRONMENTS_ROVER_DOMAIN_POI
 #define THYME_ENVIRONMENTS_ROVER_DOMAIN_POI
 
+#include <rover_domain/core/poi/ipoi.hpp>
 #include <rover_domain/core/detail/pack.hpp>
 #include <rover_domain/utilities/math/cartesian.hpp>
 
@@ -18,9 +19,9 @@ class DefaultPOI final : public IPOI {
         ConstraintPolicy constraint = ConstraintPolicy())
         : IPOI(value, obs_radius, capture_radius), m_constraint(constraint) {}
 
-    [[nodiscard]] double constraint_satisfied(const POIPack& entity_pack) const override {
+    [[nodiscard]] double constraint_satisfied(const POIs& pois, const Agents& agents, int poi_idx) const override {
         // std::cout << "POI::constraint_satisfied()" << std::endl;
-        return m_constraint.is_satisfied(entity_pack);
+        return m_constraint.is_satisfied(POIPack(pois[poi_idx], agents, pois));
     }
 
    private:
