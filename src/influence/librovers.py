@@ -30,7 +30,6 @@ if platform.machine() in ['arm64', 'aarch64']:
 
 # Headers used in the python examples. A makefile will replace this.
 cppyy.include(os.path.join(include_dir, 'rover_domain/environment.hpp'))
-cppyy.include(os.path.join(include_dir, 'rover_domain/core/rewards/difference.hpp'))
 cppyy.include(os.path.join(include_dir, 'rover_domain/core/setup/init_corners.hpp'))
 cppyy.include(os.path.join(include_dir, 'rover_domain/core/setup/init_custom.hpp'))
 cppyy.include(os.path.join(include_dir, 'rover_domain/core/poi/iconstraint.hpp'))

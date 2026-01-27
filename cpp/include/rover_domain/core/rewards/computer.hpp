@@ -2,7 +2,6 @@
 #define THYME_ENVIRONMENTS_ROVER_DOMAIN_REWARD_COMPUTER
 
 #include <rover_domain/core/rewards/global.hpp>
-#include <rover_domain/core/rewards/difference.hpp>
 #include <rover_domain/core/rover/rover.hpp>
 #include <rover_domain/utilities/math/norms.hpp>
 #include <rover_domain/core/sensors/lidar.hpp>

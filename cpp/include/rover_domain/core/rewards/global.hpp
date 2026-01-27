@@ -1,7 +1,7 @@
 #ifndef THYME_ENVIRONMENTS_ROVER_DOMAIN_GLOBAL
 #define THYME_ENVIRONMENTS_ROVER_DOMAIN_GLOBAL
 
-#include <rover_domain/core/detail/pack.hpp>
+#include <vector>
 #include <rover_domain/core/poi/ipoi.hpp>
 
 namespace rover_domain {
