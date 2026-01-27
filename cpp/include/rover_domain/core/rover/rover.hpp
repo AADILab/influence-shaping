@@ -28,9 +28,9 @@ class Rover final : public IAgent {
     // NOTE: This is commented out because I couldn't get it to work properly, but left as dead code to help me later if I need to get it working
     // Rover(const Rover& rover)
     //     : IAgent(rover.indirect_difference_parameters(), rover.reward_type(), rover.type(), rover.obs_radius()), m_sensor(SensorType()), m_reward(RewardType()) {}
-    [[nodiscard]] virtual Eigen::MatrixXd scan(const AgentPack& pack) const override {
+    [[nodiscard]] virtual Eigen::MatrixXd scan(const Agents& agents, const POIs& pois, int agent_idx) const override {
         // std::cout << "Rover::scan()" << std::endl;
-        return m_sensor->scan(pack);
+        return m_sensor->scan(agents, pois, agent_idx);
     }
     [[nodiscard]] virtual double reward(const AgentPack& pack) const override {
         // each aget gets a reward set here but only nominally so the reward computer knows

@@ -3,7 +3,6 @@
 
 #include <Eigen/Dense>
 #include <numeric>
-#include <rover_domain/core/detail/pack.hpp>
 #include <rover_domain/core/poi/default_poi.hpp>
 #include <rover_domain/core/rover/rover.hpp>
 #include <rover_domain/utilities/math/norms.hpp>
@@ -60,14 +59,14 @@ class Lidar : public ISensor {
     Lidar(double resolution = 90, CPolicy composition_policy = CompositionPolicy())
         : m_resolution(resolution), m_composition(composition_policy) {}
 
-    [[nodiscard]] Eigen::MatrixXd scan(const AgentPack& pack) const {
+    [[nodiscard]] Eigen::MatrixXd scan(const Agents& agents, const POIs& pois, int agent_idx) const {
         // std::cout << "Lidar::scan()" << std::endl;
         const std::size_t num_sectors = 360 / m_resolution;
         std::vector<std::vector<double>> poi_values(num_sectors), rover_values(num_sectors);
-        auto& rover = pack.agents[pack.agent_index];  // convenient handle
+        auto& rover = agents[agent_idx];  // convenient handle
 
         // observe pois
-        for (const auto& sensed_poi : pack.entities) {
+        for (const auto& sensed_poi : pois) {
             if (sensed_poi->observed()) continue;
             auto [angle, distance] = thyme::math::l2a(rover->position(), sensed_poi->position());
             if (distance > rover->obs_radius()) continue;
@@ -80,11 +79,11 @@ class Lidar : public ISensor {
         }
 
         // observe rovers
-        for (int i = 0; i < pack.agents.size(); ++i) {
+        for (int i = 0; i < agents.size(); ++i) {
             // Do not observe yourself
-            if (i == pack.agent_index) continue;
+            if (i == agent_idx) continue;
 
-            auto& sensed_rover = pack.agents[i];  //convenient handle
+            auto& sensed_rover = agents[i];  //convenient handle
             auto [angle, distance] = thyme::math::l2a(rover->position(), sensed_rover->position());
             if (distance > rover->obs_radius()) continue;
 
@@ -174,19 +173,19 @@ class SmartLidar : public ISensor {
         throw std::runtime_error("Measurement type for agent " + std::to_string(agent_id) + " is not defined!");
     }
 
-    [[nodiscard]] Eigen::MatrixXd scan(const AgentPack& pack) const {
+    [[nodiscard]] Eigen::MatrixXd scan(const Agents& agents, const POIs& pois, int agent_idx) const {
         const std::size_t num_sectors = 360 / m_resolution;
         std::vector<std::vector<double>> poi_values(num_sectors);
         std::vector<std::vector<double>> rover_values(num_sectors);
         std::vector<std::vector<double>> uav_values(num_sectors);
 
-        auto& agent = pack.agents[pack.agent_index];
-        const std::string& my_type = m_agent_types[pack.agent_index];
+        auto& agent = agents[agent_idx];
+        const std::string& my_type = m_agent_types[agent_idx];
         m_num_sensed_uavs = 0;
 
         // Observe POIs
-        for (std::size_t poi_ind = 0; poi_ind < pack.entities.size(); ++poi_ind) {
-            auto& sensed_poi = pack.entities[poi_ind];
+        for (std::size_t poi_ind = 0; poi_ind < pois.size(); ++poi_ind) {
+            auto& sensed_poi = pois[poi_ind];
 
             auto [angle, distance] = thyme::math::l2a(agent->position(), sensed_poi->position());
             // Match Python: if angle < 0, add 360
@@ -206,7 +205,7 @@ class SmartLidar : public ISensor {
                     // UAVs can observe specific subtypes
                     const std::string& poi_subtype = m_poi_subtypes[poi_ind];
                     if (!poi_subtype.empty()) {
-                        const auto& observable = m_agent_observable_subtypes[pack.agent_index];
+                        const auto& observable = m_agent_observable_subtypes[agent_idx];
                         if (std::find(observable.begin(), observable.end(), poi_subtype) == observable.end()) {
                             continue;
                         }
@@ -224,15 +223,15 @@ class SmartLidar : public ISensor {
 
             // Add POI observation if not already captured
             if (!sensed_poi->observed()) {
-                poi_values[sector].push_back(sensed_poi->value() * measure(distance, pack.agent_index));
+                poi_values[sector].push_back(sensed_poi->value() * measure(distance, agent_idx));
             }
         }
 
         // Observe Agents
-        for (std::size_t i = 0; i < pack.agents.size(); ++i) {
-            if (i == pack.agent_index) continue;
+        for (std::size_t i = 0; i < agents.size(); ++i) {
+            if (i == agent_idx) continue;
 
-            auto& sensed_agent = pack.agents[i];
+            auto& sensed_agent = agents[i];
             auto [angle, distance] = thyme::math::l2a(agent->position(), sensed_agent->position());
             // Match Python: if angle < 0, add 360
             if (angle < 0.0) angle += 360.0;
@@ -248,16 +247,16 @@ class SmartLidar : public ISensor {
             }
 
             if (m_agent_types[i] == "rover") {
-                rover_values[sector].push_back(measure(distance, pack.agent_index));
+                rover_values[sector].push_back(measure(distance, agent_idx));
             } else if (m_agent_types[i] == "uav") {
-                uav_values[sector].push_back(measure(distance, pack.agent_index));
+                uav_values[sector].push_back(measure(distance, agent_idx));
                 m_num_sensed_uavs++;
             }
         }
 
         // Encode state
         Eigen::MatrixXd state(num_sectors * 3, 1);
-        const double default_val = m_default_values[pack.agent_index];
+        const double default_val = m_default_values[agent_idx];
         state.setConstant(default_val);
 
         for (std::size_t i = 0; i < num_sectors; ++i) {
@@ -265,7 +264,7 @@ class SmartLidar : public ISensor {
             const std::size_t num_uavs = uav_values[i].size();
             const std::size_t num_pois = poi_values[i].size();
 
-            const std::string& accum = m_accum_type[pack.agent_index];
+            const std::string& accum = m_accum_type[agent_idx];
 
             if (num_rovers > 0) {
                 if (accum == "average") {
@@ -273,7 +272,7 @@ class SmartLidar : public ISensor {
                 } else if (accum == "sum") {
                     state(i) = m_composition->compose(rover_values[i], 0.0, 1.0);
                 } else {
-                    throw std::runtime_error("Invalid accumulation type '" + accum + "' for agent " + std::to_string(pack.agent_index));
+                    throw std::runtime_error("Invalid accumulation type '" + accum + "' for agent " + std::to_string(agent_idx));
                 }
             }
 
@@ -283,7 +282,7 @@ class SmartLidar : public ISensor {
                 } else if (accum == "sum") {
                     state(num_sectors + i) = m_composition->compose(uav_values[i], 0.0, 1.0);
                 } else {
-                    throw std::runtime_error("Invalid accumulation type '" + accum + "' for agent " + std::to_string(pack.agent_index));
+                    throw std::runtime_error("Invalid accumulation type '" + accum + "' for agent " + std::to_string(agent_idx));
                 }
             }
 
@@ -293,7 +292,7 @@ class SmartLidar : public ISensor {
                 } else if (accum == "sum") {
                     state(num_sectors * 2 + i) = m_composition->compose(poi_values[i], 0.0, 1.0);
                 } else {
-                    throw std::runtime_error("Invalid accumulation type '" + accum + "' for agent " + std::to_string(pack.agent_index));
+                    throw std::runtime_error("Invalid accumulation type '" + accum + "' for agent " + std::to_string(agent_idx));
                 }
             }
         }
@@ -370,19 +369,19 @@ class RoverLidar : public ISensor {
         throw std::runtime_error("Measurement type for agent " + std::to_string(agent_id) + " is not defined!");
     }
 
-    [[nodiscard]] Eigen::MatrixXd scan(const AgentPack& pack) const {
+    [[nodiscard]] Eigen::MatrixXd scan(const Agents& agents, const POIs& pois, int agent_idx) const {
         const std::size_t num_sectors = 360 / m_resolution;
         std::vector<std::vector<double>> rover_values(num_sectors);
         std::vector<std::vector<double>> uav_values(num_sectors);
 
-        auto& agent = pack.agents[pack.agent_index];
+        auto& agent = agents[agent_idx];
         m_num_sensed_uavs = 0;
 
         // Observe Agents only (no POI sensing)
-        for (std::size_t i = 0; i < pack.agents.size(); ++i) {
-            if (i == pack.agent_index) continue;
+        for (std::size_t i = 0; i < agents.size(); ++i) {
+            if (i == agent_idx) continue;
 
-            auto& sensed_agent = pack.agents[i];
+            auto& sensed_agent = agents[i];
             auto [angle, distance] = thyme::math::l2a(agent->position(), sensed_agent->position());
             // Match Python: if angle < 0, add 360
             if (angle < 0.0) angle += 360.0;
@@ -398,23 +397,23 @@ class RoverLidar : public ISensor {
             }
 
             if (m_agent_types[i] == "rover") {
-                rover_values[sector].push_back(measure(distance, pack.agent_index));
+                rover_values[sector].push_back(measure(distance, agent_idx));
             } else if (m_agent_types[i] == "uav") {
-                uav_values[sector].push_back(measure(distance, pack.agent_index));
+                uav_values[sector].push_back(measure(distance, agent_idx));
                 m_num_sensed_uavs++;
             }
         }
 
         // Encode state (only rovers and UAVs, no POIs)
         Eigen::MatrixXd state(num_sectors * 2, 1);
-        const double default_val = m_default_values[pack.agent_index];
+        const double default_val = m_default_values[agent_idx];
         state.setConstant(default_val);
 
         for (std::size_t i = 0; i < num_sectors; ++i) {
             const std::size_t num_rovers = rover_values[i].size();
             const std::size_t num_uavs = uav_values[i].size();
 
-            const std::string& accum = m_accum_type[pack.agent_index];
+            const std::string& accum = m_accum_type[agent_idx];
 
             if (num_rovers > 0) {
                 if (accum == "average") {
@@ -422,7 +421,7 @@ class RoverLidar : public ISensor {
                 } else if (accum == "sum") {
                     state(i) = m_composition->compose(rover_values[i], 0.0, 1.0);
                 } else {
-                    throw std::runtime_error("Invalid accumulation type '" + accum + "' for agent " + std::to_string(pack.agent_index));
+                    throw std::runtime_error("Invalid accumulation type '" + accum + "' for agent " + std::to_string(agent_idx));
                 }
             }
 
@@ -432,7 +431,7 @@ class RoverLidar : public ISensor {
                 } else if (accum == "sum") {
                     state(num_sectors + i) = m_composition->compose(uav_values[i], 0.0, 1.0);
                 } else {
-                    throw std::runtime_error("Invalid accumulation type '" + accum + "' for agent " + std::to_string(pack.agent_index));
+                    throw std::runtime_error("Invalid accumulation type '" + accum + "' for agent " + std::to_string(agent_idx));
                 }
             }
         }
@@ -470,16 +469,16 @@ class UavDistanceLidar : public ISensor {
         : m_agent_types(agent_types),
           m_num_sensed_uavs(0) {}
 
-    [[nodiscard]] Eigen::MatrixXd scan(const AgentPack& pack) const {
-        auto& agent = pack.agents[pack.agent_index];
+    [[nodiscard]] Eigen::MatrixXd scan(const Agents& agents, const POIs& pois, int agent_idx) const {
+        auto& agent = agents[agent_idx];
         m_num_sensed_uavs = 0;
         std::vector<double> distances;
 
         // Iterate through all agents
-        for (std::size_t i = 0; i < pack.agents.size(); ++i) {
+        for (std::size_t i = 0; i < agents.size(); ++i) {
             // Only process UAVs
             if (m_agent_types[i] == "uav") {
-                auto& sensed_agent = pack.agents[i];
+                auto& sensed_agent = agents[i];
                 double distance = thyme::math::l2_norm(agent->position(), sensed_agent->position());
 
                 if (distance <= agent->obs_radius()) {

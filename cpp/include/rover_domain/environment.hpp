@@ -72,9 +72,9 @@ class Environment {
         for (int i = 0; i < m_rovers.size(); ++i) {
             // std::cout << "Environment::status() | i | " << i << std::endl;
             // Construct the AgentPack on the fly
-            const AgentPack pack = {i, m_rovers, m_pois};
+            // const AgentPack pack = {i, m_rovers, m_pois};
             // std::cout << "pack" << std::endl;
-            state.push_back(m_rovers[i]->scan(pack));
+            state.push_back(m_rovers[i]->scan(m_rovers, m_pois, i));
             // rewards.push_back(m_rovers[i]->reward(pack));
         }
         return state;
