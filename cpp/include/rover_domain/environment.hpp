@@ -101,6 +101,10 @@ class Environment {
         return m_reward_computer.compute();
     }
 
+    double global_reward() {
+        return m_reward_computer.global(m_rovers, m_pois);
+    }
+
     std::tuple<State, Reward> status() {
         // Give us the full status of the environment,
         // including what every agent observes, and the rewards for each agent

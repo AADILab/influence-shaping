@@ -228,7 +228,7 @@ class RewardComputer {
         // Populate counterfactual rovers with copies of the rovers
         // Clear the path of each one
         for (int k=0; k < rovers.size(); ++k) {
-            Rover<Lidar<Density>, Global> rover(
+            Rover<Lidar<Density>> rover(
                 rovers[k]->bounds(),
                 rovers[k]->indirect_difference_parameters(),
                 rovers[k]->reward_type(),

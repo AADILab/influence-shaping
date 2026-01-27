@@ -547,7 +547,7 @@ class CooperativeCoevolutionaryAlgorithm():
             joint_state_trajectory.append(agent_positions+poi_positions)
 
         # Create an agent pack to pass to reward function
-        team_fitness = rover_domain.Global().compute(env.rovers(), env.pois())
+        team_fitness = env.global_reward()
         rewards = env.rewards()
         shaped_fitnesses = [r for r in rewards]
 

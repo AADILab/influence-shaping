@@ -30,7 +30,7 @@ class InfluenceTestCase(unittest.TestCase):
 
     @staticmethod
     def compute_G(env):
-        return env.rovers()[0].reward(env.rovers(), env.pois(), 0)
+        return env.global_reward()
 
     @staticmethod
     def extract_observation(cppyy_observation):
