@@ -5,10 +5,10 @@
 #include <iostream>
 #include <rover_domain/core/detail/agent_types.hpp>
 #include <rover_domain/core/detail/entity_types.hpp>
-#include <rover_domain/core/detail/pack.hpp>
 #include <rover_domain/core/rewards/global.hpp>
 #include <rover_domain/utilities/math/cartesian.hpp>
 #include <vector>
+#include <rover_domain/core/rover/irover.hpp>
 
 namespace rover_domain {
 
