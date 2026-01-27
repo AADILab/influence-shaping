@@ -33,10 +33,6 @@ class InfluenceTestCase(unittest.TestCase):
         return env.rovers()[0].reward(env.rovers(), env.pois(), 0)
 
     @staticmethod
-    def compute_agent_reward(env, agent_id):
-        return env.rovers()[agent_id].reward(rover_domain.AgentPack(agent_id, env.rovers(), env.pois()))
-
-    @staticmethod
     def extract_observation(cppyy_observation):
         return [cppyy_observation(i,0) for i in range(cppyy_observation.size())]
 
