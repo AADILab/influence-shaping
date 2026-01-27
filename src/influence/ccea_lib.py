@@ -552,7 +552,7 @@ class CooperativeCoevolutionaryAlgorithm():
             agents = env.rovers(),
             entities = env.pois()
         )
-        team_fitness = rover_domain.Global().compute(agent_pack)
+        team_fitness = rover_domain.Global().compute(agent_pack.agents, agent_pack.entities, agent_pack.agent_index)
         rewards = env.rewards()
         shaped_fitnesses = [r for r in rewards]
 

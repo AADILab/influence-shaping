@@ -14,7 +14,7 @@ class Difference {
    public:
     [[nodiscard]] double compute(const AgentPack& pack) const {
         // std::cout << "Difference::compute()" << std::endl;
-        double reward = Global().compute(pack);
+        double reward = Global().compute(pack.agents, pack.entities, pack.agent_index);
         // Make a vector of agents with the appropriate agent removed
         std::vector<Agent> agents_without_me;
         for (int i = 0; i < pack.agents.size(); ++i) {
@@ -24,8 +24,7 @@ class Difference {
         }
         // std::cout << "Difference::compute() | Built pack_without_me" << std::endl;
         // Make a new agentpack. Use dummy variable for agent index.
-        const AgentPack& pack_without_me = AgentPack(0, agents_without_me, pack.entities);
-        double reward_without_me = Global().compute(pack_without_me);
+        double reward_without_me = Global().compute(agents_without_me, pack.entities, pack.agent_index);
         return reward - reward_without_me;
     }
 };

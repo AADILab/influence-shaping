@@ -37,7 +37,7 @@ class Rover final : public IAgent {
         // what to do
         // but each agent is not comjputing its own reward
         // std::cout << "Rover::reward()" << std::endl;
-        return m_reward->compute(pack);
+        return m_reward->compute(pack.agents, pack.entities, pack.agent_index);
     }
     void act(const ActionType& action) override {
         // default, move in x and y
