@@ -5,7 +5,7 @@
 
 /*
  *
- * POI abstraction
+ * Forward declarations for POI types
  *
  */
 namespace rover_domain {

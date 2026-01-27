@@ -3,8 +3,8 @@
 
 #include <Eigen/Dense>
 #include <iostream>
-#include <rover_domain/core/detail/agent_types.hpp>
-#include <rover_domain/core/detail/entity_types.hpp>
+#include <rover_domain/core/declare/agent_types.hpp>
+#include <rover_domain/core/declare/entity_types.hpp>
 #include <rover_domain/core/rewards/global.hpp>
 #include <rover_domain/utilities/math/cartesian.hpp>
 #include <vector>

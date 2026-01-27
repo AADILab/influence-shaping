@@ -5,7 +5,7 @@
 
 /*
  *
- * Agent abstraction
+ * Forward declarations for agent types
  *
  */
 namespace rover_domain {

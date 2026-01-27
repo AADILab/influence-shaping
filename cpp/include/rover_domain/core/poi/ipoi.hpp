@@ -2,8 +2,8 @@
 #define THYME_ENVIRONMENTS_ROVER_DOMAIN_IPOI
 
 #include <rover_domain/utilities/math/cartesian.hpp>
-#include <rover_domain/core/detail/agent_types.hpp>
-#include <rover_domain/core/detail/entity_types.hpp>
+#include <rover_domain/core/declare/agent_types.hpp>
+#include <rover_domain/core/declare/entity_types.hpp>
 
 namespace rover_domain {
 
