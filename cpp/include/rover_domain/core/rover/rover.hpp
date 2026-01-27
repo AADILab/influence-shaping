@@ -32,12 +32,12 @@ class Rover final : public IAgent {
         // std::cout << "Rover::scan()" << std::endl;
         return m_sensor->scan(agents, pois, agent_idx);
     }
-    [[nodiscard]] virtual double reward(const AgentPack& pack) const override {
+    [[nodiscard]] virtual double reward(const Agents& agents, const POIs& pois, int agent_idx) const override {
         // each aget gets a reward set here but only nominally so the reward computer knows
         // what to do
         // but each agent is not comjputing its own reward
         // std::cout << "Rover::reward()" << std::endl;
-        return m_reward->compute(pack.agents, pack.entities, pack.agent_index);
+        return m_reward->compute(agents, pois, agent_idx);
     }
     void act(const ActionType& action) override {
         // default, move in x and y
@@ -61,8 +61,8 @@ class Rover final : public IAgent {
 //    public:
 //     Drone(double obs_radius = 1.0) : IAgent(obs_radius) {}
 
-//     [[nodiscard]] virtual Eigen::MatrixXd scan(const AgentPack&) const override { return {}; }
-//     [[nodiscard]] virtual double reward(const AgentPack&) const override { return 0; }
+//     [[nodiscard]] virtual Eigen::MatrixXd scan(const Agents& agents, const POIs& pois, int agent_idx) const override { return {}; }
+//     [[nodiscard]] virtual double reward(const Agents& agents, const POIs& pois, int agent_idx) const override { return 0; }
 //     void act(const Eigen::MatrixXd&) override { }
 // };
 

@@ -30,7 +30,7 @@ class InfluenceTestCase(unittest.TestCase):
 
     @staticmethod
     def compute_G(env):
-        return env.rovers()[0].reward(rover_domain.AgentPack(0, env.rovers(), env.pois()))
+        return env.rovers()[0].reward(env.rovers(), env.pois(), 0)
 
     @staticmethod
     def compute_agent_reward(env, agent_id):

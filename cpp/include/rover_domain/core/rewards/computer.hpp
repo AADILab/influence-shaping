@@ -435,8 +435,6 @@ class RewardComputer {
                         // remove counterfactual rovers, but provide a partial reward based on the trace
                         // and remove yourself
 
-                        // Now compute d-indirect using these rovers
-                        // reward = G - m_Global.compute(AgentPack(0, counterfactual_rovers, m_pois));
                         // Now compute d-indirect using these rovers.
                         // Make sure to entirely remove the agent we are computing d-indirect for
                         reward = G - m_Global.compute_without_inds(counterfactual_rovers, m_pois, 0, std::vector<int>(1, i));

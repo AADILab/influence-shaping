@@ -10,8 +10,6 @@
 
 namespace rover_domain {
 
-struct AgentPack;
-
 class AutomaticParameters {
     public:
     AutomaticParameters() = default;
@@ -97,7 +95,7 @@ class IAgent {
     }
 
     [[nodiscard]] virtual StateType scan(const Agents& agents, const POIs& pois, int agent_idx) const = 0;
-    [[nodiscard]] virtual double reward(const AgentPack&) const = 0;
+    [[nodiscard]] virtual double reward(const Agents&, const POIs& pois, int agent_idx) const = 0;
 
     std::string type() {
         // Give me the nominal type of this rover
