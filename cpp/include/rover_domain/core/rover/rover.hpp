@@ -32,12 +32,13 @@ class Rover final : public IAgent {
         // std::cout << "Rover::scan()" << std::endl;
         return m_sensor->scan(agents, pois, agent_idx);
     }
+    // TODO: Replace this function with an enum that describes which reward to give this agent (Global, Difference, etc)
     [[nodiscard]] virtual double reward(const Agents& agents, const POIs& pois, int agent_idx) const override {
         // each aget gets a reward set here but only nominally so the reward computer knows
         // what to do
         // but each agent is not comjputing its own reward
         // std::cout << "Rover::reward()" << std::endl;
-        return m_reward->compute(agents, pois, agent_idx);
+        return m_reward->compute(agents, pois);
     }
     void act(const ActionType& action) override {
         // default, move in x and y

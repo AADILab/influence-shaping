@@ -13,7 +13,7 @@ namespace rover_domain {
  */
 class Global {
    public:
-    [[nodiscard]] double compute(const Agents& agents, const POIs& pois, int agent_idx) const {
+    [[nodiscard]] double compute(const Agents& agents, const POIs& pois) const {
         double reward = 0.0;
         for (int i = 0; i < pois.size(); ++i) {
             reward = reward + pois[i]->value()*pois[i]->constraint_satisfied(pois, agents, i);
@@ -28,10 +28,9 @@ class Global {
                 agents_without_me.push_back(agents[i]);
             }
         }
-        double reward_without_me = compute(agents_without_me, pois, agent_idx);
-        return reward_without_me;
+        return compute(agents_without_me, pois);
     }
-    [[nodiscard]] double compute_without_inds(const Agents& agents, const POIs& pois, int agent_idx, std::vector<int> inds) const {
+    [[nodiscard]] double compute_without_inds(const Agents& agents, const POIs& pois, std::vector<int> inds) const {
         // std::cout << "Reward::compute_without_inds()" << std::endl;
         // Build a vector of agents that excludes the specified inds
         std::vector<Agent> agents_without_inds;
@@ -41,7 +40,7 @@ class Global {
                 agents_without_inds.push_back(agents[i]);
             }
         }
-        return compute(agents_without_inds, pois, agent_idx);
+        return compute(agents_without_inds, pois);
     }
 };
 

@@ -352,7 +352,7 @@ class RewardComputer {
         // std::cout << "Reward::compute()" << std::endl;
         Reward rewards;
         // Compute G
-        double G = m_Global.compute(m_rovers, m_pois, 0);
+        double G = m_Global.compute(m_rovers, m_pois);
         // std::cout << "Reward::compute() Computed G" << std::endl;
         // Prep for computing Indirect D
         std::vector<std::vector<int>> influence_sets = prep_all_or_nothing_influence();
@@ -381,7 +381,7 @@ class RewardComputer {
                 // Use all or nothing influence assignment. Just remove the entire trajectories.
                 // Refactor for more options later.
                 if (m_rovers[i]->indirect_difference_parameters().m_assignment == "manual") {
-                    reward = G - m_Global.compute_without_inds(m_rovers, m_pois, 0, m_rovers[i]->indirect_difference_parameters().m_manual);
+                    reward = G - m_Global.compute_without_inds(m_rovers, m_pois, m_rovers[i]->indirect_difference_parameters().m_manual);
                 }
                 else if (m_rovers[i]->indirect_difference_parameters().m_assignment == "automatic") {
                     // Timestep based removal
@@ -437,14 +437,14 @@ class RewardComputer {
 
                         // Now compute d-indirect using these rovers.
                         // Make sure to entirely remove the agent we are computing d-indirect for
-                        reward = G - m_Global.compute_without_inds(counterfactual_rovers, m_pois, 0, std::vector<int>(1, i));
+                        reward = G - m_Global.compute_without_inds(counterfactual_rovers, m_pois, std::vector<int>(1, i));
                         // std::cout << "reward : " << reward << " for agent i : " << i << std::endl;
                     }
 
                     // Trajectory based removal
                     else if (m_rovers[i]->indirect_difference_parameters().m_automatic_parameters.m_timescale == "trajectory") {
                         // In this route, just tally it all up into one big influence set for each agent, and do the removal
-                        reward = G - m_Global.compute_without_inds(m_rovers, m_pois, 0, influence_sets[i]);
+                        reward = G - m_Global.compute_without_inds(m_rovers, m_pois, influence_sets[i]);
                     }
                 }
             }
