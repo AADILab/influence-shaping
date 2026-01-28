@@ -71,12 +71,3 @@ tmux.conf-default
 
 # vscode
 .vscode
-
-# Qt creator
-thyme.cflags
-thyme.config
-thyme.creator
-thyme.creator.user
-thyme.cxxflags
-thyme.files
-thyme.includes
