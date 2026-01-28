@@ -1,5 +1,5 @@
-#ifndef THYME_MATH_NORMS
-#define THYME_MATH_NORMS
+#ifndef BASIL_MATH_NORMS
+#define BASIL_MATH_NORMS
 
 #include <cmath>
 #include <rover_domain/utilities/math/cartesian.hpp>

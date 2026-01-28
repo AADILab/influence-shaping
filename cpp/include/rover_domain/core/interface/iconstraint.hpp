@@ -1,5 +1,5 @@
-#ifndef THYME_ENVIRONMENTS_ROVER_DOMAIN_POI_ICONSTRAINT
-#define THYME_ENVIRONMENTS_ROVER_DOMAIN_POI_ICONSTRAINT
+#ifndef BASIL_ENVIRONMENTS_ROVER_DOMAIN_POI_ICONSTRAINT
+#define BASIL_ENVIRONMENTS_ROVER_DOMAIN_POI_ICONSTRAINT
 
 #include <rover_domain/core/rover/rover.hpp>
 #include <rover_domain/core/declare/agent_types.hpp>

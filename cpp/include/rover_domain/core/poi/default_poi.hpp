@@ -1,5 +1,5 @@
-#ifndef THYME_ENVIRONMENTS_ROVER_DOMAIN_POI
-#define THYME_ENVIRONMENTS_ROVER_DOMAIN_POI
+#ifndef BASIL_ENVIRONMENTS_ROVER_DOMAIN_POI
+#define BASIL_ENVIRONMENTS_ROVER_DOMAIN_POI
 
 #include <rover_domain/core/interface/ipoi.hpp>
 #include <rover_domain/utilities/math/cartesian.hpp>

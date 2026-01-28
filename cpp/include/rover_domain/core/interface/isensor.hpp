@@ -1,5 +1,5 @@
-#ifndef THYME_ENVIRONMENTS_ROVER_DOMAIN_ISENSOR
-#define THYME_ENVIRONMENTS_ROVER_DOMAIN_ISENSOR
+#ifndef BASIL_ENVIRONMENTS_ROVER_DOMAIN_ISENSOR
+#define BASIL_ENVIRONMENTS_ROVER_DOMAIN_ISENSOR
 
 #include <rover_domain/core/declare/agent_types.hpp>
 #include <rover_domain/core/declare/entity_types.hpp>

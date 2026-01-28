@@ -32,7 +32,6 @@ cppyy.include(os.path.join(include_dir, 'rover_domain/environment.hpp'))
 
 # making c++ namespaces visible
 rover_domain = cppyy.gbl.rover_domain
-thyme = cppyy.gbl.thyme
 std = cppyy.gbl.std
 
 # cppyy.set_debug()

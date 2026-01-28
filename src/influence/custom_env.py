@@ -1,5 +1,5 @@
 from typing import List
-from influence.librovers import rover_domain, thyme
+from influence.librovers import rover_domain
 import numpy as np
 import cppyy
 import random

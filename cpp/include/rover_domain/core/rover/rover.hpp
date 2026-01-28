@@ -1,5 +1,5 @@
-#ifndef THYME_ENVIRONMENTS_ROVER_DOMAIN_ROVER
-#define THYME_ENVIRONMENTS_ROVER_DOMAIN_ROVER
+#ifndef BASIL_ENVIRONMENTS_ROVER_DOMAIN_ROVER
+#define BASIL_ENVIRONMENTS_ROVER_DOMAIN_ROVER
 
 #include <iostream>
 #include <rover_domain/core/declare/agent_types.hpp>

@@ -1,5 +1,5 @@
-#ifndef THYME_MATH_CARTESIAN
-#define THYME_MATH_CARTESIAN
+#ifndef BASIL_MATH_CARTESIAN
+#define BASIL_MATH_CARTESIAN
 
 #include <cmath>
 #include <ostream>

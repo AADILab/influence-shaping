@@ -1,5 +1,5 @@
-#ifndef THYME_ENVIRONMENTS_ROVER_DOMAIN_IPOI
-#define THYME_ENVIRONMENTS_ROVER_DOMAIN_IPOI
+#ifndef BASIL_ENVIRONMENTS_ROVER_DOMAIN_IPOI
+#define BASIL_ENVIRONMENTS_ROVER_DOMAIN_IPOI
 
 #include <rover_domain/utilities/math/cartesian.hpp>
 #include <rover_domain/core/declare/agent_types.hpp>
