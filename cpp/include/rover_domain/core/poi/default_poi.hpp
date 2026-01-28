@@ -1,7 +1,7 @@
 #ifndef THYME_ENVIRONMENTS_ROVER_DOMAIN_POI
 #define THYME_ENVIRONMENTS_ROVER_DOMAIN_POI
 
-#include <rover_domain/core/poi/ipoi.hpp>
+#include <rover_domain/core/interface/ipoi.hpp>
 #include <rover_domain/utilities/math/cartesian.hpp>
 
 namespace rover_domain {

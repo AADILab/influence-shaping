@@ -6,7 +6,7 @@
 #include <rover_domain/core/poi/default_poi.hpp>
 #include <rover_domain/core/rover/rover.hpp>
 #include <rover_domain/utilities/math/norms.hpp>
-#include <rover_domain/core/sensors/isensor.hpp>
+#include <rover_domain/core/interface/isensor.hpp>
 // #include <ranges> // changed for python branch
 #include <vector>
 

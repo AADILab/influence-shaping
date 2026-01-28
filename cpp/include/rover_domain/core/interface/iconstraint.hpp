@@ -4,6 +4,7 @@
 #include <rover_domain/core/rover/rover.hpp>
 #include <rover_domain/core/declare/agent_types.hpp>
 #include <rover_domain/core/declare/entity_types.hpp>
+#include <rover_domain/core/interface/ipoi.hpp>
 #include <rover_domain/utilities/math/norms.hpp>
 #include <algorithm>
 #include <vector>

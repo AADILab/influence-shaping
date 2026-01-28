@@ -32,8 +32,8 @@ if platform.machine() in ['arm64', 'aarch64']:
 cppyy.include(os.path.join(include_dir, 'rover_domain/environment.hpp'))
 cppyy.include(os.path.join(include_dir, 'rover_domain/core/setup/init_corners.hpp'))
 cppyy.include(os.path.join(include_dir, 'rover_domain/core/setup/init_custom.hpp'))
-cppyy.include(os.path.join(include_dir, 'rover_domain/core/poi/iconstraint.hpp'))
-cppyy.include(os.path.join(include_dir, 'rover_domain/core/sensors/isensor.hpp'))
+cppyy.include(os.path.join(include_dir, 'rover_domain/core/interface/iconstraint.hpp'))
+cppyy.include(os.path.join(include_dir, 'rover_domain/core/interface/isensor.hpp'))
 
 # making c++ namespaces visible
 rover_domain = cppyy.gbl.rover_domain
