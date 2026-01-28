@@ -2,11 +2,23 @@
 #define THYME_ENVIRONMENTS_ROVER_DOMAIN_ENVIRONMENT
 
 #include <Eigen/Dense>
+// POIs
 #include <rover_domain/core/poi/default_poi.hpp>
+// and POI Constraints
+#include <rover_domain/core/constraint/rover_sequence.hpp>
+#include <rover_domain/core/constraint/rover.hpp>
+// Agents
 #include <rover_domain/core/rover/rover.hpp>
+// Sensors
 #include <rover_domain/core/sensors/lidar.hpp>
+#include <rover_domain/core/sensors/smart_lidar.hpp>
+#include <rover_domain/core/sensors/rover_lidar.hpp>
+#include <rover_domain/core/sensors/uav_distance_lidar.hpp>
+// Rewards
 #include <rover_domain/core/rewards/computer.hpp>
+// Environment init
 #include <rover_domain/core/setup/init_corners.hpp>
+#include <rover_domain/core/setup/init_custom.hpp>
 #include <tuple>
 #include <vector>
 
