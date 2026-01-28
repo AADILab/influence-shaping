@@ -32,6 +32,9 @@ if platform.machine() in ['arm64', 'aarch64']:
 cppyy.include(os.path.join(include_dir, 'rover_domain/environment.hpp'))
 cppyy.include(os.path.join(include_dir, 'rover_domain/core/setup/init_corners.hpp'))
 cppyy.include(os.path.join(include_dir, 'rover_domain/core/setup/init_custom.hpp'))
+cppyy.include(os.path.join(include_dir, 'rover_domain/core/constraint/abstract_rover.hpp'))
+cppyy.include(os.path.join(include_dir, 'rover_domain/core/constraint/rover.hpp'))
+cppyy.include(os.path.join(include_dir, 'rover_domain/core/constraint/rover_sequence.hpp'))
 cppyy.include(os.path.join(include_dir, 'rover_domain/core/interface/iconstraint.hpp'))
 cppyy.include(os.path.join(include_dir, 'rover_domain/core/interface/isensor.hpp'))
 
