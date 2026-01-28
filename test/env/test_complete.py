@@ -150,7 +150,7 @@ class TestComplete(InfluenceTestCase):
         processed_observations = [[] for _ in observations]
         for ind, observation in enumerate(observations):
             for i in range(observation.size()):
-                processed_observations[ind].append(observation[i,0])
+                processed_observations[ind].append(observation[i])
         # Now check that the observations match what we expect
         for expected_observation, observation in zip(expected_observations, processed_observations):
             for expected, actual in zip(expected_observation, observation):

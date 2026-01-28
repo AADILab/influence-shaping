@@ -1,7 +1,6 @@
 #ifndef THYME_ENVIRONMENTS_ROVER_DOMAIN_ROVER_LIDAR
 #define THYME_ENVIRONMENTS_ROVER_DOMAIN_ROVER_LIDAR
 
-#include <Eigen/Dense>
 #include <numeric>
 #include <rover_domain/core/poi/default_poi.hpp>
 #include <rover_domain/core/rover/rover.hpp>
@@ -62,7 +61,7 @@ class RoverLidar : public ISensor {
         throw std::runtime_error("Measurement type for agent " + std::to_string(agent_id) + " is not defined!");
     }
 
-    [[nodiscard]] Eigen::MatrixXd scan(const Agents& agents, const POIs& pois, int agent_idx) const {
+    [[nodiscard]] std::vector<double> scan(const Agents& agents, const POIs& pois, int agent_idx) const {
         const std::size_t num_sectors = 360 / m_resolution;
         std::vector<std::vector<double>> rover_values(num_sectors);
         std::vector<std::vector<double>> uav_values(num_sectors);
@@ -98,9 +97,8 @@ class RoverLidar : public ISensor {
         }
 
         // Encode state (only rovers and UAVs, no POIs)
-        Eigen::MatrixXd state(num_sectors * 2, 1);
         const double default_val = m_default_values[agent_idx];
-        state.setConstant(default_val);
+        std::vector<double> state(num_sectors * 2, default_val);
 
         for (std::size_t i = 0; i < num_sectors; ++i) {
             const std::size_t num_rovers = rover_values[i].size();
@@ -110,9 +108,9 @@ class RoverLidar : public ISensor {
 
             if (num_rovers > 0) {
                 if (accum == "average") {
-                    state(i) = m_composition->compose(rover_values[i], 0.0, num_rovers);
+                    state[i] = m_composition->compose(rover_values[i], 0.0, num_rovers);
                 } else if (accum == "sum") {
-                    state(i) = m_composition->compose(rover_values[i], 0.0, 1.0);
+                    state[i] = m_composition->compose(rover_values[i], 0.0, 1.0);
                 } else {
                     throw std::runtime_error("Invalid accumulation type '" + accum + "' for agent " + std::to_string(agent_idx));
                 }
@@ -120,9 +118,9 @@ class RoverLidar : public ISensor {
 
             if (num_uavs > 0) {
                 if (accum == "average") {
-                    state(num_sectors + i) = m_composition->compose(uav_values[i], 0.0, num_uavs);
+                    state[num_sectors + i] = m_composition->compose(uav_values[i], 0.0, num_uavs);
                 } else if (accum == "sum") {
-                    state(num_sectors + i) = m_composition->compose(uav_values[i], 0.0, 1.0);
+                    state[num_sectors + i] = m_composition->compose(uav_values[i], 0.0, 1.0);
                 } else {
                     throw std::runtime_error("Invalid accumulation type '" + accum + "' for agent " + std::to_string(agent_idx));
                 }

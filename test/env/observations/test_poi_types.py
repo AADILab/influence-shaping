@@ -62,7 +62,7 @@ class TestPoiTypeSensor(TestEnv):
         ]
 
         # Process the observations for easier debugging
-        processed_observations = [[observation[i,0] for i in range(12)] for observation in observations]
+        processed_observations = [[observation[i] for i in range(12)] for observation in observations]
 
         # Now check the observations of each uav
         for expected_observation, actual_observation in zip(expected_observations, processed_observations):

@@ -1,7 +1,6 @@
 #ifndef THYME_ENVIRONMENTS_ROVER_DOMAIN_UAV_DISTANCE_LIDAR
 #define THYME_ENVIRONMENTS_ROVER_DOMAIN_UAV_DISTANCE_LIDAR
 
-#include <Eigen/Dense>
 #include <numeric>
 #include <rover_domain/core/poi/default_poi.hpp>
 #include <rover_domain/core/rover/rover.hpp>
@@ -26,7 +25,7 @@ class UavDistanceLidar : public ISensor {
         : m_agent_types(agent_types),
           m_num_sensed_uavs(0) {}
 
-    [[nodiscard]] Eigen::MatrixXd scan(const Agents& agents, const POIs& pois, int agent_idx) const {
+    [[nodiscard]] std::vector<double> scan(const Agents& agents, const POIs& pois, int agent_idx) const {
         auto& agent = agents[agent_idx];
         m_num_sensed_uavs = 0;
         std::vector<double> distances;
@@ -47,13 +46,7 @@ class UavDistanceLidar : public ISensor {
             }
         }
 
-        // Convert to Eigen column vector
-        Eigen::MatrixXd state(distances.size(), 1);
-        for (std::size_t i = 0; i < distances.size(); ++i) {
-            state(i) = distances[i];
-        }
-
-        return state;
+        return distances;
     }
 
     [[nodiscard]] inline int num_sensed_uavs() const {

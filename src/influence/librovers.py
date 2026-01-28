@@ -25,8 +25,6 @@ libs_dir = os.path.join(source_dir, 'libs')
 # include paths
 cppyy.add_include_path(include_dir)
 cppyy.add_include_path(libs_dir)
-if platform.machine() in ['arm64', 'aarch64']:
-    cppyy.cppdef("#define EIGEN_DONT_VECTORIZE")
 
 # Header for rover environment. T
 # This file includes everything neccessary for the rover domain
@@ -36,7 +34,6 @@ cppyy.include(os.path.join(include_dir, 'rover_domain/environment.hpp'))
 rover_domain = cppyy.gbl.rover_domain
 thyme = cppyy.gbl.thyme
 std = cppyy.gbl.std
-eigen = cppyy.gbl.Eigen
 
 # cppyy.set_debug()
 

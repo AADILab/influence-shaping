@@ -464,7 +464,7 @@ class CooperativeCoevolutionaryAlgorithm():
         for observation in observations:
             observation_arr = []
             for i in range(len(observation)):
-                observation_arr.append(observation(i))
+                observation_arr.append(observation[i])
             observation_arr = np.array(observation_arr, dtype=np.float64)
             observations_arrs.append(observation_arr)
 
@@ -480,7 +480,7 @@ class CooperativeCoevolutionaryAlgorithm():
             for ind, (observation, agent_nn) in enumerate(zip(observations, agent_policies)):
                 observation_arr = []
                 for i in range(len(observation)):
-                    observation_arr.append(observation(i))
+                    observation_arr.append(observation[i])
                 observation_arr = np.array(observation_arr, dtype=np.float64)
                 # print("observation_arr:", observation_arr)
                 action_arr = agent_nn.forward(observation_arr)
@@ -529,7 +529,7 @@ class CooperativeCoevolutionaryAlgorithm():
                 observation_arrs.append(observation_arr)
                 actions_arrs.append(input_action_arr)
             for action_arr in actions_arrs:
-                action = rover_domain.tensor(action_arr)
+                action = action_arr
                 actions.append(action)
             # TODO: Might need to start getting the reward at each timestep rather than once at the end
             # And then just summing them together

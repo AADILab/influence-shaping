@@ -1,7 +1,6 @@
 #ifndef THYME_ENVIRONMENTS_ROVER_DOMAIN_IROVER
 #define THYME_ENVIRONMENTS_ROVER_DOMAIN_IROVER
 
-#include <Eigen/Dense>
 #include <iostream>
 #include <rover_domain/core/declare/agent_types.hpp>
 #include <rover_domain/core/declare/entity_types.hpp>
@@ -60,8 +59,8 @@ class Bounds {
  */
 class IAgent {
     using Point = thyme::math::Point;
-    using ActionType = Eigen::MatrixXd;
-    using StateType = Eigen::MatrixXd;
+    using ActionType = std::vector<double>;
+    using StateType = std::vector<double>;
 
    public:
     IAgent(Bounds bounds, IndirectDifferenceParameters indirect_difference_parameters, std::string reward_type, std::string type_, double obs_radius = 1.0) : m_bounds(bounds), m_indirect_difference_parameters(indirect_difference_parameters), m_reward_type(reward_type), m_type(type_), m_obs_radius(obs_radius) {};

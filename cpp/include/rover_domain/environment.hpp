@@ -1,7 +1,6 @@
 #ifndef THYME_ENVIRONMENTS_ROVER_DOMAIN_ENVIRONMENT
 #define THYME_ENVIRONMENTS_ROVER_DOMAIN_ENVIRONMENT
 
-#include <Eigen/Dense>
 // POIs
 #include <rover_domain/core/poi/default_poi.hpp>
 // and POI Constraints
@@ -32,8 +31,8 @@ namespace rover_domain {
 template <typename InitPolicy = CornersInit>
 class Environment {
    public:
-    using Action = Eigen::MatrixXd;
-    using State = std::vector<Eigen::MatrixXd>;
+    using Action = std::vector<double>;
+    using State = std::vector<std::vector<double>>;
     using Reward = std::vector<double>;
 
     Environment(InitPolicy initPolicy = InitPolicy(), std::vector<Agent> rovers = {},
@@ -140,28 +139,6 @@ class Environment {
     size_t m_width;
     size_t m_height;
 };
-
-/*
- *
- * Syntactic sugar for agents/entities
- *
- */
-using Agents = std::vector<Agent>;
-using POIs = std::vector<POI>;
-using Actions = std::vector<Eigen::MatrixXd>;
-
-Eigen::MatrixXd tensor(std::vector<double> list) {
-    return Eigen::Map<Eigen::MatrixXd>(list.data(), list.size(), 1);
-}
-
-Agents& operator<<(Agents& vector, Agent&& rover) {
-    vector.push_back(std::move(rover));
-    return vector;
-}
-POIs& operator<<(POIs& vector, POI&& poi) {
-    vector.push_back(std::move(poi));
-    return vector;
-}
 
 }  // namespace rover_domain
 

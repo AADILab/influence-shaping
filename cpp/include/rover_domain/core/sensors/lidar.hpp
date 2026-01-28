@@ -1,7 +1,6 @@
 #ifndef THYME_ENVIRONMENTS_ROVER_DOMAIN_LIDAR
 #define THYME_ENVIRONMENTS_ROVER_DOMAIN_LIDAR
 
-#include <Eigen/Dense>
 #include <numeric>
 #include <rover_domain/core/poi/default_poi.hpp>
 #include <rover_domain/core/rover/rover.hpp>
@@ -26,7 +25,7 @@ class Lidar : public ISensor {
     Lidar(double resolution = 90, CPolicy composition_policy = CompositionPolicy())
         : m_resolution(resolution), m_composition(composition_policy) {}
 
-    [[nodiscard]] Eigen::MatrixXd scan(const Agents& agents, const POIs& pois, int agent_idx) const {
+    [[nodiscard]] std::vector<double> scan(const Agents& agents, const POIs& pois, int agent_idx) const {
         // std::cout << "Lidar::scan()" << std::endl;
         const std::size_t num_sectors = 360 / m_resolution;
         std::vector<std::vector<double>> poi_values(num_sectors), rover_values(num_sectors);
@@ -61,18 +60,17 @@ class Lidar : public ISensor {
         }
 
         // encode state
-        Eigen::MatrixXd state(num_sectors * 2, 1);
+        std::vector<double> state(num_sectors * 2, -1.0);
 
         // For each sector
         for (std::size_t i = 0; i < num_sectors; ++i) {
             const std::size_t& num_rovers = rover_values[i].size();
             const std::size_t& num_poi = poi_values[i].size();
-            state(i) = state(num_sectors + i) = -1.0;
 
             if (num_rovers > 0)
-                state(i) = m_composition->compose(rover_values[i], 0.0, num_rovers);
+                state[i] = m_composition->compose(rover_values[i], 0.0, num_rovers);
             if (num_poi > 0)
-                state(num_sectors + i) = m_composition->compose(poi_values[i], 0.0, num_poi);
+                state[num_sectors + i] = m_composition->compose(poi_values[i], 0.0, num_poi);
         }
         return state;
     }

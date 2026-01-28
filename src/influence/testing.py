@@ -2,7 +2,7 @@ import unittest
 import numpy as np
 from copy import deepcopy
 from typing import Any
-from influence.librovers import rover_domain, eigen
+from influence.librovers import rover_domain
 from influence.custom_env import createEnv
 
 class InfluenceTestCase(unittest.TestCase):
@@ -34,7 +34,7 @@ class InfluenceTestCase(unittest.TestCase):
 
     @staticmethod
     def extract_observation(cppyy_observation):
-        return [cppyy_observation(i,0) for i in range(cppyy_observation.size())]
+        return [cppyy_observation[i] for i in range(cppyy_observation.size())]
 
 class TestEnv(InfluenceTestCase):
     def __init__(self, *args, **kwargs):
