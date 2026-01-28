@@ -1,5 +1,5 @@
-#ifndef BASIL_ENVIRONMENTS_ROVER_DOMAIN_POI_ICONSTRAINT
-#define BASIL_ENVIRONMENTS_ROVER_DOMAIN_POI_ICONSTRAINT
+#ifndef BASIL_ENVIRONMENTS_ROVER_DOMAIN_POI_IOBJECTIVE
+#define BASIL_ENVIRONMENTS_ROVER_DOMAIN_POI_IOBJECTIVE
 
 #include <rover_domain/core/rover/rover.hpp>
 #include <rover_domain/core/declare/agent_types.hpp>
@@ -14,13 +14,13 @@ namespace rover_domain {
 
 /*
  *
- * Constraint interface for bindings
+ * Objectives interface for bindings
  *
  */
-class IConstraint {
+class IObjective {
    public:
-    [[nodiscard]] virtual double is_satisfied(const POIs& pois, const Agents& agents, int poi_idx) const = 0;
-    virtual ~IConstraint() = default;
+    [[nodiscard]] virtual double score(const POIs& pois, const Agents& agents, int poi_idx) const = 0;
+    virtual ~IObjective() = default;
 };
 
 }  // namespace rover_domain

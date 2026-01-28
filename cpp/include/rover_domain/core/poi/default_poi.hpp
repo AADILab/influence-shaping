@@ -11,20 +11,19 @@ namespace rover_domain {
  * Default boilerplate poi
  *
  */
-template <typename ConstraintPolicy>
+template <typename Objective>
 class DefaultPOI final : public IPOI {
    public:
     DefaultPOI(double value = 1.0, double obs_radius = 1.0, double capture_radius = -1.0,
-        ConstraintPolicy constraint = ConstraintPolicy())
-        : IPOI(value, obs_radius, capture_radius), m_constraint(constraint) {}
+        Objective objective = Objective())
+        : IPOI(value, obs_radius, capture_radius), m_objective(objective) {}
 
-    [[nodiscard]] double constraint_satisfied(const POIs& pois, const Agents& agents, int poi_idx) const override {
-        // std::cout << "POI::constraint_satisfied()" << std::endl;
-        return m_constraint.is_satisfied(pois, agents, poi_idx);
+    [[nodiscard]] double score(const POIs& pois, const Agents& agents, int poi_idx) const override {
+        return m_objective.score(pois, agents, poi_idx);
     }
 
    private:
-    ConstraintPolicy m_constraint;
+    Objective m_objective;
 };
 }  // namespace rover_domain
 

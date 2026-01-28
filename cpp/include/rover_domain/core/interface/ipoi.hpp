@@ -41,7 +41,7 @@ class IPOI {
         tick();
     }
 
-    [[nodiscard]] virtual double constraint_satisfied(const POIs&, const Agents&, int poi_idx) const = 0;
+    [[nodiscard]] virtual double score(const POIs&, const Agents&, int poi_idx) const = 0;
 
    protected:
     virtual void tick() {}

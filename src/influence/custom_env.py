@@ -171,11 +171,11 @@ def createAgent(agent_config, agent_types, poi_types, disappear_bools, poi_subty
 
 def createRoverPOI(value, obs_rad, capture_radius, coupling, is_rover_list, constraint):
     if constraint == 'sequential':
-        roverConstraint = rover_domain.RoverSequenceConstraint(coupling, is_rover_list)
-        poi = rover_domain.DefaultPOI[rover_domain.RoverSequenceConstraint](value, obs_rad, capture_radius, roverConstraint)
+        roverObjective = rover_domain.RoverSequenceObjective(coupling, is_rover_list)
+        poi = rover_domain.DefaultPOI[rover_domain.RoverSequenceObjective](value, obs_rad, capture_radius, roverObjective)
     elif constraint == 'final':
-        roverConstraint = rover_domain.RoverConstraint(coupling, is_rover_list)
-        poi = rover_domain.DefaultPOI[rover_domain.RoverConstraint](value, obs_rad, capture_radius, roverConstraint)
+        roverObjective = rover_domain.RoverObjective(coupling, is_rover_list)
+        poi = rover_domain.DefaultPOI[rover_domain.RoverObjective](value, obs_rad, capture_radius, roverObjective)
     return poi
 
 # This is just to help me track which POIs are nominally hidden from rovers
@@ -185,8 +185,8 @@ def createHiddenPOI(*args, **kwargs):
 # Running into errors setting up the environment
 # Let's try it with regular POIs
 def createPOI(value, obs_rad, coupling, is_rover_list):
-    countConstraint = rover_domain.CountConstraint(coupling)
-    poi = rover_domain.DefaultPOI[rover_domain.CountConstraint](value, obs_rad, countConstraint)
+    countObjective = rover_domain.CountObjective(coupling)
+    poi = rover_domain.DefaultPOI[rover_domain.CountObjective](value, obs_rad, countObjective)
     return poi
 
 def resolvePositionSpawnRule(position_dict):

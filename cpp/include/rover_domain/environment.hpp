@@ -3,9 +3,9 @@
 
 // POIs
 #include <rover_domain/core/poi/default_poi.hpp>
-// and POI Constraints
-#include <rover_domain/core/constraint/rover_sequence.hpp>
-#include <rover_domain/core/constraint/rover.hpp>
+// and Objectives (for POIs)
+#include <rover_domain/core/objective/rover_sequence.hpp>
+#include <rover_domain/core/objective/rover.hpp>
 // Agents
 #include <rover_domain/core/rover/rover.hpp>
 // Sensors

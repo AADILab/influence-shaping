@@ -1,22 +1,22 @@
 #ifndef BASIL_ENVIRONMENTS_ROVER_DOMAIN_ABSTRACT_ROVER_CONSTRAINT
 #define BASIL_ENVIRONMENTS_ROVER_DOMAIN_ABSTRACT_ROVER_CONSTRAINT
 
-#include <rover_domain/core/interface/iconstraint.hpp>
+#include <rover_domain/core/interface/iobjective.hpp>
 
 namespace rover_domain {
 
 /*
  *
- * AbstractRoverConstraint - base class for rover-specific constraints
+ * AbstractRoverObjective - base class for rover-specific objectives
  *
  */
-class AbstractRoverConstraint : public IConstraint {
+class AbstractRoverObjective : public IObjective {
    public:
     // Default constructor
-    AbstractRoverConstraint()
+    AbstractRoverObjective()
         : m_coupling(1), m_is_rover_list() {}
 
-    AbstractRoverConstraint(int coupling, const std::vector<bool>& is_rover_list)
+    AbstractRoverObjective(int coupling, const std::vector<bool>& is_rover_list)
         : m_coupling(coupling), m_is_rover_list(is_rover_list) {}
 
     [[nodiscard]] bool captured(double dist, const Agent& agent, const POI& entity) const {
@@ -29,7 +29,7 @@ class AbstractRoverConstraint : public IConstraint {
         return false;
     }
 
-    [[nodiscard]] double step_is_satisfied(const POIs& pois, const Agents& agents, int poi_idx, std::size_t t) const {
+    [[nodiscard]] double step_score(const POIs& pois, const Agents& agents, int poi_idx, std::size_t t) const {
         int count = 0;
         std::vector<double> dists;
         bool constraint_satisfied = false;
@@ -64,13 +64,13 @@ class AbstractRoverConstraint : public IConstraint {
                 dist = std::max(1.0, dist);
             }
 
-            // Calculate constraint value as product of 1/dist for first m_coupling distances
-            double constraint_value = static_cast<double>(m_coupling);
+            // Calculate objective value as product of 1/dist for first m_coupling distances
+            double score = static_cast<double>(m_coupling);
             for (int i = 0; i < m_coupling && i < dists.size(); ++i) {
-                constraint_value *= 1.0 / dists[i];
+                score *= 1.0 / dists[i];
             }
 
-            return constraint_value;
+            return score;
         }
 
         return 0.0;

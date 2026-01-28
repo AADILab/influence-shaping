@@ -461,7 +461,7 @@ class RewardComputer {
     [[nodiscard]] double global(const Agents& agents, const POIs& pois) const {
         double reward = 0.0;
         for (int i = 0; i < pois.size(); ++i) {
-            reward = reward + pois[i]->value()*pois[i]->constraint_satisfied(pois, agents, i);
+            reward = reward + pois[i]->value()*pois[i]->score(pois, agents, i);
         }
         return reward;
     }
