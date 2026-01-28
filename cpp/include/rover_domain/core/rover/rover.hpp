@@ -7,7 +7,7 @@
 #include <rover_domain/core/declare/entity_types.hpp>
 #include <rover_domain/utilities/math/cartesian.hpp>
 #include <vector>
-#include <rover_domain/core/interface/irover.hpp>
+#include <rover_domain/core/interface/iagent.hpp>
 
 namespace rover_domain {
 
