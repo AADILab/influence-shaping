@@ -105,7 +105,7 @@ def createAgent(agent_config, agent_types, poi_types, disappear_bools, poi_subty
             ),
             indirect_difference_parameters,
             reward_type,
-            type_,
+            rover_domain.agent_type_from_string(type_),
             obs_radius,
             rover_domain.SmartLidar[rover_domain.Density](
                 resolution,
@@ -138,7 +138,7 @@ def createAgent(agent_config, agent_types, poi_types, disappear_bools, poi_subty
             ),
             indirect_difference_parameters,
             reward_type,
-            type_,
+            rover_domain.agent_type_from_string(type_),
             obs_radius,
             rover_domain.RoverLidar[rover_domain.Density](
                 resolution,
@@ -160,7 +160,7 @@ def createAgent(agent_config, agent_types, poi_types, disappear_bools, poi_subty
             ),
             indirect_difference_parameters,
             reward_type,
-            type_,
+            rover_domain.agent_type_from_string(type_),
             obs_radius,
             rover_domain.UavDistanceLidar(
                 agent_types=agent_types,

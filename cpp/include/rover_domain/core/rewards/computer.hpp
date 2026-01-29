@@ -232,7 +232,7 @@ class RewardComputer {
                 rovers[k]->bounds(),
                 rovers[k]->indirect_difference_parameters(),
                 rovers[k]->reward_type(),
-                agent_type_to_string(rovers[k]->type()),
+                rovers[k]->type(),
                 rovers[k]->obs_radius()
             );
             rover.reset();

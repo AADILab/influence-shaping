@@ -66,12 +66,12 @@ class IAgent {
         Bounds bounds,
         IndirectDifferenceParameters indirect_difference_parameters,
         std::string reward_type,
-        std::string type_,
+        AgentType agent_type,
         double obs_radius = 1.0
     ) : m_bounds(bounds),
         m_indirect_difference_parameters(indirect_difference_parameters),
         m_reward_type(reward_type),
-        m_type(agent_type_from_string(type_)),
+        m_type(agent_type),
         m_obs_radius(obs_radius) {};
 
     IAgent(IAgent&&) = default;
