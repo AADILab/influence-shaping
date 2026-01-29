@@ -2,6 +2,7 @@
 #define BASIL_ENVIRONMENTS_ROVER_DOMAIN_POI_TYPES
 
 #include <rover_domain/utilities/shared_wrapper.hpp>
+#include <vector>
 
 /*
  *
