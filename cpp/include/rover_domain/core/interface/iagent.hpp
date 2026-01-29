@@ -2,7 +2,7 @@
 #define BASIL_ENVIRONMENTS_ROVER_DOMAIN_IROVER
 
 #include <rover_domain/core/declare/agent_types.hpp>
-#include <rover_domain/core/declare/entity_types.hpp>
+#include <rover_domain/core/declare/poi_types.hpp>
 #include <rover_domain/utilities/math/cartesian.hpp>
 #include <vector>
 

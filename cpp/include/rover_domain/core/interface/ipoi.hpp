@@ -3,7 +3,7 @@
 
 #include <rover_domain/utilities/math/cartesian.hpp>
 #include <rover_domain/core/declare/agent_types.hpp>
-#include <rover_domain/core/declare/entity_types.hpp>
+#include <rover_domain/core/declare/poi_types.hpp>
 
 namespace rover_domain {
 
