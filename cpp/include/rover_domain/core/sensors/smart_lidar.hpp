@@ -26,7 +26,6 @@ class SmartLidar : public ISensor {
 
     SmartLidar(double resolution,
                CPolicy composition_policy,
-               const std::vector<std::string>& poi_types,
                const std::vector<bool>& disappear_bools,
                const std::vector<std::string>& poi_subtypes,
                const std::vector<std::vector<std::string>>& agent_observable_subtypes,
@@ -36,7 +35,6 @@ class SmartLidar : public ISensor {
                const std::vector<double>& default_values)
         : m_resolution(resolution),
           m_composition(composition_policy),
-          m_poi_types(poi_types),
           m_disappear_bools(disappear_bools),
           m_poi_subtypes(poi_subtypes),
           m_agent_observable_subtypes(agent_observable_subtypes),
@@ -85,7 +83,6 @@ class SmartLidar : public ISensor {
             if (distance > agent->obs_radius()) continue;
 
             // Check if agent can observe this POI type
-            // if (m_poi_types[poi_ind] == "hidden") {
             if (pois[poi_ind]->scope() == VisibilityScope::UAV_ONLY) {
                 if (my_type == AgentType::Rover) {
                     // Rovers cannot observe hidden POIs, but can capture them
@@ -198,7 +195,6 @@ class SmartLidar : public ISensor {
    private:
     double m_resolution;
     CPolicy m_composition;
-    std::vector<std::string> m_poi_types;
     std::vector<bool> m_disappear_bools;
     std::vector<std::string> m_poi_subtypes;
     std::vector<std::vector<std::string>> m_agent_observable_subtypes;

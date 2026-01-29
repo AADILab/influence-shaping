@@ -22,7 +22,7 @@ def calculateAngle(position_0, position_1):
         angle += 360.
     return angle
 
-def createAgent(agent_config, agent_types, poi_types, disappear_bools, poi_subtypes, agent_observable_subtypes, accum_type, measurement_type, type_, observation_radii, default_values, map_size):
+def createAgent(agent_config, disappear_bools, poi_subtypes, agent_observable_subtypes, accum_type, measurement_type, type_, observation_radii, default_values, map_size):
     """Create an agent using the agent's config and type"""
     # unpack config
     reward_type = agent_config['reward_type']
@@ -80,7 +80,6 @@ def createAgent(agent_config, agent_types, poi_types, disappear_bools, poi_subty
 
     if sensor_type == 'SmartLidar':
         # Convert Python lists to C++ vectors for SmartLidar
-        cpp_poi_types = cppyy.gbl.std.vector[cppyy.gbl.std.string](poi_types)
         cpp_disappear_bools = cppyy.gbl.std.vector[cppyy.gbl.bool](disappear_bools)
         cpp_poi_subtypes = cppyy.gbl.std.vector[cppyy.gbl.std.string](poi_subtypes)
 
@@ -109,7 +108,6 @@ def createAgent(agent_config, agent_types, poi_types, disappear_bools, poi_subty
             rover_domain.SmartLidar[rover_domain.Density](
                 resolution,
                 rover_domain.Density(),
-                cpp_poi_types,
                 cpp_disappear_bools,
                 cpp_poi_subtypes,
                 cpp_agent_observable_subtypes,
@@ -229,11 +227,8 @@ def createEnv(config):
 
     NUM_ROVERS = len(config["env"]["agents"]["rovers"])
     NUM_UAVS = len(config["env"]["agents"]["uavs"])
-    NUM_ROVER_POIS = len(config["env"]["pois"]["rover_pois"])
-    NUM_HIDDEN_POIS = len(config["env"]["pois"]["hidden_pois"])
 
     agent_types = ["rover"]*NUM_ROVERS + ["uav"]*NUM_UAVS
-    poi_types = ["rover"]*NUM_ROVER_POIS+["hidden"]*NUM_HIDDEN_POIS
 
     disappear_bools = []
     for poi_config in config['env']['pois']['rover_pois']+config['env']['pois']['hidden_pois']:
@@ -282,8 +277,6 @@ def createEnv(config):
     rovers_ = [
         createAgent(
             agent_config=rover_config,
-            agent_types=agent_types,
-            poi_types=poi_types,
             disappear_bools=disappear_bools,
             poi_subtypes=poi_subtypes,
             agent_observable_subtypes=agent_observable_subtypes,
@@ -299,8 +292,6 @@ def createEnv(config):
     uavs = [
         createAgent(
             agent_config=uav_config,
-            agent_types=agent_types,
-            poi_types=poi_types,
             disappear_bools=disappear_bools,
             poi_subtypes=poi_subtypes,
             agent_observable_subtypes=agent_observable_subtypes,
