@@ -20,10 +20,6 @@ class UavDistanceLidar : public ISensor {
     UavDistanceLidar()
         : m_num_sensed_uavs(0) {}
 
-    UavDistanceLidar(const std::vector<std::string>& agent_types)
-        : m_agent_types(agent_types),
-          m_num_sensed_uavs(0) {}
-
     [[nodiscard]] std::vector<double> scan(const Agents& agents, const POIs& pois, int agent_idx) const {
         auto& agent = agents[agent_idx];
         m_num_sensed_uavs = 0;
@@ -53,7 +49,6 @@ class UavDistanceLidar : public ISensor {
     }
 
    private:
-    std::vector<std::string> m_agent_types;
     mutable int m_num_sensed_uavs;
 };
 

@@ -25,14 +25,12 @@ class RoverLidar : public ISensor {
 
     RoverLidar(double resolution,
                CPolicy composition_policy,
-               const std::vector<std::string>& agent_types,
                const std::vector<std::string>& accum_type,
                const std::vector<std::string>& measurement_type,
                const std::vector<double>& observation_radii,
                const std::vector<double>& default_values)
         : m_resolution(resolution),
           m_composition(composition_policy),
-          m_agent_types(agent_types),
           m_accum_type(accum_type),
           m_measurement_type(measurement_type),
           m_observation_radii(observation_radii),
@@ -133,7 +131,6 @@ class RoverLidar : public ISensor {
    private:
     double m_resolution;
     CPolicy m_composition;
-    std::vector<std::string> m_agent_types;
     std::vector<std::string> m_accum_type;
     std::vector<std::string> m_measurement_type;
     std::vector<double> m_observation_radii;

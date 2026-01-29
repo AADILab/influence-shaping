@@ -80,7 +80,6 @@ def createAgent(agent_config, agent_types, poi_types, disappear_bools, poi_subty
 
     if sensor_type == 'SmartLidar':
         # Convert Python lists to C++ vectors for SmartLidar
-        cpp_agent_types = cppyy.gbl.std.vector[cppyy.gbl.std.string](agent_types)
         cpp_poi_types = cppyy.gbl.std.vector[cppyy.gbl.std.string](poi_types)
         cpp_disappear_bools = cppyy.gbl.std.vector[cppyy.gbl.bool](disappear_bools)
         cpp_poi_subtypes = cppyy.gbl.std.vector[cppyy.gbl.std.string](poi_subtypes)
@@ -110,7 +109,6 @@ def createAgent(agent_config, agent_types, poi_types, disappear_bools, poi_subty
             rover_domain.SmartLidar[rover_domain.Density](
                 resolution,
                 rover_domain.Density(),
-                cpp_agent_types,
                 cpp_poi_types,
                 cpp_disappear_bools,
                 cpp_poi_subtypes,
@@ -123,7 +121,6 @@ def createAgent(agent_config, agent_types, poi_types, disappear_bools, poi_subty
         )
     elif sensor_type == 'RoverLidar':
         # Convert Python lists to C++ vectors for RoverLidar (no POI-related parameters)
-        cpp_agent_types = cppyy.gbl.std.vector[cppyy.gbl.std.string](agent_types)
         cpp_accum_type = cppyy.gbl.std.vector[cppyy.gbl.std.string](accum_type)
         cpp_measurement_type = cppyy.gbl.std.vector[cppyy.gbl.std.string](measurement_type)
         cpp_observation_radii = cppyy.gbl.std.vector[cppyy.gbl.double](observation_radii)
@@ -143,7 +140,6 @@ def createAgent(agent_config, agent_types, poi_types, disappear_bools, poi_subty
             rover_domain.RoverLidar[rover_domain.Density](
                 resolution,
                 rover_domain.Density(),
-                cpp_agent_types,
                 cpp_accum_type,
                 cpp_measurement_type,
                 cpp_observation_radii,
@@ -162,9 +158,7 @@ def createAgent(agent_config, agent_types, poi_types, disappear_bools, poi_subty
             reward_type,
             rover_domain.agent_type_from_string(type_),
             obs_radius,
-            rover_domain.UavDistanceLidar(
-                agent_types=agent_types,
-            )
+            rover_domain.UavDistanceLidar()
         )
     else:
         raise ValueError(f"Unknown sensor_type '{sensor_type}'.")

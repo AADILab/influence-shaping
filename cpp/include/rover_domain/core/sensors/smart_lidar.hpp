@@ -26,7 +26,6 @@ class SmartLidar : public ISensor {
 
     SmartLidar(double resolution,
                CPolicy composition_policy,
-               const std::vector<std::string>& agent_types,
                const std::vector<std::string>& poi_types,
                const std::vector<bool>& disappear_bools,
                const std::vector<std::string>& poi_subtypes,
@@ -37,7 +36,6 @@ class SmartLidar : public ISensor {
                const std::vector<double>& default_values)
         : m_resolution(resolution),
           m_composition(composition_policy),
-          m_agent_types(agent_types),
           m_poi_types(poi_types),
           m_disappear_bools(disappear_bools),
           m_poi_subtypes(poi_subtypes),
@@ -199,7 +197,6 @@ class SmartLidar : public ISensor {
    private:
     double m_resolution;
     CPolicy m_composition;
-    std::vector<std::string> m_agent_types;
     std::vector<std::string> m_poi_types;
     std::vector<bool> m_disappear_bools;
     std::vector<std::string> m_poi_subtypes;
