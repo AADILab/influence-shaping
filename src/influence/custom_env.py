@@ -96,7 +96,7 @@ def createAgent(agent_config, agent_types, poi_types, disappear_bools, poi_subty
         cpp_observation_radii = cppyy.gbl.std.vector[cppyy.gbl.double](observation_radii)
         cpp_default_values = cppyy.gbl.std.vector[cppyy.gbl.double](default_values)
 
-        return rover_domain.Rover[rover_domain.SmartLidar[rover_domain.Density]](
+        return rover_domain.DefaultAgent[rover_domain.SmartLidar[rover_domain.Density]](
             Bounds(
                 low_x=bounds['low_x'],
                 high_x=bounds['high_x'],
@@ -129,7 +129,7 @@ def createAgent(agent_config, agent_types, poi_types, disappear_bools, poi_subty
         cpp_observation_radii = cppyy.gbl.std.vector[cppyy.gbl.double](observation_radii)
         cpp_default_values = cppyy.gbl.std.vector[cppyy.gbl.double](default_values)
 
-        return rover_domain.Rover[rover_domain.RoverLidar[rover_domain.Density]](
+        return rover_domain.DefaultAgent[rover_domain.RoverLidar[rover_domain.Density]](
             Bounds(
                 low_x=bounds['low_x'],
                 high_x=bounds['high_x'],
@@ -151,7 +151,7 @@ def createAgent(agent_config, agent_types, poi_types, disappear_bools, poi_subty
             )
         )
     elif sensor_type == 'UavDistanceLidar':
-        return rover_domain.Rover[rover_domain.UavDistanceLidar](
+        return rover_domain.DefaultAgent[rover_domain.UavDistanceLidar](
             Bounds(
                 low_x=bounds['low_x'],
                 high_x=bounds['high_x'],
