@@ -17,10 +17,10 @@ class AbstractRoverObjective : public IObjective {
    public:
     // Default constructor
     AbstractRoverObjective()
-        : m_coupling(1), m_is_rover_list() {}
+        : m_coupling(1) {}
 
-    AbstractRoverObjective(int coupling, const std::vector<bool>& is_rover_list)
-        : m_coupling(coupling), m_is_rover_list(is_rover_list) {}
+    AbstractRoverObjective(int coupling)
+        : m_coupling(coupling) {}
 
     [[nodiscard]] bool captured(double dist, const Agent& agent, const POI& entity) const {
         // Check if captured by capture radius or observation radii
@@ -81,7 +81,6 @@ class AbstractRoverObjective : public IObjective {
 
    protected:
     int m_coupling;
-    std::vector<bool> m_is_rover_list;
 };
 
 }  // namespace rover_domain

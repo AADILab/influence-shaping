@@ -161,14 +161,14 @@ def createAgent(agent_config, disappear_bools, poi_subtypes, agent_observable_su
     else:
         raise ValueError(f"Unknown sensor_type '{sensor_type}'.")
 
-def createPOI(value, obs_rad, capture_radius, coupling, is_rover_list, objective, hidden):
+def createPOI(value, obs_rad, capture_radius, coupling, objective, hidden):
     if objective == 'sequential':
         objective_type = rover_domain.RoverSequenceObjective
-        cpp_objective = rover_domain.RoverSequenceObjective(coupling, is_rover_list)
+        cpp_objective = rover_domain.RoverSequenceObjective(coupling)
 
     elif objective == 'final':
         objective_type = rover_domain.RoverObjective
-        cpp_objective = rover_domain.RoverObjective(coupling, is_rover_list)
+        cpp_objective = rover_domain.RoverObjective(coupling)
 
     scope = rover_domain.VisibilityScope.ALL
     if hidden:
@@ -224,11 +224,6 @@ def createEnv(config):
     for hidden_poi in config["env"]["pois"]["hidden_pois"]:
         position = resolvePositionSpawnRule(hidden_poi["position"])
         poi_positions.append(position)
-
-    NUM_ROVERS = len(config["env"]["agents"]["rovers"])
-    NUM_UAVS = len(config["env"]["agents"]["uavs"])
-
-    agent_types = ["rover"]*NUM_ROVERS + ["uav"]*NUM_UAVS
 
     disappear_bools = []
     for poi_config in config['env']['pois']['rover_pois']+config['env']['pois']['hidden_pois']:
@@ -306,8 +301,6 @@ def createEnv(config):
     ]
     agents = rovers_+uavs
 
-    is_rover_list = [True if str_=="rover" else False for str_ in agent_types]
-
     # Fill defaults for new features
     for poi_config in config['env']['pois']['rover_pois']+config['env']['pois']['hidden_pois']:
         if 'constraint' not in poi_config:
@@ -321,7 +314,6 @@ def createEnv(config):
             obs_rad=poi["observation_radius"],
             capture_radius=poi["capture_radius"],
             coupling=poi["coupling"],
-            is_rover_list=is_rover_list,
             objective=poi['constraint'],
             hidden=False
         )
@@ -333,7 +325,6 @@ def createEnv(config):
             obs_rad=poi["observation_radius"],
             capture_radius=poi["capture_radius"],
             coupling=poi["coupling"],
-            is_rover_list=is_rover_list,
             objective=poi['constraint'],
             hidden=True
         )
