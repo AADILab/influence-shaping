@@ -20,11 +20,9 @@ except NameError:
     current_dir = os.getcwd()
 source_dir = os.path.abspath(os.path.join(current_dir, os.pardir, os.pardir, "cpp"))
 include_dir = os.path.join(source_dir, 'include')
-libs_dir = os.path.join(source_dir, 'libs')
 
 # include paths
 cppyy.add_include_path(include_dir)
-cppyy.add_include_path(libs_dir)
 
 # Header for rover environment. T
 # This file includes everything neccessary for the rover domain
