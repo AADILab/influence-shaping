@@ -30,7 +30,7 @@ class Lidar : public ISensor {
 
         // observe pois
         for (const auto& sensed_poi : pois) {
-            if (sensed_poi->observed()) continue;
+            if (sensed_poi->captured()) continue;
             auto [angle, distance] = thyme::math::l2a(rover->position(), sensed_poi->position());
             if (distance > rover->obs_radius()) continue;
 

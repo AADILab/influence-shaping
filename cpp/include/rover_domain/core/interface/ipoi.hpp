@@ -39,11 +39,10 @@ class IPOI {
     const double& obs_radius() const { return m_obs_radius; }
     const double& capture_radius() const { return m_capture_radius; }
 
-    void set_observed(bool observed) {
-        // std::cout << "IPOI::set_observed()" << std::endl;
-        m_observed = observed;
+    void set_captured(bool captured) {
+        m_captured = captured;
     }
-    const bool& observed() const { return m_observed; }
+    const bool& captured() const { return m_captured; }
 
     void update() {
         // housekeeping.
@@ -64,10 +63,10 @@ class IPOI {
 
     double m_obs_radius;
     double m_capture_radius;
-    bool m_observed{false};
+    bool m_captured{false};
     VisibilityScope m_scope;
     // TODO: Add another class variable, like m_value_achieved or something like that
-    // Basically the same function as m_observed, but it is a floating point value
+    // Basically the same function as m_captured, but it is a floating point value
     // That tells us how much of the reward from this poi has already been gained
     // And it starts at 0. Any time a rover gets closer (at a given timestep),
     // we'll raise the value up

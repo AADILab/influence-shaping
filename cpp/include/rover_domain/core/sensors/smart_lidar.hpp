@@ -90,7 +90,7 @@ class SmartLidar : public ISensor {
                 if (my_type == AgentType::Rover) {
                     // Rovers cannot observe hidden POIs, but can capture them
                     if (distance <= 1.0 && m_disappear_bools[poi_ind]) {
-                        sensed_poi->set_observed(true);
+                        sensed_poi->set_captured(true);
                     }
                     continue;
                 } else if (my_type == AgentType::UAV) {
@@ -114,7 +114,7 @@ class SmartLidar : public ISensor {
             }
 
             // Add POI observation if not already captured
-            if (!sensed_poi->observed()) {
+            if (!sensed_poi->captured()) {
                 poi_values[sector].push_back(sensed_poi->value() * measure(distance, agent_idx));
             }
         }

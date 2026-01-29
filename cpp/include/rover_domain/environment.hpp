@@ -94,7 +94,7 @@ class Environment {
         // clear agents
         for (auto& r : m_rovers) r->reset();
         // reset pois
-        for (auto& poi : m_pois) poi->set_observed(false);
+        for (auto& poi : m_pois) poi->set_captured(false);
         // initialize
         m_initPolicy.initialize(m_rovers, m_pois);
         // return next observations and rewards
