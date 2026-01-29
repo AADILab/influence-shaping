@@ -164,11 +164,11 @@ def createAgent(agent_config, disappear_bools, poi_subtypes, agent_observable_su
 def createPOI(value, obs_rad, capture_radius, coupling, objective, hidden):
     if objective == 'sequential':
         objective_type = rover_domain.RoverSequenceObjective
-        cpp_objective = rover_domain.RoverSequenceObjective(coupling)
 
     elif objective == 'final':
         objective_type = rover_domain.RoverObjective
-        cpp_objective = rover_domain.RoverObjective(coupling)
+
+    cpp_objective = objective_type(coupling)
 
     scope = rover_domain.VisibilityScope.ALL
     if hidden:
