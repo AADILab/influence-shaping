@@ -72,8 +72,8 @@ class SmartLidar : public ISensor {
         std::vector<std::vector<double>> rover_values(num_sectors);
         std::vector<std::vector<double>> uav_values(num_sectors);
 
-        auto& agent = agents[agent_idx];
-        const std::string& my_type = m_agent_types[agent_idx];
+        Agent agent = agents[agent_idx];
+        AgentType my_type = agent->type();
         m_num_sensed_uavs = 0;
 
         // Observe POIs
@@ -88,13 +88,13 @@ class SmartLidar : public ISensor {
 
             // Check if agent can observe this POI type
             if (m_poi_types[poi_ind] == "hidden") {
-                if (my_type == "rover") {
+                if (my_type == AgentType::Rover) {
                     // Rovers cannot observe hidden POIs, but can capture them
                     if (distance <= 1.0 && m_disappear_bools[poi_ind]) {
                         sensed_poi->set_observed(true);
                     }
                     continue;
-                } else if (my_type == "uav") {
+                } else if (my_type == AgentType::UAV) {
                     // UAVs can observe specific subtypes
                     const std::string& poi_subtype = m_poi_subtypes[poi_ind];
                     if (!poi_subtype.empty()) {
@@ -139,9 +139,9 @@ class SmartLidar : public ISensor {
                 sector = 0;
             }
 
-            if (m_agent_types[i] == "rover") {
+            if (sensed_agent->type() == AgentType::Rover) {
                 rover_values[sector].push_back(measure(distance, agent_idx));
-            } else if (m_agent_types[i] == "uav") {
+            } else if (sensed_agent->type() == AgentType::UAV) {
                 uav_values[sector].push_back(measure(distance, agent_idx));
                 m_num_sensed_uavs++;
             }

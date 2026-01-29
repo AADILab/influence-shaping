@@ -32,7 +32,7 @@ class UavDistanceLidar : public ISensor {
         // Iterate through all agents
         for (std::size_t i = 0; i < agents.size(); ++i) {
             // Only process UAVs
-            if (m_agent_types[i] == "uav") {
+            if (agents[i]->type() == AgentType::UAV) {
                 auto& sensed_agent = agents[i];
                 double distance = thyme::math::l2_norm(agent->position(), sensed_agent->position());
 

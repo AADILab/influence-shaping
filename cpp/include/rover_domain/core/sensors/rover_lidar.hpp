@@ -84,9 +84,9 @@ class RoverLidar : public ISensor {
                 sector = 0;
             }
 
-            if (m_agent_types[i] == "rover") {
+            if (agents[i]->type() == AgentType::Rover) {
                 rover_values[sector].push_back(measure(distance, agent_idx));
-            } else if (m_agent_types[i] == "uav") {
+            } else if (agents[i]->type() == AgentType::UAV) {
                 uav_values[sector].push_back(measure(distance, agent_idx));
                 m_num_sensed_uavs++;
             }
