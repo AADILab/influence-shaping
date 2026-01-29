@@ -1,7 +1,7 @@
 #ifndef BASIL_ENVIRONMENTS_ROVER_DOMAIN_REWARD_COMPUTER
 #define BASIL_ENVIRONMENTS_ROVER_DOMAIN_REWARD_COMPUTER
 
-#include <rover_domain/core/rover/rover.hpp>
+#include <rover_domain/core/agent/agent.hpp>
 #include <rover_domain/utilities/math/norms.hpp>
 #include <rover_domain/core/sensors/lidar.hpp>
 

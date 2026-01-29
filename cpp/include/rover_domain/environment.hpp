@@ -7,7 +7,7 @@
 #include <rover_domain/core/objective/rover_sequence.hpp>
 #include <rover_domain/core/objective/rover.hpp>
 // Agents
-#include <rover_domain/core/rover/rover.hpp>
+#include <rover_domain/core/agent/agent.hpp>
 // Sensors
 #include <rover_domain/core/sensors/lidar.hpp>
 #include <rover_domain/core/sensors/smart_lidar.hpp>
