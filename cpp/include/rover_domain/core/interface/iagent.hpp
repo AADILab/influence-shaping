@@ -62,7 +62,18 @@ class IAgent {
     using StateType = std::vector<double>;
 
    public:
-    IAgent(Bounds bounds, IndirectDifferenceParameters indirect_difference_parameters, std::string reward_type, std::string type_, double obs_radius = 1.0) : m_bounds(bounds), m_indirect_difference_parameters(indirect_difference_parameters), m_reward_type(reward_type), m_type(type_), m_obs_radius(obs_radius) {};
+    IAgent(
+        Bounds bounds,
+        IndirectDifferenceParameters indirect_difference_parameters,
+        std::string reward_type,
+        std::string type_,
+        double obs_radius = 1.0
+    ) : m_bounds(bounds),
+        m_indirect_difference_parameters(indirect_difference_parameters),
+        m_reward_type(reward_type),
+        m_type(agent_type_from_string(type_)),
+        m_obs_radius(obs_radius) {};
+
     IAgent(IAgent&&) = default;
     IAgent(const IAgent&) = default;
     virtual ~IAgent() = default;
@@ -94,7 +105,7 @@ class IAgent {
 
     [[nodiscard]] virtual StateType scan(const Agents& agents, const POIs& pois, int agent_idx) const = 0;
 
-    std::string type() {
+    AgentType type() {
         // Give me the nominal type of this rover
         return m_type;
     }
@@ -118,7 +129,7 @@ class IAgent {
 
    private:
     std::string m_reward_type;
-    std::string m_type;
+    AgentType m_type;
     double m_obs_radius;
     Point m_position;
     std::vector<Point> m_path;

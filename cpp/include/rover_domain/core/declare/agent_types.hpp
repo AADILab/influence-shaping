@@ -21,7 +21,7 @@ enum class AgentType{
 };
 
 // Helper functions for string conversion
-inline std::string to_string(AgentType type) {
+inline std::string agent_type_to_string(AgentType type) {
     switch(type) {
         case AgentType::Rover: return std::string("rover");
         case AgentType::UAV: return "uav";

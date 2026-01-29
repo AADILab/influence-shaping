@@ -38,7 +38,7 @@ class AbstractRoverObjective : public IObjective {
         bool constraint_satisfied = false;
 
         for (const auto& agent : agents) {
-            if (agent->type() == "rover") {
+            if (agent->type() == AgentType::Rover) {
                 double dist;
                 // Check for counterfactual removal (position [-1, -1])
                 if (agent->path()[t].x == -1 && agent->path()[t].y == -1) {

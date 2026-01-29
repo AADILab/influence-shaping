@@ -39,7 +39,7 @@ class RewardComputer {
                 for (int k=0; k < m_rovers.size(); ++k) { // inner loop is agent that is being influenced
                     // Check that agent i is influencing agent k, and set the influence value to 1 if this is the case
                     if (
-                        i != k && m_rovers[i]->type() == "uav" && m_rovers[k]->type() == "rover" && is_influencing(m_rovers[i], m_rovers[k], t)
+                        i != k && m_rovers[i]->type() == AgentType::UAV && m_rovers[k]->type() == AgentType::Rover && is_influencing(m_rovers[i], m_rovers[k], t)
                     ) {
                         complete_influence_array[t][i][k] = 1;
                     }
@@ -232,7 +232,7 @@ class RewardComputer {
                 rovers[k]->bounds(),
                 rovers[k]->indirect_difference_parameters(),
                 rovers[k]->reward_type(),
-                rovers[k]->type(),
+                agent_type_to_string(rovers[k]->type()),
                 rovers[k]->obs_radius()
             );
             rover.reset();
@@ -281,7 +281,7 @@ class RewardComputer {
                 // agent k is the agent being influenced
                 for (int k=0; k < m_rovers.size(); ++k) {
                     // std::cout << "k " << k << std::endl;
-                    if (i != k && m_rovers[i]->type() == "uav" && m_rovers[k]->type() == "rover" && is_influencing(m_rovers[i], m_rovers[k], t) ) {
+                    if (i != k && m_rovers[i]->type() == AgentType::UAV && m_rovers[k]->type() == AgentType::Rover && is_influencing(m_rovers[i], m_rovers[k], t) ) {
                         // std::cout << "Increasing counter at counters["<<k<<"]["<<i<<"]" << std::endl;
                         counters[k][i]++;
                     }
