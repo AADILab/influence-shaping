@@ -163,24 +163,27 @@ def createAgent(agent_config, agent_types, poi_types, disappear_bools, poi_subty
     else:
         raise ValueError(f"Unknown sensor_type '{sensor_type}'.")
 
-def createRoverPOI(value, obs_rad, capture_radius, coupling, is_rover_list, constraint):
-    if constraint == 'sequential':
-        roverObjective = rover_domain.RoverSequenceObjective(coupling, is_rover_list)
-        poi = rover_domain.DefaultPOI[rover_domain.RoverSequenceObjective](value, obs_rad, capture_radius, roverObjective)
-    elif constraint == 'final':
-        roverObjective = rover_domain.RoverObjective(coupling, is_rover_list)
-        poi = rover_domain.DefaultPOI[rover_domain.RoverObjective](value, obs_rad, capture_radius, roverObjective)
-    return poi
+def createPOI(value, obs_rad, capture_radius, coupling, is_rover_list, objective, hidden):
+    if objective == 'sequential':
+        objective_type = rover_domain.RoverSequenceObjective
+        cpp_objective = rover_domain.RoverSequenceObjective(coupling, is_rover_list)
 
-# This is just to help me track which POIs are nominally hidden from rovers
-def createHiddenPOI(*args, **kwargs):
-    return createRoverPOI(*args, **kwargs)
+    elif objective == 'final':
+        objective_type = rover_domain.RoverObjective
+        cpp_objective = rover_domain.RoverObjective(coupling, is_rover_list)
 
-# Running into errors setting up the environment
-# Let's try it with regular POIs
-def createPOI(value, obs_rad, coupling, is_rover_list):
-    countObjective = rover_domain.CountObjective(coupling)
-    poi = rover_domain.DefaultPOI[rover_domain.CountObjective](value, obs_rad, countObjective)
+    scope = rover_domain.VisibilityScope.ALL
+    if hidden:
+        scope = rover_domain.VisibilityScope.UAV_ONLY
+
+    poi = rover_domain.DefaultPOI[objective_type](
+        value,
+        obs_rad,
+        capture_radius,
+        scope,
+        cpp_objective
+    )
+
     return poi
 
 def resolvePositionSpawnRule(position_dict):
@@ -322,24 +325,26 @@ def createEnv(config):
             poi_config['capture_radius'] = -1.0
 
     rover_pois = [
-        createRoverPOI(
+        createPOI(
             value=poi["value"],
             obs_rad=poi["observation_radius"],
             capture_radius=poi["capture_radius"],
             coupling=poi["coupling"],
             is_rover_list=is_rover_list,
-            constraint=poi['constraint']
+            objective=poi['constraint'],
+            hidden=False
         )
         for poi in config["env"]["pois"]["rover_pois"]
     ]
     hidden_pois = [
-        createHiddenPOI(
+        createPOI(
             value=poi["value"],
             obs_rad=poi["observation_radius"],
             capture_radius=poi["capture_radius"],
             coupling=poi["coupling"],
             is_rover_list=is_rover_list,
-            constraint=poi['constraint']
+            objective=poi['constraint'],
+            hidden=True
         )
         for poi in config["env"]["pois"]["hidden_pois"]
     ]

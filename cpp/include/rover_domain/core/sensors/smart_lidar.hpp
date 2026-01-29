@@ -85,7 +85,8 @@ class SmartLidar : public ISensor {
             if (distance > agent->obs_radius()) continue;
 
             // Check if agent can observe this POI type
-            if (m_poi_types[poi_ind] == "hidden") {
+            // if (m_poi_types[poi_ind] == "hidden") {
+            if (pois[poi_ind]->scope() == VisibilityScope::UAV_ONLY) {
                 if (my_type == AgentType::Rover) {
                     // Rovers cannot observe hidden POIs, but can capture them
                     if (distance <= 1.0 && m_disappear_bools[poi_ind]) {

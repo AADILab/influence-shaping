@@ -16,7 +16,17 @@ class IPOI {
     using Point = thyme::math::Point;
 
    public:
-    IPOI(double value, double obs_radius, double capture_radius) : m_value(value), m_obs_radius(obs_radius), m_capture_radius(capture_radius) {}
+    IPOI(
+        double value,
+        double obs_radius,
+        double capture_radius,
+        VisibilityScope scope
+    ) :
+    m_value(value),
+    m_obs_radius(obs_radius),
+    m_capture_radius(capture_radius),
+    m_scope(scope) {}
+
     virtual ~IPOI() = default;
 
     const Point& position() const { return m_position; }
@@ -43,6 +53,8 @@ class IPOI {
 
     [[nodiscard]] virtual double score(const POIs&, const Agents&, int poi_idx) const = 0;
 
+    [[nodiscard]] VisibilityScope scope() const {return m_scope;}
+
    protected:
     virtual void tick() {}
 
@@ -53,6 +65,7 @@ class IPOI {
     double m_obs_radius;
     double m_capture_radius;
     bool m_observed{false};
+    VisibilityScope m_scope;
     // TODO: Add another class variable, like m_value_achieved or something like that
     // Basically the same function as m_observed, but it is a floating point value
     // That tells us how much of the reward from this poi has already been gained

@@ -13,9 +13,13 @@ namespace rover_domain {
 template <typename Objective>
 class DefaultPOI final : public IPOI {
    public:
-    DefaultPOI(double value = 1.0, double obs_radius = 1.0, double capture_radius = -1.0,
-        Objective objective = Objective())
-        : IPOI(value, obs_radius, capture_radius), m_objective(objective) {}
+    DefaultPOI(
+        double value,
+        double obs_radius,
+        double capture_radius,
+        VisibilityScope scope = VisibilityScope::ALL,
+        Objective objective = Objective()
+    ) : IPOI(value, obs_radius, capture_radius, scope), m_objective(objective) {}
 
     [[nodiscard]] double score(const POIs& pois, const Agents& agents, int poi_idx) const override {
         return m_objective.score(pois, agents, poi_idx);

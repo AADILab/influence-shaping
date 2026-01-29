@@ -13,6 +13,10 @@ namespace rover_domain {
 class IPOI;
 using POI = thyme::utilities::SharedWrap<IPOI>;
 using POIs = std::vector<POI>;
+enum class VisibilityScope {
+    ALL,
+    UAV_ONLY
+};
 }  // namespace rover_domain
 
 #endif
