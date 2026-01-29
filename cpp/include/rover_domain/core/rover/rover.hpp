@@ -1,12 +1,8 @@
 #ifndef BASIL_ENVIRONMENTS_ROVER_DOMAIN_ROVER
 #define BASIL_ENVIRONMENTS_ROVER_DOMAIN_ROVER
 
-#include <iostream>
-#include <rover_domain/core/declare/agent_types.hpp>
-#include <rover_domain/core/declare/entity_types.hpp>
-#include <rover_domain/utilities/math/cartesian.hpp>
-#include <vector>
 #include <rover_domain/core/interface/iagent.hpp>
+#include <vector>
 
 namespace rover_domain {
 

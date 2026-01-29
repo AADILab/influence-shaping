@@ -1,7 +1,7 @@
 #ifndef BASIL_UTILITIES_SHARED_WRAPPER
 #define BASIL_UTILITIES_SHARED_WRAPPER
 
-#include <memory>
+// #include <memory>
 
 namespace thyme::utilities {
 

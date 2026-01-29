@@ -2,6 +2,9 @@
 #define BASIL_ENVIRONMENTS_ROVER_DOMAIN_ABSTRACT_ROVER_CONSTRAINT
 
 #include <rover_domain/core/interface/iobjective.hpp>
+#include <rover_domain/core/interface/ipoi.hpp>
+#include <rover_domain/core/interface/iagent.hpp>
+#include <rover_domain/utilities/math/norms.hpp>
 
 namespace rover_domain {
 

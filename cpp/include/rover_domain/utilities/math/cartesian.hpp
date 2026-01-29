@@ -1,7 +1,6 @@
 #ifndef BASIL_MATH_CARTESIAN
 #define BASIL_MATH_CARTESIAN
 
-#include <cmath>
 #include <ostream>
 
 namespace thyme::math {

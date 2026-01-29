@@ -1,10 +1,7 @@
 #ifndef BASIL_ENVIRONMENTS_ROVER_DOMAIN_SMART_LIDAR
 #define BASIL_ENVIRONMENTS_ROVER_DOMAIN_SMART_LIDAR
 
-#include <numeric>
-#include <rover_domain/core/poi/default_poi.hpp>
-#include <rover_domain/core/rover/rover.hpp>
-#include <rover_domain/utilities/math/norms.hpp>
+#include <rover_domain/core/interface/iagent.hpp>
 #include <rover_domain/core/interface/isensor.hpp>
 #include <rover_domain/core/composition/density.hpp>
 #include <vector>

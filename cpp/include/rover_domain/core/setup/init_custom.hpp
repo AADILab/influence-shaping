@@ -1,7 +1,6 @@
 #ifndef BASIL_ENVIRONMENTS_ROVER_DOMAIN_INIT_CUSTOM
 #define BASIL_ENVIRONMENTS_ROVER_DOMAIN_INIT_CUSTOM
 
-#include <cmath>
 #include <vector>
 
 namespace rover_domain {

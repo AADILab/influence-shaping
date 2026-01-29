@@ -1,11 +1,10 @@
 #ifndef BASIL_ENVIRONMENTS_ROVER_DOMAIN_UAV_DISTANCE_LIDAR
 #define BASIL_ENVIRONMENTS_ROVER_DOMAIN_UAV_DISTANCE_LIDAR
 
-#include <numeric>
-#include <rover_domain/core/poi/default_poi.hpp>
-#include <rover_domain/core/rover/rover.hpp>
-#include <rover_domain/utilities/math/norms.hpp>
+#include <rover_domain/core/interface/iagent.hpp>
 #include <rover_domain/core/interface/isensor.hpp>
+#include <rover_domain/core/composition/density.hpp>
+#include <rover_domain/utilities/math/norms.hpp>
 #include <vector>
 
 namespace rover_domain {

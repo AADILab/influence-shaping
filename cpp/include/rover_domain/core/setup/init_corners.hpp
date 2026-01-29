@@ -1,9 +1,6 @@
 #ifndef BASIL_ENVIRONMENTS_ROVER_DOMAIN_INIT_CORNERS
 #define BASIL_ENVIRONMENTS_ROVER_DOMAIN_INIT_CORNERS
 
-#include <cmath>
-// #include <ranges>
-
 namespace rover_domain {
 
 /*
