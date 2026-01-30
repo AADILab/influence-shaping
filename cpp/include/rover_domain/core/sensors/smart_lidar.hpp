@@ -75,7 +75,7 @@ class SmartLidar : public ISensor {
             auto& sensed_poi = pois[poi_ind];
 
             // Skip POI if it disappears after capture (and has been captured)
-            // if (sensed_poi->captured() && sensed_poi->disappears()) continue;
+            if (sensed_poi->captured() && sensed_poi->disappears()) continue;
 
             auto [angle, distance] = thyme::math::l2a(agent->position(), sensed_poi->position());
             // Match Python: if angle < 0, add 360
@@ -87,7 +87,7 @@ class SmartLidar : public ISensor {
             if (pois[poi_ind]->scope() == VisibilityScope::UAV_ONLY) {
                 if (my_type == AgentType::Rover) {
                     // Rovers cannot observe hidden POIs, but can capture them
-                    if (distance <= 1.0 && sensed_poi->disappears()) {
+                    if (distance <= 1.0) {
                         sensed_poi->set_captured(true);
                     }
                     continue;
@@ -111,10 +111,8 @@ class SmartLidar : public ISensor {
                 sector = 0;
             }
 
-            // Add POI observation if not already captured
-            if (!sensed_poi->captured()) {
-                poi_values[sector].push_back(sensed_poi->value() * measure(distance, agent_idx));
-            }
+            // Add POI observation
+            poi_values[sector].push_back(sensed_poi->value() * measure(distance, agent_idx));
         }
 
         // Observe Agents
