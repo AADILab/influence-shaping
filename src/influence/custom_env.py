@@ -22,7 +22,7 @@ def calculateAngle(position_0, position_1):
         angle += 360.
     return angle
 
-def createAgent(agent_config, disappear_bools, poi_subtypes, agent_observable_subtypes, accum_type, measurement_type, type_, observation_radii, default_values, map_size):
+def createAgent(agent_config, poi_subtypes, agent_observable_subtypes, accum_type, measurement_type, type_, observation_radii, default_values, map_size):
     """Create an agent using the agent's config and type"""
     # unpack config
     reward_type = agent_config['reward_type']
@@ -80,7 +80,6 @@ def createAgent(agent_config, disappear_bools, poi_subtypes, agent_observable_su
 
     if sensor_type == 'SmartLidar':
         # Convert Python lists to C++ vectors for SmartLidar
-        cpp_disappear_bools = cppyy.gbl.std.vector[cppyy.gbl.bool](disappear_bools)
         cpp_poi_subtypes = cppyy.gbl.std.vector[cppyy.gbl.std.string](poi_subtypes)
 
         # Convert nested list to C++ vector of vectors
@@ -108,7 +107,6 @@ def createAgent(agent_config, disappear_bools, poi_subtypes, agent_observable_su
             rover_domain.SmartLidar[rover_domain.Density](
                 resolution,
                 rover_domain.Density(),
-                cpp_disappear_bools,
                 cpp_poi_subtypes,
                 cpp_agent_observable_subtypes,
                 cpp_accum_type,
@@ -161,7 +159,7 @@ def createAgent(agent_config, disappear_bools, poi_subtypes, agent_observable_su
     else:
         raise ValueError(f"Unknown sensor_type '{sensor_type}'.")
 
-def createPOI(value, obs_rad, capture_radius, coupling, objective, hidden):
+def createPOI(value, obs_rad, capture_radius, coupling, objective, hidden, disappears):
     if objective == 'sequential':
         objective_type = rover_domain.RoverSequenceObjective
 
@@ -178,6 +176,7 @@ def createPOI(value, obs_rad, capture_radius, coupling, objective, hidden):
         value,
         obs_rad,
         capture_radius,
+        disappears,
         scope,
         cpp_objective
     )
@@ -225,12 +224,9 @@ def createEnv(config):
         position = resolvePositionSpawnRule(hidden_poi["position"])
         poi_positions.append(position)
 
-    disappear_bools = []
     for poi_config in config['env']['pois']['rover_pois']+config['env']['pois']['hidden_pois']:
-        if 'disappear_bool' in poi_config:
-            disappear_bools.append(poi_config['disappear_bool'])
-        else:
-            disappear_bools.append(False)
+        if 'disappear_bool' not in poi_config:
+            poi_config['disappear_bool'] = True
 
     poi_subtypes = []
     for poi_config in config['env']['pois']['rover_pois']+config['env']['pois']['hidden_pois']:
@@ -272,7 +268,6 @@ def createEnv(config):
     rovers_ = [
         createAgent(
             agent_config=rover_config,
-            disappear_bools=disappear_bools,
             poi_subtypes=poi_subtypes,
             agent_observable_subtypes=agent_observable_subtypes,
             accum_type=accum_type,
@@ -287,7 +282,6 @@ def createEnv(config):
     uavs = [
         createAgent(
             agent_config=uav_config,
-            disappear_bools=disappear_bools,
             poi_subtypes=poi_subtypes,
             agent_observable_subtypes=agent_observable_subtypes,
             accum_type=accum_type,
@@ -315,6 +309,7 @@ def createEnv(config):
             capture_radius=poi["capture_radius"],
             coupling=poi["coupling"],
             objective=poi['constraint'],
+            disappears=poi['disappear_bool'],
             hidden=False
         )
         for poi in config["env"]["pois"]["rover_pois"]
@@ -326,6 +321,7 @@ def createEnv(config):
             capture_radius=poi["capture_radius"],
             coupling=poi["coupling"],
             objective=poi['constraint'],
+            disappears=poi['disappear_bool'],
             hidden=True
         )
         for poi in config["env"]["pois"]["hidden_pois"]

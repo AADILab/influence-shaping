@@ -20,11 +20,13 @@ class IPOI {
         double value,
         double obs_radius,
         double capture_radius,
+        bool disappears,
         VisibilityScope scope
     ) :
     m_value(value),
     m_obs_radius(obs_radius),
     m_capture_radius(capture_radius),
+    m_disappears(disappears),
     m_scope(scope) {}
 
     virtual ~IPOI() = default;
@@ -43,6 +45,8 @@ class IPOI {
         m_captured = captured;
     }
     const bool& captured() const { return m_captured; }
+
+    const bool& disappears() const { return m_disappears; }
 
     void update() {
         // housekeeping.
@@ -64,6 +68,7 @@ class IPOI {
     double m_obs_radius;
     double m_capture_radius;
     bool m_captured{false};
+    bool m_disappears;
     VisibilityScope m_scope;
     // TODO: Add another class variable, like m_value_achieved or something like that
     // Basically the same function as m_captured, but it is a floating point value

@@ -17,9 +17,10 @@ class DefaultPOI final : public IPOI {
         double value,
         double obs_radius,
         double capture_radius,
+        bool disappears,
         VisibilityScope scope = VisibilityScope::ALL,
         Objective objective = Objective()
-    ) : IPOI(value, obs_radius, capture_radius, scope), m_objective(objective) {}
+    ) : IPOI(value, obs_radius, capture_radius, disappears, scope), m_objective(objective) {}
 
     [[nodiscard]] double score(const POIs& pois, const Agents& agents, int poi_idx) const override {
         return m_objective.score(pois, agents, poi_idx);

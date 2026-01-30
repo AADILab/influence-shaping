@@ -26,7 +26,6 @@ class SmartLidar : public ISensor {
 
     SmartLidar(double resolution,
                CPolicy composition_policy,
-               const std::vector<bool>& disappear_bools,
                const std::vector<std::string>& poi_subtypes,
                const std::vector<std::vector<std::string>>& agent_observable_subtypes,
                const std::vector<std::string>& accum_type,
@@ -35,7 +34,6 @@ class SmartLidar : public ISensor {
                const std::vector<double>& default_values)
         : m_resolution(resolution),
           m_composition(composition_policy),
-          m_disappear_bools(disappear_bools),
           m_poi_subtypes(poi_subtypes),
           m_agent_observable_subtypes(agent_observable_subtypes),
           m_accum_type(accum_type),
@@ -76,6 +74,9 @@ class SmartLidar : public ISensor {
         for (std::size_t poi_ind = 0; poi_ind < pois.size(); ++poi_ind) {
             auto& sensed_poi = pois[poi_ind];
 
+            // Skip POI if it disappears after capture (and has been captured)
+            // if (sensed_poi->captured() && sensed_poi->disappears()) continue;
+
             auto [angle, distance] = thyme::math::l2a(agent->position(), sensed_poi->position());
             // Match Python: if angle < 0, add 360
             if (angle < 0.0) angle += 360.0;
@@ -86,7 +87,7 @@ class SmartLidar : public ISensor {
             if (pois[poi_ind]->scope() == VisibilityScope::UAV_ONLY) {
                 if (my_type == AgentType::Rover) {
                     // Rovers cannot observe hidden POIs, but can capture them
-                    if (distance <= 1.0 && m_disappear_bools[poi_ind]) {
+                    if (distance <= 1.0 && sensed_poi->disappears()) {
                         sensed_poi->set_captured(true);
                     }
                     continue;
@@ -195,7 +196,6 @@ class SmartLidar : public ISensor {
    private:
     double m_resolution;
     CPolicy m_composition;
-    std::vector<bool> m_disappear_bools;
     std::vector<std::string> m_poi_subtypes;
     std::vector<std::vector<std::string>> m_agent_observable_subtypes;
     std::vector<std::string> m_accum_type;
