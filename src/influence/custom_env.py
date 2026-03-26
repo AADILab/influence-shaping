@@ -102,7 +102,7 @@ def createAgent(agent_config, poi_subtypes, agent_observable_subtypes, accum_typ
             ),
             indirect_difference_parameters,
             reward_type,
-            rover_domain.agent_type_from_string(type_),
+            type_,
             obs_radius,
             rover_domain.SmartLidar[rover_domain.Density](
                 resolution,
@@ -131,7 +131,7 @@ def createAgent(agent_config, poi_subtypes, agent_observable_subtypes, accum_typ
             ),
             indirect_difference_parameters,
             reward_type,
-            rover_domain.agent_type_from_string(type_),
+            type_,
             obs_radius,
             rover_domain.RoverLidar[rover_domain.Density](
                 resolution,
@@ -152,7 +152,7 @@ def createAgent(agent_config, poi_subtypes, agent_observable_subtypes, accum_typ
             ),
             indirect_difference_parameters,
             reward_type,
-            rover_domain.agent_type_from_string(type_),
+            type_,
             obs_radius,
             rover_domain.UavDistanceLidar()
         )
@@ -272,7 +272,7 @@ def createEnv(config):
             agent_observable_subtypes=agent_observable_subtypes,
             accum_type=accum_type,
             measurement_type=measurement_type,
-            type_='rover',
+            type_=rover_domain.AgentType.Rover,
             observation_radii=observation_radii,
             default_values=default_values,
             map_size=config['env']['map_size']
@@ -286,7 +286,7 @@ def createEnv(config):
             agent_observable_subtypes=agent_observable_subtypes,
             accum_type=accum_type,
             measurement_type=measurement_type,
-            type_ = 'uav',
+            type_ = rover_domain.AgentType.UAV,
             observation_radii=observation_radii,
             default_values=default_values,
             map_size=config['env']['map_size']

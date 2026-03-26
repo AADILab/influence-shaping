@@ -20,21 +20,6 @@ enum class AgentType{
     UAV
 };
 
-// Helper functions for string conversion
-inline std::string agent_type_to_string(AgentType type) {
-    switch(type) {
-        case AgentType::Rover: return std::string("rover");
-        case AgentType::UAV: return "uav";
-        default: throw std::invalid_argument("Unknown enum for agent type: " + std::to_string(static_cast<int>(type)));
-    }
-}
-
-inline AgentType agent_type_from_string(const std::string& str) {
-    if (str == "rover") return AgentType::Rover;
-    if (str == "uav") return AgentType::UAV;
-    throw std::invalid_argument("Unknown agent type: " + str);
-}
-
 }  // namespace rover_domain
 
 #endif
