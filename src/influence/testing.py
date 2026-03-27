@@ -46,7 +46,9 @@ class TestEnv(InfluenceTestCase):
                 'fixed': [25.0, 24.0]
             },
             'resolution': 90,
-            'reward_type': 'Global'
+            'reward_spec': {
+                'reward_type': 'Global'
+            }
         }
         self.default_uav_config = {
             'observation_radius': 1000.0,
@@ -55,7 +57,9 @@ class TestEnv(InfluenceTestCase):
                 'fixed': [26.0, 24.0]
             },
             'resolution': 90,
-            'reward_type': 'Global'
+            'reward_spec': {
+                'reward_type': 'Global'
+            }
         }
         self.default_poi_config = {
             'coupling': 1,

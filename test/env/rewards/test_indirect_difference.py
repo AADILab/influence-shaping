@@ -85,8 +85,8 @@ class TestOneRoverOneUavOnePoiPath(TestIndirectDifference):
             [[25.0, 25.0], [50.0, 50.0]]
         ]
         # Switch rover and uav to D
-        config['env']['agents']['rovers'][0]['reward_type'] = 'Difference'
-        config['env']['agents']['uavs'][0]['reward_type'] = 'Difference'
+        config['env']['agents']['rovers'][0]['reward_spec']['reward_type'] = 'Difference'
+        config['env']['agents']['uavs'][0]['reward_spec']['reward_type'] = 'Difference'
         env = createEnv(config)
         expected_rewards_at_each_step = [
             # Initial setup. No reward.
@@ -106,8 +106,8 @@ class TestOneRoverOneUavOnePoiPath(TestIndirectDifference):
             [[25.0, 25.0], [50.0, 50.0]]
         ]
         # Switch rover and uav to D-Indirect
-        config['env']['agents']['rovers'][0]['reward_type'] = 'IndirectDifference'
-        config['env']['agents']['uavs'][0]['reward_type'] = 'IndirectDifference'
+        config['env']['agents']['rovers'][0]['reward_spec']['reward_type'] = 'IndirectDifference'
+        config['env']['agents']['uavs'][0]['reward_spec']['reward_type'] = 'IndirectDifference'
         env = createEnv(config)
         expected_rewards_at_each_step = [
             # Initial setup. No reward
@@ -127,7 +127,7 @@ class TestOneRoverOneUavOnePoiPath(TestIndirectDifference):
             [[25.0, 25.0], [50.0, 50.0]]
         ]
         # Switch rover to D. Keep uav as D-Indirect
-        config['env']['agents']['rovers'][0]['reward_type'] = 'Difference'
+        config['env']['agents']['rovers'][0]['reward_spec']['reward_type'] = 'Difference'
         env = createEnv(config)
         expected_rewards_at_each_step = [
             # Initial setup. No reward
@@ -164,8 +164,8 @@ class TestOneRoverOneUavOnePoiPath(TestIndirectDifference):
         ]
         self.assert_path_rewards(env, agent_paths, expected_rewards_at_each_step)
         # Switch rover and uav to D. Only rover should get credit
-        config['env']['agents']['rovers'][0]['reward_type'] = 'Difference'
-        config['env']['agents']['uavs'][0]['reward_type'] = 'Difference'
+        config['env']['agents']['rovers'][0]['reward_spec']['reward_type'] = 'Difference'
+        config['env']['agents']['uavs'][0]['reward_spec']['reward_type'] = 'Difference'
         env = createEnv(config)
         expected_rewards_at_each_step = [
             [0.0, 0.0],
@@ -174,8 +174,8 @@ class TestOneRoverOneUavOnePoiPath(TestIndirectDifference):
         ]
         self.assert_path_rewards(env, agent_paths, expected_rewards_at_each_step)
         # Switch rover and uav to D-Indirect. Both should get credit
-        config['env']['agents']['rovers'][0]['reward_type'] = 'IndirectDifference'
-        config['env']['agents']['uavs'][0]['reward_type'] = 'IndirectDifference'
+        config['env']['agents']['rovers'][0]['reward_spec']['reward_type'] = 'IndirectDifference'
+        config['env']['agents']['uavs'][0]['reward_spec']['reward_type'] = 'IndirectDifference'
         env = createEnv(config)
         expected_rewards_at_each_step = [
             [0.0, 0.0],
@@ -184,7 +184,7 @@ class TestOneRoverOneUavOnePoiPath(TestIndirectDifference):
         ]
         self.assert_path_rewards(env, agent_paths, expected_rewards_at_each_step)
         # Switch rover to D. Both should still get credit
-        config['env']['agents']['rovers'][0]['reward_type'] = 'Difference'
+        config['env']['agents']['rovers'][0]['reward_spec']['reward_type'] = 'Difference'
         self.assert_path_rewards(env, agent_paths, expected_rewards_at_each_step)
 
 class TestTwoRoversTwoUavsTwoPois(TestIndirectDifference):
@@ -201,15 +201,15 @@ class TestTwoRoversTwoUavsTwoPois(TestIndirectDifference):
         self.assert_correct_rewards(config, expected_rewards=[2.0, 2.0, 2.0, 2.0])
         # Switch everyone to D and check
         for agent_config in config['env']['agents']['rovers']+config['env']['agents']['uavs']:
-            agent_config['reward_type'] = 'Difference'
+            agent_config['reward_spec']['reward_type'] = 'Difference'
         self.assert_correct_rewards(config, expected_rewards=[1.0, 1.0, 0.0, 0.0])
         # Switch everyone to D-Indirect and check
         for agent_config in config['env']['agents']['rovers']+config['env']['agents']['uavs']:
-            agent_config['reward_type'] = 'IndirectDifference'
+            agent_config['reward_spec']['reward_type'] = 'IndirectDifference'
         self.assert_correct_rewards(config, expected_rewards=[1.0, 1.0, 1.0, 1.0])
         # Switch just rovers back to D and check
         for rover_config in config['env']['agents']['rovers']:
-            rover_config['reward_type'] = 'Difference'
+            rover_config['reward_spec']['reward_type'] = 'Difference'
         self.assert_correct_rewards(config, expected_rewards=[1.0, 1.0, 1.0, 1.0])
 
     def test_b(self):
@@ -229,11 +229,11 @@ class TestTwoRoversTwoUavsTwoPois(TestIndirectDifference):
         self.assert_correct_rewards(config, expected_rewards=[2.0, 2.0, 2.0, 2.0])
         # Switch to D and check
         for agent_config in config['env']['agents']['rovers']+config['env']['agents']['uavs']:
-            agent_config['reward_type'] = 'Difference'
+            agent_config['reward_spec']['reward_type'] = 'Difference'
         self.assert_correct_rewards(config, expected_rewards=[0.0, 0.0, 0.0, 0.0])
         # Switch to D-Indirect and check
         for agent_config in config['env']['agents']['rovers']+config['env']['agents']['uavs']:
-            agent_config['reward_type'] = 'IndirectDifference'
+            agent_config['reward_spec']['reward_type'] = 'IndirectDifference'
         self.assert_correct_rewards(config, expected_rewards=[0.0, 0.0, 2.0, 0.0])
 
     def test_c(self):
@@ -253,11 +253,11 @@ class TestTwoRoversTwoUavsTwoPois(TestIndirectDifference):
         self.assert_correct_rewards(config, expected_rewards=[1.0, 1.0, 1.0, 1.0])
         # Check D
         for agent_config in config['env']['agents']['rovers']+config['env']['agents']['uavs']:
-            agent_config['reward_type'] = 'Difference'
+            agent_config['reward_spec']['reward_type'] = 'Difference'
         self.assert_correct_rewards(config, expected_rewards=[1.0, 0.0, 0.0, 0.0])
         # Check D-Indirect
         for agent_config in config['env']['agents']['rovers']+config['env']['agents']['uavs']:
-            agent_config['reward_type'] = 'IndirectDifference'
+            agent_config['reward_spec']['reward_type'] = 'IndirectDifference'
         self.assert_correct_rewards(config, expected_rewards=[1.0, 0.0, 1.0, 0.0])
 
 class TestTwoRoversTwoUavsTwoPoisPath(TestIndirectDifference):
@@ -290,7 +290,7 @@ class TestTwoRoversTwoUavsTwoPoisPath(TestIndirectDifference):
         self.assert_path_rewards(env, agent_paths, expected_rewards_at_each_step)
         # Switch all agents to D. Only rovers should get credit
         for agent_config in config['env']['agents']['rovers']+config['env']['agents']['uavs']:
-            agent_config['reward_type'] = 'Difference'
+            agent_config['reward_spec']['reward_type'] = 'Difference'
         expected_rewards_at_each_step = [
             # Initial setup, no reward
             [0.0, 0.0, 0.0, 0.0],
@@ -304,7 +304,7 @@ class TestTwoRoversTwoUavsTwoPoisPath(TestIndirectDifference):
         self.assert_path_rewards(env, agent_paths, expected_rewards_at_each_step)
         # Switch all agents to D-Indirect. Uavs get credit now
         for agent_config in config['env']['agents']['rovers']+config['env']['agents']['uavs']:
-            agent_config['reward_type'] = 'IndirectDifference'
+            agent_config['reward_spec']['reward_type'] = 'IndirectDifference'
         expected_rewards_at_each_step = [
             # Initial setup, no reward
             [0.0, 0.0, 0.0, 0.0],
@@ -342,7 +342,7 @@ class TestTwoRoversTwoUavsTwoPoisPath(TestIndirectDifference):
         self.assert_path_rewards(env, agent_paths, expected_rewards_at_each_step)
         # Switch everyone to D and check rewards
         for agent_config in config['env']['agents']['rovers']+config['env']['agents']['uavs']:
-            agent_config['reward_type'] = 'Difference'
+            agent_config['reward_spec']['reward_type'] = 'Difference'
         expected_rewards_at_each_step = [
             # Initial setup, no reward
             [0.0, 0.0, 0.0, 0.0],
@@ -355,7 +355,7 @@ class TestTwoRoversTwoUavsTwoPoisPath(TestIndirectDifference):
         self.assert_path_rewards(env, agent_paths, expected_rewards_at_each_step)
         # Switch everyone to D-Indirect and check rewards
         for agent_config in config['env']['agents']['rovers']+config['env']['agents']['uavs']:
-            agent_config['reward_type'] = 'IndirectDifference'
+            agent_config['reward_spec']['reward_type'] = 'IndirectDifference'
         expected_rewards_at_each_step = [
             # Initial setup, no reward
             [0.0, 0.0, 0.0, 0.0],
@@ -404,7 +404,7 @@ class TestTwoRoversTwoUavsTwoPoisPath(TestIndirectDifference):
         agent_paths = self.get_path_c()
         # Switch agents to D and check D. Only rovers should get credit
         for agent_config in config['env']['agents']['rovers']+config['env']['agents']['uavs']:
-            agent_config['reward_type'] = 'Difference'
+            agent_config['reward_spec']['reward_type'] = 'Difference'
         expected_rewards_at_each_step = [
             # Initial setup. No reward
             [0.0, 0.0, 0.0, 0.0],
@@ -423,7 +423,7 @@ class TestTwoRoversTwoUavsTwoPoisPath(TestIndirectDifference):
         # Rovers get credit for their poi.
         # Second uav gets credit for influencing the rovers
         for agent_config in config['env']['agents']['rovers']+config['env']['agents']['uavs']:
-            agent_config['reward_type'] = 'IndirectDifference'
+            agent_config['reward_spec']['reward_type'] = 'IndirectDifference'
         expected_rewards_at_each_step = [
             # Initial setup. No reward
             [0.0, 0.0, 0.0, 0.0],
@@ -467,7 +467,7 @@ class TestTwoRoversTwoUavsTwoPoisPath(TestIndirectDifference):
         agent_paths = self.get_path_d()
         # Switch agents to Difference reward
         for agent_config in config['env']['agents']['rovers']+config['env']['agents']['uavs']:
-            agent_config['reward_type'] = 'Difference'
+            agent_config['reward_spec']['reward_type'] = 'Difference'
         expected_rewards_at_each_step = [
             # Initial setup. No reward
             [0.0, 0.0, 0.0, 0.0],
@@ -486,7 +486,7 @@ class TestTwoRoversTwoUavsTwoPoisPath(TestIndirectDifference):
         agent_paths = self.get_path_d()
         # Switch agents to Indirect Difference reward
         for agent_config in config['env']['agents']['rovers']+config['env']['agents']['uavs']:
-            agent_config['reward_type'] = 'IndirectDifference'
+            agent_config['reward_spec']['reward_type'] = 'IndirectDifference'
         expected_rewards_at_each_step = [
             # Initial setup. No reward
             [0.0, 0.0, 0.0, 0.0],
@@ -513,8 +513,8 @@ class TestOneRoverOneUavOnePoi(TestIndirectDifference):
     def test_a_Difference(self):
         config = self.get_default_config()
         # Switch both agents to D. Check rewards
-        config['env']['agents']['rovers'][0]['reward_type'] = 'Difference'
-        config['env']['agents']['uavs'][0]['reward_type'] = 'Difference'
+        config['env']['agents']['rovers'][0]['reward_spec']['reward_type'] = 'Difference'
+        config['env']['agents']['uavs'][0]['reward_spec']['reward_type'] = 'Difference'
         self.assert_correct_rewards(config, expected_rewards=[1.0, 0.0])
 
     def test_a_IndirectDifference(self):
@@ -522,24 +522,22 @@ class TestOneRoverOneUavOnePoi(TestIndirectDifference):
         # Switch both agents to D-Indirect. Check rewards.
         # Should be 1.0 for rover and 1.0 for uav.
         # Rover gets credit for itself and uav gets credit for itself and the rover
-        config['env']['agents']['rovers'][0]['reward_type'] = 'IndirectDifference'
-        config['env']['agents']['uavs'][0]['reward_type'] = 'IndirectDifference'
+        config['env']['agents']['rovers'][0]['reward_spec']['reward_type'] = 'IndirectDifference'
+        config['env']['agents']['uavs'][0]['reward_spec']['reward_type'] = 'IndirectDifference'
         self.assert_correct_rewards(config, expected_rewards=[1.0, 1.0])
 
     def test_a_IndirectDifference_manual_empty(self):
         """Manually assign no rovers to the uav"""
         config = self.get_default_config()
         # Switch both agents to D-Indirect
-        config['env']['agents']['rovers'][0]['reward_type'] = 'IndirectDifference'
-        config['env']['agents']['uavs'][0]['reward_type'] = 'IndirectDifference'
+        config['env']['agents']['rovers'][0]['reward_spec']['reward_type'] = 'IndirectDifference'
+        config['env']['agents']['uavs'][0]['reward_spec']['reward_type'] = 'IndirectDifference'
         # Manually set up D-Indirect on the uav to get credit for no additional agents
-        config['env']['agents']['uavs'][0]['IndirectDifference'] = {
-            'type' : 'removal',
-            'assignment' : 'manual',
-            'manual' : [],
-            'automatic' : {
-                'timescale': '',
-                'credit' : ''
+        config['env']['agents']['uavs'][0]['reward_spec']['indirect_difference'] = {
+            'mode': 'Static',
+            'static': {
+                'assignment': 'manual',
+                'manual': []
             }
         }
         self.assert_correct_rewards(config, expected_rewards=[1.0, 0.0])
@@ -548,8 +546,8 @@ class TestOneRoverOneUavOnePoi(TestIndirectDifference):
         """Manually assign the rover to the uav"""
         config = self.get_default_config()
         # Switch both agents to D-Indirect
-        config['env']['agents']['rovers'][0]['reward_type'] = 'IndirectDifference'
-        config['env']['agents']['uavs'][0]['reward_type'] = 'IndirectDifference'
+        config['env']['agents']['rovers'][0]['reward_spec']['reward_type'] = 'IndirectDifference'
+        config['env']['agents']['uavs'][0]['reward_spec']['reward_type'] = 'IndirectDifference'
         # Manually set up D-Indirect on the uav to get credit for the rover
         config['env']['agents']['uavs'][0]['IndirectDifference'] = {
             'type' : 'removal',
@@ -565,8 +563,8 @@ class TestOneRoverOneUavOnePoi(TestIndirectDifference):
     def test_a_Mixed(self):
         config = self.get_default_config()
         # Switch rover to D, uav to D-Indirect.
-        config['env']['agents']['rovers'][0]['reward_type'] = 'Difference'
-        config['env']['agents']['uavs'][0]['reward_type'] = 'IndirectDifference'
+        config['env']['agents']['rovers'][0]['reward_spec']['reward_type'] = 'Difference'
+        config['env']['agents']['uavs'][0]['reward_spec']['reward_type'] = 'IndirectDifference'
         self.assert_correct_rewards(config, expected_rewards=[1.0, 1.0])
 
     def test_b(self):
@@ -578,15 +576,15 @@ class TestOneRoverOneUavOnePoi(TestIndirectDifference):
         # Check G
         self.assert_correct_rewards(config, expected_rewards=[1.0, 1.0])
         # Switch both to D
-        config['env']['agents']['rovers'][0]['reward_type'] = 'Difference'
-        config['env']['agents']['uavs'][0]['reward_type'] = 'Difference'
+        config['env']['agents']['rovers'][0]['reward_spec']['reward_type'] = 'Difference'
+        config['env']['agents']['uavs'][0]['reward_spec']['reward_type'] = 'Difference'
         self.assert_correct_rewards(config, expected_rewards=[1.0, 0.0])
         # Switch both to D-Indirect
-        config['env']['agents']['rovers'][0]['reward_type'] = 'IndirectDifference'
-        config['env']['agents']['uavs'][0]['reward_type'] = 'IndirectDifference'
+        config['env']['agents']['rovers'][0]['reward_spec']['reward_type'] = 'IndirectDifference'
+        config['env']['agents']['uavs'][0]['reward_spec']['reward_type'] = 'IndirectDifference'
         self.assert_correct_rewards(config, expected_rewards=[1.0, 0.0])
         # Switch just rover to D, leave uav as D-Indirect
-        config['env']['agents']['rovers'][0]['reward_type'] = 'Difference'
+        config['env']['agents']['rovers'][0]['reward_spec']['reward_type'] = 'Difference'
         self.assert_correct_rewards(config, expected_rewards=[1.0, 0.0])
 
     def test_c(self):
@@ -598,15 +596,15 @@ class TestOneRoverOneUavOnePoi(TestIndirectDifference):
         # Check G
         self.assert_correct_rewards(config, expected_rewards=[0.0, 0.0])
         # Switch both to D
-        config['env']['agents']['rovers'][0]['reward_type'] = 'Difference'
-        config['env']['agents']['uavs'][0]['reward_type'] = 'Difference'
+        config['env']['agents']['rovers'][0]['reward_spec']['reward_type'] = 'Difference'
+        config['env']['agents']['uavs'][0]['reward_spec']['reward_type'] = 'Difference'
         self.assert_correct_rewards(config, expected_rewards=[0.0, 0.0])
         # Switch both to D-Indirect
-        config['env']['agents']['rovers'][0]['reward_type'] = 'IndirectDifference'
-        config['env']['agents']['uavs'][0]['reward_type'] = 'IndirectDifference'
+        config['env']['agents']['rovers'][0]['reward_spec']['reward_type'] = 'IndirectDifference'
+        config['env']['agents']['uavs'][0]['reward_spec']['reward_type'] = 'IndirectDifference'
         self.assert_correct_rewards(config, expected_rewards=[0.0, 0.0])
         # Switch just rover to D, leave uav using D-Indirect
-        config['env']['agents']['rovers'][0]['reward_type'] = 'Difference'
+        config['env']['agents']['rovers'][0]['reward_spec']['reward_type'] = 'Difference'
         self.assert_correct_rewards(config, expected_rewards=[0.0, 0.0])
 
     def test_d(self):
@@ -619,12 +617,12 @@ class TestOneRoverOneUavOnePoi(TestIndirectDifference):
         config['env']['agents']['uavs'][0]['position']['fixed'] = [50.0, 50.0]
         self.assert_correct_rewards(config, expected_rewards=[0.0, 0.0])
         # Switch both to D
-        config['env']['agents']['rovers'][0]['reward_type'] = 'Difference'
-        config['env']['agents']['uavs'][0]['reward_type'] = 'Difference'
+        config['env']['agents']['rovers'][0]['reward_spec']['reward_type'] = 'Difference'
+        config['env']['agents']['uavs'][0]['reward_spec']['reward_type'] = 'Difference'
         self.assert_correct_rewards(config, expected_rewards=[0.0, 0.0])
         # Switch both to D-Indirect
-        config['env']['agents']['rovers'][0]['reward_type'] = 'IndirectDifference'
-        config['env']['agents']['uavs'][0]['reward_type'] = 'IndirectDifference'
+        config['env']['agents']['rovers'][0]['reward_spec']['reward_type'] = 'IndirectDifference'
+        config['env']['agents']['uavs'][0]['reward_spec']['reward_type'] = 'IndirectDifference'
         self.assert_correct_rewards(config, expected_rewards=[0.0, 0.0])
 
     def test_e(self):
@@ -643,15 +641,15 @@ class TestOneRoverOneUavOnePoi(TestIndirectDifference):
         )
         self.assert_correct_rewards(config, expected_rewards=[G, G])
         # Switch both to D and check
-        config['env']['agents']['rovers'][0]['reward_type'] = 'Difference'
-        config['env']['agents']['uavs'][0]['reward_type'] = 'Difference'
+        config['env']['agents']['rovers'][0]['reward_spec']['reward_type'] = 'Difference'
+        config['env']['agents']['uavs'][0]['reward_spec']['reward_type'] = 'Difference'
         self.assert_correct_rewards(config, expected_rewards=[G, 0.0])
         # Switch both to D-Indirect and check
-        config['env']['agents']['rovers'][0]['reward_type'] = 'IndirectDifference'
-        config['env']['agents']['uavs'][0]['reward_type'] = 'IndirectDifference'
+        config['env']['agents']['rovers'][0]['reward_spec']['reward_type'] = 'IndirectDifference'
+        config['env']['agents']['uavs'][0]['reward_spec']['reward_type'] = 'IndirectDifference'
         self.assert_correct_rewards(config, expected_rewards=[G, G])
         # Switch just rover back to D and check
-        config['env']['agents']['rovers'][0]['reward_type'] = 'Difference'
+        config['env']['agents']['rovers'][0]['reward_spec']['reward_type'] = 'Difference'
         self.assert_correct_rewards(config, expected_rewards=[G, G])
 
     def test_f(self):
@@ -670,15 +668,15 @@ class TestOneRoverOneUavOnePoi(TestIndirectDifference):
         )
         self.assert_correct_rewards(config, expected_rewards=[G, G])
         # Switch both to D and check
-        config['env']['agents']['rovers'][0]['reward_type'] = 'Difference'
-        config['env']['agents']['uavs'][0]['reward_type'] = 'Difference'
+        config['env']['agents']['rovers'][0]['reward_spec']['reward_type'] = 'Difference'
+        config['env']['agents']['uavs'][0]['reward_spec']['reward_type'] = 'Difference'
         self.assert_correct_rewards(config, expected_rewards=[G, 0.0])
         # Switch both to D-Indirect and check
-        config['env']['agents']['rovers'][0]['reward_type'] = 'IndirectDifference'
-        config['env']['agents']['uavs'][0]['reward_type'] = 'IndirectDifference'
+        config['env']['agents']['rovers'][0]['reward_spec']['reward_type'] = 'IndirectDifference'
+        config['env']['agents']['uavs'][0]['reward_spec']['reward_type'] = 'IndirectDifference'
         self.assert_correct_rewards(config, expected_rewards=[G, G])
         # Switch just rover back to D and check
-        config['env']['agents']['rovers'][0]['reward_type'] = 'Difference'
+        config['env']['agents']['rovers'][0]['reward_spec']['reward_type'] = 'Difference'
         self.assert_correct_rewards(config, expected_rewards=[G, G])
 
 class TestTwoRoversTwoPois(TestIndirectDifference):
@@ -722,14 +720,14 @@ class TestTwoRoversTwoPois(TestIndirectDifference):
         config = self.get_config_a()
         # Set rover rewards to Difference
         for rover_config in config['env']['agents']['rovers']:
-            rover_config['reward_type'] = 'Difference'
+            rover_config['reward_spec']['reward_type'] = 'Difference'
         self.assert_correct_rewards(config, expected_rewards=[1.0, 1.0])
 
     def test_a_IndirectDifference(self):
         config = self.get_config_a()
         # Set rover rewards to IndirectDifference
         for rover_config in config['env']['agents']['rovers']:
-            rover_config['reward_type'] = 'IndirectDifference'
+            rover_config['reward_spec']['reward_type'] = 'IndirectDifference'
         self.assert_correct_rewards(config, expected_rewards=[1.0, 1.0])
 
 if __name__ == '__main__':

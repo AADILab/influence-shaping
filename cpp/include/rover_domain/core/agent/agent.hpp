@@ -18,15 +18,13 @@ class DefaultAgent final : public IAgent {
    public:
     DefaultAgent(
         Bounds bounds,
-        IndirectDifferenceParameters indirect_difference_parameters,
-        std::string reward_type,
+        RewardSpec reward_spec,
         AgentType agent_type,
         double obs_radius = 1.0,
         SType sensor = SensorType()
     ) : IAgent(
         bounds,
-        indirect_difference_parameters,
-        reward_type,
+        reward_spec,
         agent_type,
         obs_radius
     ), m_sensor(sensor) {}

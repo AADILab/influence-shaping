@@ -35,7 +35,9 @@ class TestComplete(InfluenceTestCase):
                                 'fixed': agent_0_pos
                             },
                             'resolution': 90,
-                            'reward_type': 'Global'
+                            'reward_spec': {
+                                'reward_type': 'Global'
+                            }
                         },
                         {
                             'observation_radius': 1000.0,
@@ -44,7 +46,9 @@ class TestComplete(InfluenceTestCase):
                                 'fixed': agent_1_pos
                             },
                             'resolution': 90,
-                            'reward_type': 'Global'
+                            'reward_spec': {
+                                'reward_type': 'Global'
+                            }
                         }
                     ],
                     'uavs': [
@@ -55,7 +59,9 @@ class TestComplete(InfluenceTestCase):
                                 'fixed': agent_2_pos
                             },
                             'resolution': 90,
-                            'reward_type': 'Global'
+                            'reward_spec': {
+                                'reward_type': 'Global'
+                            }
                         }
                     ]
                 },

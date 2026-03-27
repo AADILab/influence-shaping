@@ -83,7 +83,7 @@ class TestDifference(TestEnv):
         # Check with G
         self.assert_correct_rewards(config, expected_rewards=[1.0])
         # Check with D
-        config['env']['agents']['rovers'][0]['reward_type'] = 'Difference'
+        config['env']['agents']['rovers'][0]['reward_spec']['reward_type'] = 'Difference'
         self.assert_correct_rewards(config, expected_rewards=[1.0])
 
     def test_two_rovers_one_poi(self):
@@ -93,7 +93,7 @@ class TestDifference(TestEnv):
         self.assert_correct_rewards(config, expected_rewards=[1.0, 1.0])
         # Check with D for both rovers
         for rover_config in config['env']['agents']['rovers']:
-            rover_config['reward_type'] = 'Difference'
+            rover_config['reward_spec']['reward_type'] = 'Difference'
         self.assert_correct_rewards(config, expected_rewards=[1.0, 0.0])
 
     def test_two_rovers_two_pois(self):
@@ -103,7 +103,7 @@ class TestDifference(TestEnv):
         self.assert_correct_rewards(config, expected_rewards=[2.0, 2.0])
         # Check with D for both rovers
         for rover_config in config['env']['agents']['rovers']:
-            rover_config['reward_type'] = 'Difference'
+            rover_config['reward_spec']['reward_type'] = 'Difference'
         self.assert_correct_rewards(config, expected_rewards=[1.0, 1.0])
 
     def test_four_rovers_four_pois(self):
@@ -113,7 +113,7 @@ class TestDifference(TestEnv):
         self.assert_correct_rewards(config, expected_rewards=[4.0]*4)
         # Switch rovers to D and check D for all 4 rovers
         for rover_config in config['env']['agents']['rovers']:
-            rover_config['reward_type'] = 'Difference'
+            rover_config['reward_spec']['reward_type'] = 'Difference'
         self.assert_correct_rewards(config, expected_rewards=[1.0]*4)
 
     def test_one_rover_one_uav_one_poi(self):
@@ -121,8 +121,8 @@ class TestDifference(TestEnv):
         # Check G for rover and uav
         self.assert_correct_rewards(config, expected_rewards=[1.0, 1.0])
         # Switch rover and uav to D
-        config['env']['agents']['rovers'][0]['reward_type'] = 'Difference'
-        config['env']['agents']['uavs'][0]['reward_type'] = 'Difference'
+        config['env']['agents']['rovers'][0]['reward_spec']['reward_type'] = 'Difference'
+        config['env']['agents']['uavs'][0]['reward_spec']['reward_type'] = 'Difference'
         # Check D for rover and uav
         self.assert_correct_rewards(config, expected_rewards=[1.0, 0.0])
 
@@ -133,9 +133,9 @@ class TestDifference(TestEnv):
         self.assert_correct_rewards(config, expected_rewards=[2.0, 2.0, 2.0, 2.0])
         # Check D for all agents. (0.0 for each rover because the other rover is in the same place. 0.0 for uavs because they cannot observe pois)
         for rover_config in config['env']['agents']['rovers']:
-            rover_config['reward_type'] = 'Difference'
+            rover_config['reward_spec']['reward_type'] = 'Difference'
         for uav_config in config['env']['agents']['uavs']:
-            uav_config['reward_type'] = 'Difference'
+            uav_config['reward_spec']['reward_type'] = 'Difference'
         self.assert_correct_rewards(config, expected_rewards=[0.0, 0.0, 0.0, 0.0])
 
     def test_two_rovers_two_uavs_two_pois_b(self):
@@ -152,9 +152,9 @@ class TestDifference(TestEnv):
         # Now check D. D should be 0.0 for rovers because if you remove either one, the other one is there at the same spot
         # D should also be 0.0 for uavs because G never changes when uavs are removed
         for rover_config in config['env']['agents']['rovers']:
-            rover_config['reward_type'] = 'Difference'
+            rover_config['reward_spec']['reward_type'] = 'Difference'
         for uav_config in config['env']['agents']['uavs']:
-            uav_config['reward_type'] = 'Difference'
+            uav_config['reward_spec']['reward_type'] = 'Difference'
         self.assert_correct_rewards(config, expected_rewards=[0.0, 0.0, 0.0, 0.0])
 
     def test_two_rovers_two_uavs_two_pois_c(self):
@@ -168,9 +168,9 @@ class TestDifference(TestEnv):
         self.assert_correct_rewards(config, expected_rewards=[2.0, 2.0, 2.0, 2.0])
         # Now check D. Should be (1.0 - impact of other rover) for each rover and 0.0 for each uav
         for rover_config in config['env']['agents']['rovers']:
-            rover_config['reward_type'] = 'Difference'
+            rover_config['reward_spec']['reward_type'] = 'Difference'
         for uav_config in config['env']['agents']['uavs']:
-            uav_config['reward_type'] = 'Difference'
+            uav_config['reward_spec']['reward_type'] = 'Difference'
         self.assert_correct_rewards(config, expected_rewards=[1.0, 1.0, 0.0, 0.0])
 
 if __name__ == '__main__':

@@ -22,10 +22,88 @@ def calculateAngle(position_0, position_1):
         angle += 360.
     return angle
 
+def _map_static_credit(credit: str):
+    Credit = rover_domain.IDStaticAutomatic.Credit
+    if credit == "Local":
+        return Credit.Local
+    if credit == "WinnerTakesAll":
+        return Credit.WinnerTakesAll
+    raise ValueError(f"Unsupported static automatic credit: {credit}")
+
+def _map_dynamic_credit(credit: str):
+    Credit = rover_domain.IDDynamic.Credit
+    if credit == "Local":
+        return Credit.Local
+    if credit == "WinnerTakesAll":
+        return Credit.WinnerTakesAll
+    if credit == "System":
+        return Credit.System
+    if credit == "Difference":
+        return Credit.Difference
+    raise ValueError(f"Unsupported dynamic credit: {credit}")
+
+def build_reward_spec(agent_config):
+    reward_config = agent_config["reward_spec"]
+    reward_type = reward_config["reward_type"]
+
+    # Top-level reward type
+    if reward_type == "Global":
+        return rover_domain.RewardSpec(rover_domain.GlobalReward())
+    elif reward_type == "Difference":
+        return rover_domain.RewardSpec(rover_domain.DifferenceReward())
+    elif reward_type == "IndirectDifference":
+        indirect_config = reward_config.get("indirect_difference", {})
+        mode = indirect_config.get("mode", "Static")  # Static | Dynamic | Adaptive
+        add_G = bool(indirect_config.get("add_G", False))
+
+        id_reward = rover_domain.IndirectDifferenceReward()
+
+        if mode == "Static":
+            id_reward.mode = rover_domain.IndirectDifferenceReward.Mode.Static
+            static_config = indirect_config.get("static", {})
+
+            assignment = static_config.get("assignment", "automatic")  # manual | automatic
+
+            if assignment == "manual":
+                manual = static_config.get("manual", [])
+                static_payload = rover_domain.IDStaticManual()
+                static_payload.manual = listToVec(manual)
+
+                # params expects variant<IDStatic, IDDynamic, IDAdaptive>
+                # IDStatic is variant<IDStaticManual, IDStaticAutomatic>
+                id_reward.params = rover_domain.IDStatic(static_payload)
+
+            elif assignment == "automatic":
+                credit_str = indirect_config.get("automatic", "WinnerTakesAll")
+                auto_payload = rover_domain.IDStaticAutomatic()
+                auto_payload.credit = _map_static_credit(credit_str)
+
+                id_reward.params = rover_domain.IDStatic(auto_payload)
+            else:
+                raise ValueError(f"Unsupported Static assignment: {assignment}")
+
+        elif mode == "Dynamic":
+            id_reward.mode = rover_domain.IndirectDifferenceReward.Mode.Dynamic
+
+            credit_str = indirect_config.get("dynamic", "WinnerTakesAll")
+            dynamic_payload = rover_domain.IDDynamic()
+            dynamic_payload.credit = _map_dynamic_credit(credit_str)
+
+            id_reward.params = dynamic_payload
+
+        elif mode == "Adaptive":
+            id_reward.mode = rover_domain.IndirectDifferenceReward.Mode.Adaptive
+            id_reward.params = rover_domain.IDAdaptive()
+        else:
+            raise ValueError(f"Unsupported IndirectDifference mode: {mode}")
+        id_reward.add_G = add_G
+    else:
+        raise ValueError(f"Unsupported reward type: {reward_type}")
+    return rover_domain.RewardSpec(id_reward)
+
 def createAgent(agent_config, poi_subtypes, agent_observable_subtypes, accum_type, measurement_type, type_, observation_radii, default_values, map_size):
     """Create an agent using the agent's config and type"""
     # unpack config
-    reward_type = agent_config['reward_type']
     obs_radius = agent_config['observation_radius']
     resolution = agent_config['resolution']
 
@@ -36,35 +114,8 @@ def createAgent(agent_config, poi_subtypes, agent_observable_subtypes, accum_typ
         sensor_type = agent_config['sensor']['type']
     # print(sensor_type)
 
-    # repackage indirect difference parameters
-    IndirectDifferenceParameters = rover_domain.IndirectDifferenceParameters
-    AutomaticParameters = rover_domain.AutomaticParameters
-    if 'IndirectDifference' in agent_config:
-        indirect_difference_config = agent_config['IndirectDifference']
-        auto_params_config = indirect_difference_config['automatic']
-        indirect_difference_parameters = IndirectDifferenceParameters(
-            type_ = indirect_difference_config['type'],
-            assignment = indirect_difference_config['assignment'],
-            manual = listToVec(indirect_difference_config['manual']) if 'manual' in indirect_difference_config else [],
-            automatic_parameters = AutomaticParameters(
-                timescale = auto_params_config['timescale'],
-                credit = auto_params_config['credit']
-            ),
-            add_G = indirect_difference_config['add_G'] if 'add_G' in indirect_difference_config else False
-        )
-
-    else:
-        # Use default if none are specified
-        indirect_difference_parameters = IndirectDifferenceParameters(
-            type_ = 'removal',
-            assignment = 'automatic',
-            manual = cppyy.gbl.std.vector[cppyy.gbl.int](),
-            automatic_parameters = AutomaticParameters(
-                timescale = 'trajectory',
-                credit = 'AllOrNothing'
-            ),
-            add_G = False
-        )
+    # Set up rewards
+    reward_spec = build_reward_spec(agent_config)
 
     # Set up agent bounds if they are not specified
     bounds = {
@@ -100,8 +151,7 @@ def createAgent(agent_config, poi_subtypes, agent_observable_subtypes, accum_typ
                 low_y=bounds['low_y'],
                 high_y=bounds['high_y']
             ),
-            indirect_difference_parameters,
-            reward_type,
+            reward_spec,
             type_,
             obs_radius,
             rover_domain.SmartLidar[rover_domain.Density](
@@ -129,8 +179,7 @@ def createAgent(agent_config, poi_subtypes, agent_observable_subtypes, accum_typ
                 low_y=bounds['low_y'],
                 high_y=bounds['high_y']
             ),
-            indirect_difference_parameters,
-            reward_type,
+            reward_spec,
             type_,
             obs_radius,
             rover_domain.RoverLidar[rover_domain.Density](
@@ -150,8 +199,7 @@ def createAgent(agent_config, poi_subtypes, agent_observable_subtypes, accum_typ
                 low_y=bounds['low_y'],
                 high_y=bounds['high_y']
             ),
-            indirect_difference_parameters,
-            reward_type,
+            reward_spec,
             type_,
             obs_radius,
             rover_domain.UavDistanceLidar()

@@ -3,38 +3,39 @@
 
 #include <rover_domain/core/declare/agent_types.hpp>
 #include <rover_domain/core/declare/poi_types.hpp>
+#include <rover_domain/core/declare/reward_types.hpp>
 #include <rover_domain/utilities/math/cartesian.hpp>
 #include <vector>
 
 namespace rover_domain {
 
-class AutomaticParameters {
-    public:
-    AutomaticParameters() = default;
-    AutomaticParameters(std::string timescale, std::string credit) {
-        m_timescale = timescale;
-        m_credit = credit;
-    }
-    std::string m_timescale;
-    std::string m_credit;
-};
+// class AutomaticParameters {
+//     public:
+//     AutomaticParameters() = default;
+//     AutomaticParameters(std::string timescale, std::string credit) {
+//         m_timescale = timescale;
+//         m_credit = credit;
+//     }
+//     std::string m_timescale;
+//     std::string m_credit;
+// };
 
-class IndirectDifferenceParameters {
-    public:
-    IndirectDifferenceParameters(std::string type_, std::string assignment, std::vector<int> manual, AutomaticParameters automatic_parameters, bool add_G) {
-        m_type = type_;
-        m_assignment = assignment;
-        m_manual = manual;
-        m_automatic_parameters = automatic_parameters;
-        m_add_G = add_G;
-    }
+// class IndirectDifferenceParameters {
+//     public:
+//     IndirectDifferenceParameters(std::string type_, std::string assignment, std::vector<int> manual, AutomaticParameters automatic_parameters, bool add_G) {
+//         m_type = type_;
+//         m_assignment = assignment;
+//         m_manual = manual;
+//         m_automatic_parameters = automatic_parameters;
+//         m_add_G = add_G;
+//     }
 
-    std::string m_type;
-    std::string m_assignment;
-    std::vector<int> m_manual;
-    AutomaticParameters m_automatic_parameters;
-    bool m_add_G;
-};
+//     std::string m_type;
+//     std::string m_assignment;
+//     std::vector<int> m_manual;
+//     AutomaticParameters m_automatic_parameters;
+//     bool m_add_G;
+// };
 
 class Bounds {
     public:
@@ -64,13 +65,11 @@ class IAgent {
    public:
     IAgent(
         Bounds bounds,
-        IndirectDifferenceParameters indirect_difference_parameters,
-        std::string reward_type,
+        RewardSpec reward_spec,
         AgentType agent_type,
         double obs_radius = 1.0
     ) : m_bounds(bounds),
-        m_indirect_difference_parameters(indirect_difference_parameters),
-        m_reward_type(reward_type),
+        m_reward_spec(reward_spec),
         m_type(agent_type),
         m_obs_radius(obs_radius) {};
 
@@ -109,12 +108,8 @@ class IAgent {
         // Give me the nominal type of this rover
         return m_type;
     }
-    std::string reward_type() {
-        return m_reward_type;
-    }
-
-    IndirectDifferenceParameters indirect_difference_parameters() {
-        return m_indirect_difference_parameters;
+    RewardSpec reward_spec() {
+        return m_reward_spec;
     }
 
     Bounds bounds() {
@@ -128,12 +123,11 @@ class IAgent {
     virtual void tick() {}
 
    private:
-    std::string m_reward_type;
+    RewardSpec m_reward_spec;
     AgentType m_type;
     double m_obs_radius;
     Point m_position;
     std::vector<Point> m_path;
-    IndirectDifferenceParameters m_indirect_difference_parameters;
     Bounds m_bounds;
 };
 

@@ -7,6 +7,9 @@
 
 namespace rover_domain {
 
+using CompleteInfluenceArray = std::vector<std::vector<std::vector<bool>>>;
+using SliceInfluenceArray = std::vector<std::vector<bool>>;
+
 class RewardComputer {
     public:
     using Reward = std::vector<double>;
@@ -230,8 +233,7 @@ class RewardComputer {
         for (int k=0; k < rovers.size(); ++k) {
             DefaultAgent<Lidar<Density>> rover(
                 rovers[k]->bounds(),
-                rovers[k]->indirect_difference_parameters(),
-                rovers[k]->reward_type(),
+                rovers[k]->reward_spec(),
                 rovers[k]->type(),
                 rovers[k]->obs_radius()
             );
@@ -347,6 +349,92 @@ class RewardComputer {
         }
     }
 
+    double reward_from_influence_array(int i, double G, const std::vector<std::vector<bool>>& influence_array) const {
+        std::vector<Agent> counterfactual_rovers = create_counterfactual_rovers(m_rovers, influence_array);
+        return G - global_without_inds(counterfactual_rovers, m_pois, std::vector<int>{i});
+    }
+
+    std::vector<std::vector<bool>> make_dynamic_influence_array(int i, IDDynamic::Credit credit) const {
+        const CompleteInfluenceArray complete = create_complete_influence_array();
+        switch (credit) {
+            case IDDynamic::Credit::Local:
+                return create_local_influence_array(complete, i);
+            case IDDynamic::Credit::WinnerTakesAll:
+                return create_allornothing_influence_array(complete, i);
+            case IDDynamic::Credit::System:
+                return create_system_influence_array(complete);
+            case IDDynamic::Credit::Difference: {
+                const SliceInfluenceArray system = create_system_influence_array(complete);
+                const SliceInfluenceArray system_without_i = create_system_influence_array(complete, i);
+                return create_difference_influence_array(system, system_without_i);
+            }
+        }
+        throw std::runtime_error("Unhandled IDDynamic::Credit");
+    }
+
+    double compute_indirect_reward(
+        int i,
+        double G,
+        const std::vector<std::vector<int>>& influence_sets,
+        const IndirectDifferenceReward& indirect
+    ) const {
+        double reward = 0.0;
+
+        // First level: check which mode (IDStatic, IDDynamic, IDAdaptive)
+        if (std::holds_alternative<IDStatic>(indirect.params)) {
+            const IDStatic& static_mode = std::get<IDStatic>(indirect.params);
+
+            // Second level: within IDStatic, check which type (IDStaticManual, IDStaticAutomatic)
+            if (std::holds_alternative<IDStaticManual>(static_mode)) {
+                const IDStaticManual& manual = std::get<IDStaticManual>(static_mode);
+                reward = G - global_without_inds(m_rovers, m_pois, manual.manual);
+            } else if (std::holds_alternative<IDStaticAutomatic>(static_mode)) {
+                const IDStaticAutomatic& automatic = std::get<IDStaticAutomatic>(static_mode);
+                reward = G - global_without_inds(m_rovers, m_pois, influence_sets[i]);
+            } else {
+                throw std::runtime_error("Unhandled IDStatic variant");
+            }
+        }
+        else if (std::holds_alternative<IDDynamic>(indirect.params)) {
+            const IDDynamic& dynamic = std::get<IDDynamic>(indirect.params);
+            const SliceInfluenceArray influence_array = make_dynamic_influence_array(i, dynamic.credit);
+            reward = reward_from_influence_array(i, G, influence_array);
+        }
+        else if (std::holds_alternative<IDAdaptive>(indirect.params)) {
+            throw std::runtime_error("IDAdaptive is not implemented yet");
+        }
+        else {
+            throw std::runtime_error("Unhandled indirect mode variant");
+        }
+
+        if (indirect.add_G) {
+            reward += G;
+        }
+        return reward;
+            return reward;
+    }
+
+    double compute_reward_for_agent(
+        int i,
+        double G,
+        const std::vector<std::vector<int>>& influence_sets
+    ) const {
+        const RewardSpec reward_spec = m_rovers[i]->reward_spec();
+        if (std::holds_alternative<GlobalReward>(reward_spec)) {
+            return G;
+        }
+        else if (std::holds_alternative<DifferenceReward>(reward_spec)) {
+            return G - global_without_me(m_rovers, m_pois, i);
+        }
+        else if (std::holds_alternative<IndirectDifferenceReward>(reward_spec)) {
+            const IndirectDifferenceReward& indirect = std::get<IndirectDifferenceReward>(reward_spec);
+            return compute_indirect_reward(i, G, influence_sets, indirect);
+        }
+        else {
+            throw std::runtime_error("Unhandled RewardSpec variant");
+        }
+    }
+
     [[nodiscard]] Reward compute() const {
         // std::cout << "Reward::compute()" << std::endl;
         Reward rewards;
@@ -361,95 +449,7 @@ class RewardComputer {
         // std::cout << "Reward::compute() Computing rewards for each agent" << std::endl;
         for (int i = 0; i < m_rovers.size(); ++i) {
             // std::cout << "Reward::compute() Computing reward for agent " << i << std::endl;
-            double reward = 0.0;
-            // Get the reward type
-            std::string reward_type = m_rovers[i]->reward_type();
-            // Compute the reward for this agent based on the reward type
-            if (reward_type == "Global") {
-                // std::cout << "Reward::compute() Computing Global reward" << std::endl;
-                reward = G;
-            }
-            else if (reward_type == "Difference") {
-                // std::cout << "Reward::compute() Computing Difference reward" << std::endl;
-                reward = G - global_without_me(m_rovers, m_pois, i);
-            }
-            else if (reward_type == "IndirectDifference") {
-                // std::cout << "Reward::compute() Computing Indirect Difference" << std::endl;
-                // Start simple.
-                // Assume that only rovers can count as being influenced
-                // Use all or nothing influence assignment. Just remove the entire trajectories.
-                // Refactor for more options later.
-                if (m_rovers[i]->indirect_difference_parameters().m_assignment == "manual") {
-                    reward = G - global_without_inds(m_rovers, m_pois, m_rovers[i]->indirect_difference_parameters().m_manual);
-                }
-                else if (m_rovers[i]->indirect_difference_parameters().m_assignment == "automatic") {
-                    // Timestep based removal
-                    if (m_rovers[i]->indirect_difference_parameters().m_automatic_parameters.m_timescale == "timestep") {
-                        // In this route, create sets at each time step. If someone was influenced, then put a stand-in for their state as
-                        // a counterfactual. For instance (need to check if this will work), put -1,-1 as the position
-                        // (or if that doesn't work, add a std::vector<boolean> that has 0 for removed at step i vs 1 for present at step i. Modify G to check this bool)
-
-                        // Construct the influence array telling us who to remove when using the specified method
-                        // std::vector<std::vector<bool>> influence_array = create_allornothing_influence_array(
-                        //         create_complete_influence_array(), i
-                        //     )
-                        std::vector<std::vector<bool>> influence_array;
-                        if (m_rovers[i]->indirect_difference_parameters().m_automatic_parameters.m_credit == "Local") {
-                            influence_array = create_local_influence_array(
-                                create_complete_influence_array(), i
-                            );
-                        }
-                        else if (m_rovers[i]->indirect_difference_parameters().m_automatic_parameters.m_credit == "AllOrNothing") {
-                            influence_array = create_allornothing_influence_array(
-                                create_complete_influence_array(), i
-                            );
-                        }
-                        else if (m_rovers[i]->indirect_difference_parameters().m_automatic_parameters.m_credit == "System") {
-                            influence_array = create_system_influence_array(
-                                create_complete_influence_array()
-                            );
-                        }
-                        else if (m_rovers[i]->indirect_difference_parameters().m_automatic_parameters.m_credit == "Difference") {
-                            // Start with the complete influence array
-                            std::vector<std::vector<std::vector<bool>>> complete_influence_array = create_complete_influence_array();
-                            // Figure out the system influence array
-                            std::vector<std::vector<bool>> system_influence_array = create_system_influence_array(complete_influence_array);
-                            // Now with agent i's influence removed
-                            std::vector<std::vector<bool>> counterfactual_system_influence_array = create_system_influence_array(complete_influence_array, i);
-                            // The difference between system influence with i vs system influence without i is the difference influence we want
-                            influence_array = create_difference_influence_array(system_influence_array, counterfactual_system_influence_array);
-                        }
-
-                        // Construct a set of counterfactual agents that have paths where that agent is at [-1, -1] if it was influenced by another agent
-                        std::vector<Agent> counterfactual_rovers = create_counterfactual_rovers(
-                            m_rovers, influence_array
-                        );
-
-                        // I guess this is where I can build a trace array? Or modify influence_array to contain
-                        // information about the traces?
-                        // I think I'd be using the same counterfactual removal
-                        // except now we give a partial reward for the traces
-                        // maybe
-                        // global_with_traces()
-                        // remove counterfactual rovers, but provide a partial reward based on the trace
-                        // and remove yourself
-
-                        // Now compute d-indirect using these rovers.
-                        // Make sure to entirely remove the agent we are computing d-indirect for
-                        reward = G - global_without_inds(counterfactual_rovers, m_pois, std::vector<int>(1, i));
-                        // std::cout << "reward : " << reward << " for agent i : " << i << std::endl;
-                    }
-
-                    // Trajectory based removal
-                    else if (m_rovers[i]->indirect_difference_parameters().m_automatic_parameters.m_timescale == "trajectory") {
-                        // In this route, just tally it all up into one big influence set for each agent, and do the removal
-                        reward = G - global_without_inds(m_rovers, m_pois, influence_sets[i]);
-                    }
-                }
-            }
-            if (m_rovers[i]->indirect_difference_parameters().m_add_G) {
-                reward = reward + G;
-            }
+            double reward = compute_reward_for_agent(i, G, influence_sets);
             if (m_debug_reward_equals_G && reward != G) {
                 throw std::runtime_error("reward does not equal G!");
             }

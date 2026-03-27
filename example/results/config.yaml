@@ -48,7 +48,7 @@ env:
     - IndirectDifference:
         assignment: automatic
         automatic:
-          credit: AllOrNothing
+          credit: WinnerTakesAll
           timescale: timestep
         manual: []
         type: removal
@@ -64,21 +64,21 @@ env:
         - 25.0
         spawn_rule: fixed
       resolution: 90
-      reward_type: IndirectDifference
+      reward_spec:
+        reward_type: IndirectDifference
+        indirect_difference:
+          mode: Static
+          static:
+            assignment: automatic
+            automatic: WinnerTakesAll
+          add_G: false
       sensor:
         accum_type: sum
         default_value: 0.0
         measurement_type: one_minus_inverse_distance_over_observation_radius
         type: RoverLidar
     uavs:
-    - IndirectDifference:
-        assignment: automatic
-        automatic:
-          credit: AllOrNothing
-          timescale: timestep
-        manual: []
-        type: removal
-      action:
+    - action:
         type: dxdy
       observation_radius: 25.0
       position:
@@ -87,12 +87,19 @@ env:
         - 25.0
         spawn_rule: fixed
       resolution: 90
-      reward_type: IndirectDifference
       sensor:
         accum_type: sum
         default_value: 0.0
         measurement_type: one_minus_inverse_distance_over_observation_radius
         type: SmartLidar
+      reward_spec:
+        reward_type: IndirectDifference
+        indirect_difference:
+          mode: Static
+          static:
+            assignment: automatic
+            automatic: WinnerTakesAll
+          add_G: false
   map_size:
   - 50.0
   - 50.0
