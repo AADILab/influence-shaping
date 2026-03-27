@@ -25,34 +25,10 @@ ccea:
   weight_initialization:
     lower_bound: -0.5
     upper_bound: 0.5
-data:
-  checkpoints:
-    delete_previous: true
-    frequency: 1
-    save: true
-  save_trajectories:
-    test:
-      num_gens_between_save: 250
-      switch: true
-    train:
-      num_gens_between_save: 100
-      switch: false
-debug:
-  random_seed:
-    increment_every_trial: true
-    set_seed: null
-  reward_equals_G: false
 env:
   agents:
     rovers:
-    - IndirectDifference:
-        assignment: automatic
-        automatic:
-          credit: WinnerTakesAll
-          timescale: timestep
-        manual: []
-        type: removal
-      action:
+    - action:
         type: dxdy
       needs_uav_to_move: false
       observation_radius: 5.0
@@ -124,3 +100,20 @@ experiment:
 processing:
   num_threads: 15
   use_multiprocessing: true
+data:
+  checkpoints:
+    delete_previous: true
+    frequency: 1
+    save: true
+  save_trajectories:
+    test:
+      num_gens_between_save: 250
+      switch: true
+    train:
+      num_gens_between_save: 100
+      switch: false
+debug:
+  random_seed:
+    increment_every_trial: true
+    set_seed: null
+  reward_equals_G: false
