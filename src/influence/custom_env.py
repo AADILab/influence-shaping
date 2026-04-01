@@ -66,18 +66,15 @@ def build_reward_spec(agent_config):
 
             if assignment == "manual":
                 manual = static_config.get("manual", [])
-                static_payload = rover_domain.IDStaticManual()
-                static_payload.manual = listToVec(manual)
+                manual_payload = rover_domain.IDStaticManual()
+                manual_payload.manual = listToVec(manual)
 
                 # params expects variant<IDStatic, IDDynamic, IDAdaptive>
                 # IDStatic is variant<IDStaticManual, IDStaticAutomatic>
-                id_reward.params = rover_domain.IDStatic(static_payload)
+                id_reward.params = rover_domain.IDStatic(manual_payload)
 
             elif assignment == "automatic":
-                credit_str = indirect_config.get("automatic", "WinnerTakesAll")
                 auto_payload = rover_domain.IDStaticAutomatic()
-                auto_payload.credit = _map_static_credit(credit_str)
-
                 id_reward.params = rover_domain.IDStatic(auto_payload)
             else:
                 raise ValueError(f"Unsupported Static assignment: {assignment}")
