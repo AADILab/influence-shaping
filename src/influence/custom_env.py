@@ -93,7 +93,13 @@ def build_reward_spec(agent_config):
 
         elif mode == "Adaptive":
             id_reward.mode = rover_domain.IndirectDifferenceReward.Mode.Adaptive
-            id_reward.params = rover_domain.IDAdaptive()
+            adaptive_payload = rover_domain.IDAdaptive()
+
+            adaptive_config = indirect_config.get("adaptive", {})
+            adaptive_payload.N_agents = adaptive_config.get("N_agents", 0)
+            adaptive_payload.n_timesteps = adaptive_config.get("n_timesteps", 0)
+
+            id_reward.params = adaptive_payload
         else:
             raise ValueError(f"Unsupported IndirectDifference mode: {mode}")
         id_reward.add_G = add_G

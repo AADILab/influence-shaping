@@ -31,8 +31,11 @@ struct IDDynamic {
     enum class Credit { Local, WinnerTakesAll, System, Difference };
     Credit credit;
 };
-// Adaptive mode has not yet been implemented
-struct IDAdaptive { /* new fields later */ };
+// Adaptive mode
+struct IDAdaptive {
+    int N_agents;
+    int n_timesteps;
+};
 
 // Indirect difference reward struct is then built depending on parameters needed
 struct IndirectDifferenceReward {

@@ -354,6 +354,157 @@ class RewardComputer {
         return G - global_without_inds(counterfactual_rovers, m_pois, std::vector<int>{i});
     }
 
+    /* Create a complete influence array that ends agent i's influence on k only once another N_agents
+    have stopped influencing k. This function NEVER REMOVES influence, ONLY EXTENDS existing influence.
+    IE: If mulitple agent i's influence the same agent k throughout the episode, we do not remove
+    anyone's influence. We only fill in gaps wherever agent k was not influence by any agent i.
+    */
+    std::vector<std::vector<std::vector<bool>>> create_coupled_influence_array(
+        std::vector<std::vector<std::vector<bool>>> complete_influence_array,
+        int N_agents
+    ) const {
+        // Start w. number of timesteps in each path
+        int t_final = m_rovers[0]->path().size();
+
+        // Make an empty coupled_complete_influence_array
+        // initialize this array with all zeros
+        std::vector<std::vector<std::vector<bool>>> coupled_complete_influence_array(
+            t_final, std::vector<std::vector<bool>>(
+                m_rovers.size(), std::vector<bool>(m_rovers.size(), 0)
+            )
+        );
+
+        // k represents the agent being influenced. ie: rovers
+        // influencer_ind represents the agent that is influencing, ie: uavs
+        for (int k = 0; k < m_rovers.size(); ++k) {
+            for (int influencer_ind = 0; influencer_ind < m_rovers.size(); ++influencer_ind) {
+                // Initialize variables for extending influence
+                int N_remaining_influencers = N_agents;
+                std::vector<int> other_influencers_already_stopped;
+                std::vector<int> previous_other_influencers;
+                std::vector<int> current_other_influencers;
+                for (int t = 0; t < t_final; ++t) {
+                    if (complete_influence_array[t][influencer_ind][k]) {
+                        // Set influence as true
+                        coupled_complete_influence_array[t][influencer_ind][k] = true;
+                        // Reset everything
+                        N_remaining_influencers = N_agents;
+                        other_influencers_already_stopped = {};
+                        previous_other_influencers = {};
+                        current_other_influencers = {};
+                    } else {
+                        // Figure out who else is influencing agent k
+                        current_other_influencers = {};
+                        for (int i = 0; i < m_rovers.size(); ++i) {
+                            // Don't count yourself
+                            if (i != influencer_ind) {
+                                // Check complete influence array to figure out if i influenced k at t
+                                if (complete_influence_array[t][i][k]) {
+                                    current_other_influencers.push_back(i);
+                                }
+                            }
+                        }
+                        // Now figure out if we need to subtract from remaining influencers
+                        for (int prev_idx : previous_other_influencers) {
+                            // Tell me if this previous idx is also present in current influencers
+                            bool prev_idx_in_current_influencers = (
+                                std::find(
+                                    current_other_influencers.begin(),
+                                    current_other_influencers.end(),
+                                    prev_idx
+                                ) != current_other_influencers.end()
+                            );
+                            bool prev_idx_NOT_in_current_influencers = !prev_idx_in_current_influencers;
+                            // Tell me if this previous idx has already stopped influencing before
+                            // ie: We don't care about it if it stops influencing multiple times
+                            bool prev_idx_already_stopped = (
+                                std::find(
+                                    other_influencers_already_stopped.begin(),
+                                    other_influencers_already_stopped.end(),
+                                    prev_idx
+                                ) != other_influencers_already_stopped.end()
+                            );
+                            bool prev_idx_NOT_already_stopped = !prev_idx_already_stopped;
+                            // If this prev idx is NOT in current influencers, then it means this idx just stopped influencing k
+                            // AND if this prev idx has NOT been counted already, then we want to decrement our counter
+                            if (prev_idx_NOT_in_current_influencers && prev_idx_NOT_already_stopped) {
+                                // Decrease the counter
+                                N_remaining_influencers--;
+                                // Add prev idx to vector of influencers that we have already counted
+                                other_influencers_already_stopped.push_back(prev_idx);
+                            }
+                        }
+                        // Now we set the influence bool based on the counter
+                        if (N_remaining_influencers > 0) {
+                            // Set influence to true if our counter is still greater than 0
+                            coupled_complete_influence_array[t][influencer_ind][k] = true;
+                        } else {
+                            // Otherwise, time to set influence to false
+                            coupled_complete_influence_array[t][influencer_ind][k] = false;
+                        }
+                    }
+                }
+            }
+        }
+        return coupled_complete_influence_array;
+    }
+
+    /* Create an influence array slice that extends agent i's influence on k
+    by a fixed number of timesteps. This function NEVER REMOVES influence, ONLY EXTENDS existing influence.
+    Indexing of the slice is [t][k] where t is the timestep and k is the agent
+    */
+    std::vector<std::vector<bool>> create_extended_influence_array(
+        std::vector<std::vector<std::vector<bool>>> complete_influence_array,
+        int i,
+        int n_timesteps
+    ) const {
+        // Start w. number of timesteps in each path
+        int t_final = m_rovers[0]->path().size();
+
+        // Make an empty extended_complete_influence_array
+        // initialize this array with all zeros
+        std::vector<std::vector<bool>> extended_influence_array(
+            t_final, std::vector<bool>(
+                m_rovers.size(), 0
+            )
+        );
+
+        // t is timestep, i is influencing agent (uav), k is agent being influenced (rover)
+        for (int k = 0; k < m_rovers.size(); ++k) {
+            // Set our counter for how much more we need to extend influence
+            int n_remaining_timesteps = n_timesteps;
+            for (int t = 0; t < t_final; ++t) {
+                if (complete_influence_array[t][i][k]) {
+                    // If i is influencing k at t, then i keeps that influence
+                    extended_influence_array[t][k] = true;
+                    // Reset the counter
+                    n_remaining_timesteps = n_timesteps;
+                } else {
+                    if (n_remaining_timesteps>0) {
+                        // If the counter is high enough, we extend the influence
+                        extended_influence_array[t][k] = true;
+                        // And then decrease the counter
+                        // (sort of like we just used that extension, so now it goes away)
+                        n_remaining_timesteps--;
+                    } else {
+                        // Otherwise, no extension
+                        extended_influence_array[t][k] = false;
+                    }
+                }
+            }
+        }
+        return extended_influence_array;
+    }
+
+    std::vector<std::vector<bool>> make_adaptive_influence_array(int i, int N_agents, int n_timesteps) const {
+        CompleteInfluenceArray complete = create_complete_influence_array();
+        // First use the N_agents to resolve the coupled part of the influence
+        CompleteInfluenceArray coupled_complete_arr = create_coupled_influence_array(complete, N_agents);
+        // Then use the n_timesteps to extend the influence of an agent further out
+        SliceInfluenceArray extended_slice_arr = create_extended_influence_array(coupled_complete_arr, i, n_timesteps);
+        return extended_slice_arr;
+    }
+
     std::vector<std::vector<bool>> make_dynamic_influence_array(int i, IDDynamic::Credit credit) const {
         const CompleteInfluenceArray complete = create_complete_influence_array();
         switch (credit) {
@@ -401,7 +552,11 @@ class RewardComputer {
             reward = reward_from_influence_array(i, G, influence_array);
         }
         else if (std::holds_alternative<IDAdaptive>(indirect.params)) {
-            throw std::runtime_error("IDAdaptive is not implemented yet");
+            const IDAdaptive& adaptive = std::get<IDAdaptive>(indirect.params);
+            const SliceInfluenceArray influence_array = make_adaptive_influence_array(
+                i, adaptive.N_agents, adaptive.n_timesteps
+            );
+            reward = reward_from_influence_array(i, G, influence_array);
         }
         else {
             throw std::runtime_error("Unhandled indirect mode variant");
