@@ -379,7 +379,7 @@ class RewardComputer {
         for (int k = 0; k < m_rovers.size(); ++k) {
             for (int influencer_ind = 0; influencer_ind < m_rovers.size(); ++influencer_ind) {
                 // Initialize variables for extending influence
-                int N_remaining_influencers = N_agents;
+                int N_remaining_influencers = 0;
                 std::vector<int> other_influencers_already_stopped;
                 std::vector<int> previous_other_influencers;
                 std::vector<int> current_other_influencers;

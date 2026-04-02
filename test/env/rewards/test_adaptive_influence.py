@@ -74,6 +74,7 @@ class TestAdaptive(TestEnv):
         return config
 
     def get_path_b1(self):
+        # [ rover , uav A, uav B]
         return [
             # Uav A and rover A go to POI. Uav B stays still
             [[ 1.0,  1.0], [ 1.0,  1.0], [10.0,  0.0]],
@@ -98,16 +99,16 @@ class TestAdaptive(TestEnv):
             [[10.0,  1.0], [10.0,  1.0], [10.0,  0.0]],
             [[10.0,  0.0], [10.0,  0.0], [10.0,  0.0]],
             # Uav B brings rover to second POI
-            [[10.0,  0.0], [11.0,  1.0], [11.0,  1.0]],
-            [[10.0,  0.0], [12.0,  2.0], [12.0,  2.0]],
-            [[10.0,  0.0], [13.0,  3.0], [13.0,  3.0]],
-            [[10.0,  0.0], [14.0,  4.0], [14.0,  4.0]],
-            [[10.0,  0.0], [15.0,  5.0], [15.0,  5.0]],
-            [[10.0,  0.0], [16.0,  6.0], [16.0,  6.0]],
-            [[10.0,  0.0], [17.0,  7.0], [17.0,  7.0]],
-            [[10.0,  0.0], [18.0,  8.0], [18.0,  8.0]],
-            [[10.0,  0.0], [19.0,  9.0], [19.0,  9.0]],
-            [[10.0,  0.0], [20.0, 20.0], [20.0, 20.0]]
+            [[11.0,  1.0], [10.0,  0.0], [11.0,  1.0]],
+            [[12.0,  2.0], [10.0,  0.0], [12.0,  2.0]],
+            [[13.0,  3.0], [10.0,  0.0], [13.0,  3.0]],
+            [[14.0,  4.0], [10.0,  0.0], [14.0,  4.0]],
+            [[15.0,  5.0], [10.0,  0.0], [15.0,  5.0]],
+            [[16.0,  6.0], [10.0,  0.0], [16.0,  6.0]],
+            [[17.0,  7.0], [10.0,  0.0], [17.0,  7.0]],
+            [[18.0,  8.0], [10.0,  0.0], [18.0,  8.0]],
+            [[19.0,  9.0], [10.0,  0.0], [19.0,  9.0]],
+            [[20.0, 10.0], [10.0,  0.0], [20.0, 10.0]]
         ]
 
     def test_one_rover_one_uav_one_poi_config_a_path_a1_G(self):
@@ -389,46 +390,227 @@ class TestAdaptive(TestEnv):
         ]
         self.assert_path_rewards(env, self.get_path_a2(), expected_rewards_at_each_step)
 
-    def test_one_rover_two_uavs_two_pois_config_B_path_b1_G(self):
-        pass
-        # config = self.get_one_rover_two_uavs_two_pois_config_b()
-        # expected_rewards_at_each_step = [
-        #     # Initial setup. No reward
-        #     [0.0, 0.0, 0.0],
-        #     # Uav A and rover A go to POI. Uav B stays still
-        #     [0.0, 0.0, 0.0],
-        #     [0.0, 0.0, 0.0],
-        #     [0.0, 0.0, 0.0],
-        #     [0.0, 0.0, 0.0],
-        #     [0.0, 0.0, 0.0],
-        #     [0.0, 0.0, 0.0],
-        #     [0.0, 0.0, 0.0],
-        #     [0.0, 0.0, 0.0],
-        #     [0.0, 0.0, 0.0],
-        #     [1.0, 1.0, 1.0],
-        #     # Uav A and rover A go to Uav B
-        #     [1.0, 1.0, 1.0],
-        #     [1.0, 1.0, 1.0],
-        #     [1.0, 1.0, 1.0],
-        #     [1.0, 1.0, 1.0],
-        #     [1.0, 1.0, 1.0],
-        #     [1.0, 1.0, 1.0],
-        #     [1.0, 1.0, 1.0],
-        #     [1.0, 1.0, 1.0],
-        #     [1.0, 1.0, 1.0],
-        #     [1.0, 1.0, 1.0],
-        #     # Uav B brings rover to second POI
-        #     [1.0, 1.0, 1.0],
-        #     [1.0, 1.0, 1.0],
-        #     [1.0, 1.0, 1.0],
-        #     [1.0, 1.0, 1.0],
-        #     [1.0, 1.0, 1.0],
-        #     [1.0, 1.0, 1.0],
-        #     [1.0, 1.0, 1.0],
-        #     [1.0, 1.0, 1.0],
-        #     [1.0, 1.0, 1.0],
-        #     [2.0, 2.0, 2.0],
-        # ]
+    def test_one_rover_two_uavs_two_pois_config_b_path_b1_G(self):
+        config = self.get_one_rover_two_uavs_two_pois_config_b()
+        env = createEnv(config)
+        expected_rewards_at_each_step = [
+            # Initial setup. No reward
+            [0.0, 0.0, 0.0],
+            # Uav A and rover A go to POI. Uav B stays still
+            [0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0],
+            [1.0, 1.0, 1.0],
+            # Uav A and rover A go to Uav B
+            [1.0, 1.0, 1.0],
+            [1.0, 1.0, 1.0],
+            [1.0, 1.0, 1.0],
+            [1.0, 1.0, 1.0],
+            [1.0, 1.0, 1.0],
+            [1.0, 1.0, 1.0],
+            [1.0, 1.0, 1.0],
+            [1.0, 1.0, 1.0],
+            [1.0, 1.0, 1.0],
+            [1.0, 1.0, 1.0],
+            # Uav B brings rover to second POI
+            [1.0, 1.0, 1.0],
+            [1.0, 1.0, 1.0],
+            [1.0, 1.0, 1.0],
+            [1.0, 1.0, 1.0],
+            [1.0, 1.0, 1.0],
+            [1.0, 1.0, 1.0],
+            [1.0, 1.0, 1.0],
+            [1.0, 1.0, 1.0],
+            [1.0, 1.0, 1.0],
+            [2.0, 2.0, 2.0],
+        ]
+        self.assert_path_rewards(env, self.get_path_b1(), expected_rewards_at_each_step)
+
+    def test_one_rover_two_uavs_two_pois_config_b_path_b1_D(self):
+        # No credit for uavs
+        config = self.get_one_rover_two_uavs_two_pois_config_b()
+        for rover_config in config['env']['agents']['rovers']:
+            rover_config['reward_spec']['reward_type'] = 'Difference'
+        for uav_config in config['env']['agents']['uavs']:
+            uav_config['reward_spec']['reward_type'] = 'Difference'
+        env = createEnv(config)
+        expected_rewards_at_each_step = [
+            # rover, uav A, uav B
+            # Initial setup. No reward
+            [0.0, 0.0, 0.0],
+            # Uav A and rover A go to POI. Uav B stays still
+            [0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0],
+            [1.0, 0.0, 0.0],
+            # Uav A and rover A go to Uav B
+            [1.0, 0.0, 0.0],
+            [1.0, 0.0, 0.0],
+            [1.0, 0.0, 0.0],
+            [1.0, 0.0, 0.0],
+            [1.0, 0.0, 0.0],
+            [1.0, 0.0, 0.0],
+            [1.0, 0.0, 0.0],
+            [1.0, 0.0, 0.0],
+            [1.0, 0.0, 0.0],
+            [1.0, 0.0, 0.0],
+            # Uav B brings rover to second POI
+            [1.0, 0.0, 0.0],
+            [1.0, 0.0, 0.0],
+            [1.0, 0.0, 0.0],
+            [1.0, 0.0, 0.0],
+            [1.0, 0.0, 0.0],
+            [1.0, 0.0, 0.0],
+            [1.0, 0.0, 0.0],
+            [1.0, 0.0, 0.0],
+            [1.0, 0.0, 0.0],
+            [2.0, 0.0, 0.0],
+        ]
+        self.assert_path_rewards(env, self.get_path_b1(), expected_rewards_at_each_step)
+
+    def test_one_rover_two_uavs_two_pois_config_b_path_b1_adaptive_N0_n0(self):
+        # Adaptive influence collapses into dynamic influence
+        config = self.get_one_rover_two_uavs_two_pois_config_b()
+        for rover_config in config['env']['agents']['rovers']:
+            rover_config['reward_spec'] = {
+                'reward_type': 'IndirectDifference',
+                'indirect_difference' : {
+                    'mode': 'Adaptive',
+                    'adaptive': {
+                        'N_agents': 0,
+                        'n_timesteps': 0
+                    }
+                }
+            }
+        for uav_config in config['env']['agents']['uavs']:
+            uav_config['reward_spec'] = {
+                'reward_type': 'IndirectDifference',
+                'indirect_difference' : {
+                    'mode': 'Adaptive',
+                    'adaptive': {
+                        'N_agents': 0,
+                        'n_timesteps': 0
+                    }
+                }
+            }
+        env = createEnv(config)
+        expected_rewards_at_each_step = [
+            # rover, uav A, uav B
+            # Initial setup. No reward
+            [0.0, 0.0, 0.0],
+            # Uav A and rover A go to POI. Uav B stays still
+            [0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0],
+            [1.0, 1.0, 0.0], # First POI captured
+            # Uav A and rover A go to Uav B
+            [1.0, 1.0, 0.0],
+            [1.0, 1.0, 0.0],
+            [1.0, 1.0, 0.0],
+            [1.0, 1.0, 0.0],
+            [1.0, 1.0, 0.0],
+            [1.0, 1.0, 0.0],
+            [1.0, 1.0, 0.0],
+            [1.0, 1.0, 0.0],
+            [1.0, 1.0, 0.0],
+            [1.0, 1.0, 0.0],
+            # Uav B brings rover to second POI
+            [1.0, 1.0, 0.0],
+            [1.0, 1.0, 0.0],
+            [1.0, 1.0, 0.0],
+            [1.0, 1.0, 0.0],
+            [1.0, 1.0, 0.0],
+            [1.0, 1.0, 0.0],
+            [1.0, 1.0, 0.0],
+            [1.0, 1.0, 0.0],
+            [1.0, 1.0, 0.0],
+            [2.0, 1.0, 1.0] # Second POI captured
+        ]
+        self.assert_path_rewards(env, self.get_path_b1(), expected_rewards_at_each_step)
+
+    def test_one_rover_two_uavs_two_pois_config_b_path_b1_adaptive_N1_n0(self):
+        # Uav A gets credit for both POIs now
+        config = self.get_one_rover_two_uavs_two_pois_config_b()
+        for rover_config in config['env']['agents']['rovers']:
+            rover_config['reward_spec'] = {
+                'reward_type': 'IndirectDifference',
+                'indirect_difference' : {
+                    'mode': 'Adaptive',
+                    'adaptive': {
+                        'N_agents': 1,
+                        'n_timesteps': 0
+                    }
+                }
+            }
+        for uav_config in config['env']['agents']['uavs']:
+            uav_config['reward_spec'] = {
+                'reward_type': 'IndirectDifference',
+                'indirect_difference' : {
+                    'mode': 'Adaptive',
+                    'adaptive': {
+                        'N_agents': 1,
+                        'n_timesteps': 0
+                    }
+                }
+            }
+        env = createEnv(config)
+        expected_rewards_at_each_step = [
+            # rover, uav A, uav B
+            # Initial setup. No reward
+            [0.0, 0.0, 0.0],
+            # Uav A and rover A go to POI. Uav B stays still
+            [0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0],
+            [1.0, 1.0, 0.0], # First POI captured
+            # Uav A and rover A go to Uav B
+            [1.0, 1.0, 0.0],
+            [1.0, 1.0, 0.0],
+            [1.0, 1.0, 0.0],
+            [1.0, 1.0, 0.0],
+            [1.0, 1.0, 0.0],
+            [1.0, 1.0, 0.0],
+            [1.0, 1.0, 0.0],
+            [1.0, 1.0, 0.0],
+            [1.0, 1.0, 0.0],
+            [1.0, 1.0, 0.0],
+            # Uav B brings rover to second POI
+            [1.0, 1.0, 0.0],
+            [1.0, 1.0, 0.0],
+            [1.0, 1.0, 0.0],
+            [1.0, 1.0, 0.0],
+            [1.0, 1.0, 0.0],
+            [1.0, 1.0, 0.0],
+            [1.0, 1.0, 0.0],
+            [1.0, 1.0, 0.0],
+            [1.0, 1.0, 0.0],
+            [2.0, 2.0, 1.0] # Second POI captured
+        ]
+        self.assert_path_rewards(env, self.get_path_b1(), expected_rewards_at_each_step)
 
 # Make a config where uav A passes a rover to uav B, and make sure that it works
 # Extend that to a case where A passes rover to B, passes to C. Include uav D but it should not get credit
