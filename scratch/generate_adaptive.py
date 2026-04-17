@@ -7,13 +7,10 @@
 # We add 25 timesteps for each additional space
 # Default starting point is just 1 rover, 1 drone, 1 POI in 20x20 space.
 # Make the rover stay within observation radius of the drone
-# POIs alternate between being North and South (y=15 vs y=5)
+# POIs are opposite of the drone in their space
 
-# from enum import Enum
-
-# class Parity(Enum):
-#     ODD = 1
-#     EVEN = 2
+import argparse
+import yaml
 
 def is_divisible(divisor: int, dividend: int)->bool:
     return divisor % dividend == 0
@@ -41,7 +38,7 @@ def generate_space(idx: int, gap_size: int) -> dict:
     space_dict = {}
     # start means this is the first space
     # so place a rover
-    if idx=0:
+    if idx==0:
         rover = {
             'action': {
                 'type': 'dxdy'
@@ -118,30 +115,65 @@ def generate_space(idx: int, gap_size: int) -> dict:
             'observation_radius': 5.0,
             'position': {
                 'fixed': [
-
-                ]
-            }
+                    pos_x,
+                    pos_y
+                ],
+                'spawn_rule': 'fixed'
+            },
+            'value': 1.0
         }
-
-            # - capture_radius: 10.0
-            #   constraint: sequential
-            #   coupling: 1
-            #   disappear_bool: true
-            #   observation_radius: 5.0
-            #   position:
-            #     fixed:
-            #     - 10.0
-            #     - 5.0
-            #     spawn_rule: fixed
-            #   value: 1.0
+        space_dict['hidden_pois'] = [poi]
 
     return space_dict
 
-def generate_sequence(num_pois: int, gap_size: int)->dict:
-    pass
+def compute_total_spaces(num_pois: int, gap_size: int)->int:
+    return num_pois*(gap_size+1)
 
-if __name__=='__main__':
+def compute_sequence_params(num_pois: int, gap_size: int)->dict:
+    total_spaces = compute_total_spaces(num_pois=num_pois, gap_size=gap_size)
+    x_size = total_spaces*20
+    y_size = 20
+    num_steps = total_spaces*25
+    sequence_dict = {
+        'hidden_pois': [],
+        'uavs': [],
+        'rovers': [],
+        'num_steps': num_steps,
+        'map_size': [
+            x_size,
+            y_size
+        ]
+    }
+    for idx in range(total_spaces):
+        space_dict = generate_space(idx=idx, gap_size=gap_size)
+        for key in ['rovers', 'uavs', 'hidden_pois']:
+            if key in space_dict:
+                for item in space_dict[key]:
+                    sequence_dict[key].append(item)
+    return sequence_dict
+
+def generate_config_snippet(num_pois: int, gap_size: int)->dict:
+    # Figure out where rovers, uavs, pois go
+    sequence_dict = compute_sequence_params(num_pois=num_pois, gap_size=gap_size)
+    config = {
+        'env': {
+            'agents': {},
+            'pois': {
+                'rover_pois': []
+            }
+        }
+    }
+
+    config['env']['agents']['rovers'] = sequence_dict['rovers']
+    config['env']['agents']['uavs'] = sequence_dict['uavs']
+    config['env']['pois']['hidden_pois'] = sequence_dict['hidden_pois']
+    config['env']['map_size'] = sequence_dict['map_size']
+    config['ccea'] = {'num_steps': sequence_dict['num_steps']}
+    return config
+
+def test():
     # Testing
+    print(' --- test is_gap_space() ---')
     print('gap_size = 0 | All outputs should be false.')
     gap_size = 0
     for idx in range(10):
@@ -157,3 +189,32 @@ if __name__=='__main__':
     for idx in range(10):
         out=is_gap_space(idx=idx, gap_size=gap_size)
         print(idx, ' | ', out)
+    print(' --- test compute_total_spaces() --- ')
+    num_pois = 1
+    for gap_size in range(3):
+        total_spaces = compute_total_spaces(num_pois=num_pois, gap_size=gap_size)
+        print(f'num_pois: {num_pois} | gap_size: {gap_size} | total_spaces: {total_spaces}')
+    gap_size = 3
+    for num_pois in [1,2,3]:
+        total_spaces = compute_total_spaces(num_pois=num_pois, gap_size=gap_size)
+        print(f'num_pois: {num_pois} | gap_size: {gap_size} | total_spaces: {total_spaces}')
+
+def main():
+    parser = argparse.ArgumentParser(description="Generate adaptive influence experiment configuration.")
+    parser.add_argument('--num_pois', type=int, required=True, help='Number of POIs')
+    parser.add_argument('--gap_size', type=int, required=True, help='Gap size (number of empty spaces between POIs)')
+    parser.add_argument('--output', type=str, default=None, help='Output file (optional, prints to stdout if not set)')
+    args = parser.parse_args()
+
+    # Call sequence generator function with parsed arguments
+    result = generate_config_snippet(num_pois=args.num_pois, gap_size=args.gap_size)
+
+    # Output result to file or print
+    if args.output:
+        with open(args.output, 'w') as f:
+            yaml.dump(result, f, default_flow_style=False)
+    else:
+        print(yaml.dump(result, default_flow_style=False))
+
+if __name__=='__main__':
+    main()
