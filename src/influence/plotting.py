@@ -5,8 +5,11 @@ import pandas as pd
 from pathlib import Path
 import matplotlib.pyplot as plt
 from matplotlib.axes import Axes
+import matplotlib.image as mpimg
+from matplotlib.offsetbox import OffsetImage, AnnotationBbox
 import numpy as np
 from pprint import pprint
+from PIL import Image
 
 from influence.config import load_config
 from influence.parsing import PlotArgs, LinePlotArgs, BatchPlotArgs, BatchLinePlotArgs
@@ -26,6 +29,15 @@ plt.rcParams.update({
     "legend.fontsize": 14,     # Legend
     "figure.figsize": (6,4.5)    # Figure size
 })
+
+# Get the directory of the current file (e.g., plotting.py)
+MODULE_DIR = Path(__file__).parent
+
+# Path to the assets directory (assuming it's at the repo root)
+ASSETS_DIR = MODULE_DIR.parent.parent / "assets"
+
+DRONE_IMAGE = ASSETS_DIR / "drone.png"
+ROVER_IMAGE = ASSETS_DIR / "rover.png"
 
 COMPARISON_NAMES = [
     'Global',
@@ -245,6 +257,7 @@ def add_rover_trajectories(
         df: pd.DataFrame,
         num_rovers: int,
         individual_colors: bool,
+        use_image: bool,
         rover_observation_radii: Optional[List[float]],
         all_rover_bounds: Optional[List[Optional[dict]]],
         num_steps: Optional[int]
@@ -260,7 +273,52 @@ def add_rover_trajectories(
         final_x = xs.iloc[-1]
         final_y = ys.iloc[-1]
         ax.plot(xs, ys, ':', lw=2, color=color)
-        ax.plot(final_x, final_y, 's', ms=8, color=color)
+        # ax.plot(final_x, final_y, 's', ms=8, color=color)
+
+        # Grab the rover image
+        rover_img = Image.open(str(ROVER_IMAGE))
+        img_arr = np.array(rover_img)
+
+        # Recolor the rover
+        orig_color = np.array([162, 197, 202, 255])  # RGBA
+        # orig_color = np.array([0, 0, 0, 255])  # RGBA
+        target_rgb = np.array([int(255*c) if c <= 1 else int(c) for c in color])  # Handles both 0-1 and 0-255
+        target_color = np.concatenate([target_rgb, [255]])  # RGBA
+
+        # Create mask for the original color
+        mask = np.all(img_arr[:, :, :3] == orig_color[:3], axis=-1)
+
+        # Replace color
+        img_arr[mask] = target_color
+
+        rover_img = Image.fromarray(img_arr)
+
+        # Get the last two positions for heading calculation
+        if len(xs) >= 2:
+            x_prev, y_prev = xs.iloc[-2], ys.iloc[-2]
+            x_final, y_final = xs.iloc[-1], ys.iloc[-1]
+        else:
+            x_prev, y_prev = xs.iloc[-1], ys.iloc[-1]
+            x_final, y_final = xs.iloc[-1], ys.iloc[-1]
+
+        # Compute angle in degrees (0 = right, 90 = up, etc.)
+        dx = x_final - x_prev
+        dy = y_final - y_prev
+        if dx == 0 and dy == 0:
+            rotation = 0
+        else:
+            angle_rad = np.arctan2(dy, dx)
+            rotation = np.degrees(angle_rad)
+
+        zoom = 0.01
+        # Rotate the image according to what we need
+        if rotation != 0:
+            rover_img = rover_img.rotate(rotation, resample=Image.BICUBIC, expand=True)
+        img = np.array(rover_img)
+
+        imagebox = OffsetImage(img, zoom=zoom)
+        ab = AnnotationBbox(imagebox, (final_x, final_y), frameon=False)
+        ax.add_artist(ab)
         if rover_observation_radii is not None:
             obs_rad = rover_observation_radii[i]
             observation_circle = plt.Circle(
@@ -420,7 +478,16 @@ def generate_joint_trajectory_plot(
             else:
                 all_uav_bounds.append(None)
 
-    add_rover_trajectories(ax, df, num_rovers, individual_colors, rover_observation_radii, all_rover_bounds, num_steps)
+    add_rover_trajectories(
+        ax,
+        df,
+        num_rovers,
+        individual_colors,
+        True,
+        rover_observation_radii,
+        all_rover_bounds,
+        num_steps
+    )
     add_uav_trajectories(ax, df, num_uavs, individual_colors, influence_shading, uav_observation_radii, all_uav_bounds, num_steps)
     for i, poi_config in enumerate(config['env']['pois']['rover_pois']):
         plot_poi(ax, poi_config, x=df['rover_poi_'+str(i)+'_x'][0], y=df['rover_poi_'+str(i)+'_y'][0], color='tab:green', radius_shading=not no_shading)
