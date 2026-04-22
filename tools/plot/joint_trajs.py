@@ -84,17 +84,17 @@ if __name__ == '__main__':
 
     out_dir = Path(args.out_dir) if args.out_dir is not None else None
     plot_joint_trajectory_tree(
-        Path(args.root_dir),
-        out_dir,
-        args.num_steps,
-        args.individual_colors,
-        args.use_image,
-        args.no_poi_shading,
-        args.no_grid,
-        args.influence_shading,
-        args.uav_observation_radius,
-        args.rover_observation_radius,
-        args.include_bounds,
-        args.downsample,
-        parser.dump_batch_plot_args(args)
+        root_dir=Path(args.root_dir),
+        out_dir=out_dir,
+        num_steps=args.num_steps,
+        individual_colors=args.individual_colors,
+        use_image=args.use_image,
+        no_poi_shading=args.no_poi_shading,
+        no_grid=args.no_grid,
+        influence_shading=args.influence_shading,
+        uav_observation_radius=args.uav_observation_radius,
+        rover_observation_radius=args.rover_observation_radius,
+        include_bounds=args.include_bounds,
+        downsample=args.downsample,
+        batch_plot_args=parser.dump_batch_plot_args(args)
     )

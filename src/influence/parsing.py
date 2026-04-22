@@ -27,9 +27,12 @@ class PlotArgs():
             output: Optional[str]=None,
             xlim: Optional[List[float]]=None,
             ylim: Optional[List[float]]=None,
+            xticks: Optional[List[float]]=None,
+            yticks: Optional[List[float]]=None,
             xlabel: Optional[str]=None,
             ylabel: Optional[str]=None,
             silent: bool=False,
+            remove_border: bool=False,
             dpi: Optional[int]=None
         ):
         self.title = title
@@ -39,22 +42,34 @@ class PlotArgs():
             self.output = output
         self.xlim = xlim
         self.ylim = ylim
+        self.xticks = xticks
+        self.yticks = yticks
         self.xlabel = xlabel
         self.ylabel = ylabel
         self.silent = silent
+        self.remove_border = remove_border
         self.dpi = dpi
 
     def apply(self, ax: Axes):
-        if self.title:
+        if self.title is not None:
             ax.set_title(self.title)
-        if self.xlim:
+        if self.xlim is not None:
             ax.set_xlim(self.xlim)
-        if self.ylim:
+        if self.ylim is not None:
             ax.set_ylim(self.ylim)
-        if self.xlabel:
+        if self.xticks is not None:
+            ax.set_xticks(self.xticks)
+        if self.yticks is not None:
+            ax.set_yticks(self.yticks)
+        if self.xlabel is not None:
             ax.set_xlabel(self.xlabel)
-        if self.ylabel:
+        if self.ylabel is not None:
             ax.set_ylabel(self.ylabel)
+        if self.remove_border:
+            ax.spines['top'].set_visible(False)
+            ax.spines['right'].set_visible(False)
+            ax.spines['left'].set_visible(False)
+            ax.spines['bottom'].set_visible(False)
 
     def finish_figure(self, fig: Figure):
         if self.output is not None:
@@ -82,18 +97,24 @@ class LinePlotArgs():
 
 class BatchPlotArgs():
     def __init__(self,
-            xlim: Optional[List[float]],
-            ylim: Optional[List[float]],
-            xlabel: Optional[str],
-            ylabel: Optional[str],
-            silent: bool,
+            xlim: Optional[List[float]]=None,
+            ylim: Optional[List[float]]=None,
+            xticks: Optional[List[float]]=None,
+            yticks: Optional[List[float]]=None,
+            xlabel: Optional[str]=None,
+            ylabel: Optional[str]=None,
+            silent: bool=False,
+            remove_border: bool=False,
             dpi: Optional[int]=None
         ):
         self.xlim = xlim
         self.ylim = ylim
+        self.xticks = xticks
+        self.yticks = yticks
         self.xlabel = xlabel
         self.ylabel = ylabel
         self.silent = silent
+        self.remove_border = remove_border
         self.dpi = dpi
 
     def build_plot_args(self, title: Optional[str], output: Optional[str]):
@@ -102,9 +123,12 @@ class BatchPlotArgs():
             output=output,
             xlim=self.xlim,
             ylim=self.ylim,
+            xticks=self.xticks,
+            yticks=self.yticks,
             xlabel=self.xlabel,
             ylabel=self.ylabel,
             silent=self.silent,
+            remove_border=self.remove_border,
             dpi=self.dpi
         )
 
@@ -150,6 +174,18 @@ class PlotParser(argparse.ArgumentParser):
             type=float
         )
         self.add_argument(
+            '--xticks',
+            nargs='*',
+            type=float,
+            help='Custom x-tick positions (space separated). Use empty to remove all x-ticks.'
+        )
+        self.add_argument(
+            '--yticks',
+            nargs='*',
+            type=float,
+            help='Custom y-tick positions (space separated). Use empty to remove all y-ticks.'
+        )
+        self.add_argument(
             '--xlabel',
             help='label for the x axis',
             type=str
@@ -165,6 +201,11 @@ class PlotParser(argparse.ArgumentParser):
             action='store_true'
         )
         self.add_argument(
+            '--remove-border',
+            help='remove border of the figure',
+            action='store_true'
+        )
+        self.add_argument(
             '--dpi',
             help='DPI (dots per inch) for saved plots',
             type=int,
@@ -173,7 +214,19 @@ class PlotParser(argparse.ArgumentParser):
         return None
 
     def dump_plot_args(self, args):
-        return PlotArgs(args.title, args.output, args.xlim, args.ylim, args.xlabel, args.ylabel, args.silent, args.dpi)
+        return PlotArgs(
+            title=args.title,
+            output=args.output,
+            xlim=args.xlim,
+            ylim=args.ylim,
+            xticks=args.xticks,
+            yticks=args.yticks,
+            xlabel=args.xlabel,
+            ylabel=args.ylabel,
+            silent=args.silent,
+            remove_border=args.remove_border,
+            dpi=args.dpi
+        )
 
 class LinePlotParser(PlotParser):
     def __init__(self, *args, **kwargs):
@@ -195,7 +248,10 @@ class LinePlotParser(PlotParser):
         return None
 
     def dump_line_plot_args(self, args):
-        return LinePlotArgs(args.window_size, args.downsample)
+        return LinePlotArgs(
+            window_size=args.window_size,
+            downsample=args.downsample
+        )
 
 class BatchPlotParser(argparse.ArgumentParser):
     def __init__(self, *args, **kwargs):
@@ -215,6 +271,18 @@ class BatchPlotParser(argparse.ArgumentParser):
             type=float
         )
         self.add_argument(
+            '--xticks',
+            nargs='*',
+            type=float,
+            help='Custom x-tick positions (space separated). Use empty to remove all x-ticks.'
+        )
+        self.add_argument(
+            '--yticks',
+            nargs='*',
+            type=float,
+            help='Custom y-tick positions (space separated). Use empty to remove all y-ticks.'
+        )
+        self.add_argument(
             '--xlabel',
             help='label for x axes',
             type=str
@@ -230,6 +298,11 @@ class BatchPlotParser(argparse.ArgumentParser):
             action='store_true'
         )
         self.add_argument(
+            '--remove-border',
+            help='remove border of the figure',
+            action='store_true'
+        )
+        self.add_argument(
             '--dpi',
             help='DPI (dots per inch) for saved plots',
             type=int,
@@ -238,7 +311,17 @@ class BatchPlotParser(argparse.ArgumentParser):
         return None
 
     def dump_batch_plot_args(self, args):
-        return BatchPlotArgs(args.xlim, args.ylim, args.xlabel, args.ylabel, args.silent, args.dpi)
+        return BatchPlotArgs(
+            xlim=args.xlim,
+            ylim=args.ylim,
+            xticks=args.xticks,
+            yticks=args.yticks,
+            xlabel=args.xlabel,
+            ylabel=args.ylabel,
+            silent=args.silent,
+            remove_border=args.remove_border,
+            dpi=args.dpi
+        )
 
 class BatchLinePlotParser(BatchPlotParser):
     def __init__(self, *args, **kwargs):
