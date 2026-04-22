@@ -273,8 +273,8 @@ def add_trajectory(
     ):
     # Cut down xs and ys according to num steps
     if num_steps is not None:
-        xs = xs[0:num_steps]
-        ys = ys[0:num_steps]
+        xs = xs[0:num_steps+1]
+        ys = ys[0:num_steps+1]
 
     # Plot the trajectory "trace" dots
     ax.plot(xs, ys, linestyle='None', color=color, marker='o', markersize=0.5, alpha=0.75)
@@ -448,7 +448,7 @@ def generate_joint_trajectory_plot(
     ):
     """Generate plot of the joint trajectory specified in joint_traj_dir"""
 
-    fig, ax = plt.subplots(1,1)
+    fig, ax = plot_args.init_figure()
     if not no_grid:
         ax.grid(zorder=0)
         ax.set_axisbelow(True)
@@ -588,7 +588,7 @@ def generate_learning_curve_plot(
     ):
     """Generate plot of the learning curve specified in fitness_dir"""
 
-    fig, ax = plt.subplots(1,1)
+    fig, ax = plot_args.init_figure()
 
     # Get the fitnesses
     df = pd.read_csv(fitness_dir)
@@ -726,7 +726,7 @@ def generate_stat_learning_curve_plot(
     ):
     """Generate plot of statistics of learning given the parent directoy of trials"""
 
-    fig, ax = plt.subplots(1,1)
+    fig, ax = plot_args.init_figure()
 
     gens = add_stat_learning_curve(ax, individual_trials, csv_name, trials_dir, label=trials_dir.name, line_plot_args=line_plot_args)
 
@@ -901,7 +901,7 @@ def generate_comparison_plot(
     experiment_dir is parent of parent of trial directories
     """
     # print(experiment_dir)
-    fig, ax = plt.subplots(1,1)
+    fig, ax = plot_args.init_figure()
 
     # Set background color and grid style
     ax.set_facecolor('#e6e6e6')
@@ -1202,7 +1202,7 @@ def generate_config_plot(
     config = load_config(config_dir)
 
     # Set up figure
-    fig, ax = plt.subplots(1,1)
+    fig, ax = plot_args.init_figure()
 
     # plot rovers
     rover_colors = get_rover_colors(individual_colors)

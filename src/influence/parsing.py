@@ -31,6 +31,8 @@ class PlotArgs():
             yticks: Optional[List[float]]=None,
             xlabel: Optional[str]=None,
             ylabel: Optional[str]=None,
+            figsize: Optional[List[float]]=None,
+            axes_position: Optional[List[float]]=None,
             silent: bool=False,
             remove_border: bool=False,
             dpi: Optional[int]=None
@@ -46,9 +48,14 @@ class PlotArgs():
         self.yticks = yticks
         self.xlabel = xlabel
         self.ylabel = ylabel
+        self.figsize = figsize
+        self.axes_position = axes_position
         self.silent = silent
         self.remove_border = remove_border
         self.dpi = dpi
+
+    def init_figure(self, nrows:int=1, ncols:int=1):
+        return plt.subplots(nrows, ncols, figsize=self.figsize)
 
     def apply(self, ax: Axes):
         if self.title is not None:
@@ -65,6 +72,8 @@ class PlotArgs():
             ax.set_xlabel(self.xlabel)
         if self.ylabel is not None:
             ax.set_ylabel(self.ylabel)
+        if self.axes_position is not None:
+            ax.set_position(self.axes_position)
         if self.remove_border:
             ax.spines['top'].set_visible(False)
             ax.spines['right'].set_visible(False)
@@ -196,6 +205,20 @@ class PlotParser(argparse.ArgumentParser):
             type=str
         )
         self.add_argument(
+            '--figsize',
+            nargs=2,
+            type=float,
+            metavar=('WIDTH', 'HEIGHT'),
+            help='Figure size in inches: width height'
+        )
+        self.add_argument(
+            '--axes-position',
+            nargs=4,
+            type=float,
+            metavar=('LEFT', 'BOTTOM', 'WIDTH', 'HEIGHT'),
+            help='Axes position as fractions of figure: left bottom width height (all between 0 and 1)'
+        )
+        self.add_argument(
             '-s', '--silent',
             help='run silently without showing the plot',
             action='store_true'
@@ -223,6 +246,8 @@ class PlotParser(argparse.ArgumentParser):
             yticks=args.yticks,
             xlabel=args.xlabel,
             ylabel=args.ylabel,
+            figsize=args.figsize,
+            axes_position=args.axes_position,
             silent=args.silent,
             remove_border=args.remove_border,
             dpi=args.dpi
@@ -291,6 +316,20 @@ class BatchPlotParser(argparse.ArgumentParser):
             '--ylabel',
             help='label for the y axes',
             type=str
+        )
+        self.add_argument(
+            '--figsize',
+            nargs=2,
+            type=float,
+            metavar=('WIDTH', 'HEIGHT'),
+            help='Figure size in inches: width height'
+        )
+        self.add_argument(
+            '--axes-position',
+            nargs=4,
+            type=float,
+            metavar=('LEFT', 'BOTTOM', 'WIDTH', 'HEIGHT'),
+            help='Axes position as fractions of figure: left bottom width height (all between 0 and 1)'
         )
         self.add_argument(
             '-s', '--silent',
