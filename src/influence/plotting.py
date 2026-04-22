@@ -228,7 +228,8 @@ def plot_poi(ax, poi_config, x, y, color, radius_shading):
     center_circle = plt.Circle(
         xy = (x, y),
         radius = min(1.0, poi_config['capture_radius']),
-        color=color,
+        facecolor=color,
+        edgecolor='none',
         fill=True,
         alpha=1.0
         )
@@ -237,7 +238,8 @@ def plot_poi(ax, poi_config, x, y, color, radius_shading):
         outer_circle = plt.Circle(
             xy = (x, y),
             radius = poi_config['capture_radius'],
-            color=color,
+            facecolor=color,
+            edgecolor='none',
             fill=True,
             alpha=0.2
             )
@@ -263,6 +265,7 @@ def add_trajectory(
         ys: np.ndarray,
         color: tuple,
         use_image: bool,
+        influence_shading: bool,
         agent_type: AgentType,
         observation_radius: Optional[float],
         bounds: Optional[List[Optional[dict]]],
@@ -274,8 +277,7 @@ def add_trajectory(
         ys = ys[0:num_steps]
 
     # Plot the trajectory "trace" dots
-    # ax.plot(xs, ys, ':', lw=2, color=color)
-    ax.plot(xs, ys, linestyle='None', color=color, marker='o', markersize=0.5)
+    ax.plot(xs, ys, linestyle='None', color=color, marker='o', markersize=0.5, alpha=0.75)
 
     # Place the marker / image at the final position
     x_final = xs[-1]
@@ -285,9 +287,23 @@ def add_trajectory(
         if agent_type == AgentType.ROVER:
             image_path = ROVER_IMAGE
             orig_color = np.array([162, 197, 202, 255]) # RGBA
+            # Get last two positions for heading calculation
+            if len(xs) >= 2:
+                x_prev, y_prev = xs[-2], ys[-2]
+            else:
+                x_prev, y_prev = x_final, y_final
+            # Compute angle in degrees (0 = right, 90 = up, etc.)
+            dx = x_final - x_prev
+            dy = y_final - y_prev
+            if dx == 0 and dy == 0:
+                rotation = 0
+            else:
+                angle_rad = np.arctan2(dy, dx)
+                rotation = np.degrees(angle_rad)
         else:
             image_path = UAV_IMAGE
             orig_color = np.array([114, 38, 115, 255]) # RGBA
+            rotation = 0
 
         # Grab the appropriate image
         img = Image.open(str(image_path))
@@ -300,21 +316,6 @@ def add_trajectory(
         img_arr[mask] = target_color
         img = Image.fromarray(img_arr)
 
-        # Get last two positions for heading calculation
-        if len(xs) >= 2:
-            x_prev, y_prev = xs[-2], ys[-2]
-        else:
-            x_prev, y_prev = x_final, y_final
-
-        # Compute angle in degrees (0 = right, 90 = up, etc.)
-        dx = x_final - x_prev
-        dy = y_final - y_prev
-        if dx == 0 and dy == 0:
-            rotation = 0
-        else:
-            angle_rad = np.arctan2(dy, dx)
-            rotation = np.degrees(angle_rad)
-
         # Rotate PIL image according to heading. Convert to np array.
         if rotation != 0:
             img = img.rotate(rotation, resample=Image.BICUBIC, expand=True)
@@ -325,6 +326,12 @@ def add_trajectory(
         imagebox = OffsetImage(img, zoom=zoom)
         ab = AnnotationBbox(imagebox, (x_final, y_final), frameon=False)
         ax.add_artist(ab)
+    else:
+        if agent_type == AgentType.ROVER:
+            marker_type = 's'
+        else:
+            marker_type = 'x'
+        ax.plot(x_final, y_final, marker_type, ms=6, color=color)
 
     if observation_radius is not None:
         observation_circle = plt.Circle(
@@ -347,10 +354,22 @@ def add_trajectory(
             height=high_y-low_y,
             color=color,
             fill=False,
-            linewidth=2,
+            linewidth=1,
             linestyle=':'
         )
         ax.add_patch(bounds_rect)
+
+    if influence_shading and agent_type == AgentType.ROVER:
+        influence_circle = plt.Circle(
+            xy = (x_final, y_final),
+            radius = 5.0,
+            facecolor= color,
+            fill=True,
+            alpha=0.25,
+            linewidth=0,
+            edgecolor='none'
+        )
+        ax.add_patch(influence_circle)
 
 def add_trajectories(
         ax: Axes,
@@ -359,6 +378,7 @@ def add_trajectories(
         num_uavs: int,
         individual_colors: bool,
         use_image: bool,
+        influence_shading: bool,
         rover_observation_radii: Optional[List[float]],
         uav_observation_radii: Optional[List[float]],
         rover_bounds_list: Optional[List[Optional[dict]]],
@@ -384,6 +404,7 @@ def add_trajectories(
             ys=ys,
             color=color,
             use_image=use_image,
+            influence_shading=influence_shading,
             agent_type=AgentType.ROVER,
             observation_radius=observation_radius,
             bounds=bounds,
@@ -405,6 +426,7 @@ def add_trajectories(
             ys=ys,
             color=color,
             use_image=use_image,
+            influence_shading=influence_shading,
             agent_type=AgentType.UAV,
             observation_radius=observation_radius,
             bounds=bounds,
@@ -415,6 +437,7 @@ def generate_joint_trajectory_plot(
         joint_traj_dir: Path,
         num_steps: Optional[int],
         individual_colors: bool,
+        use_image: bool,
         no_shading: bool,
         no_grid: bool,
         influence_shading: bool,
@@ -489,7 +512,8 @@ def generate_joint_trajectory_plot(
         num_rovers=num_rovers,
         num_uavs=num_uavs,
         individual_colors=individual_colors,
-        use_image=True,
+        use_image=use_image,
+        influence_shading=influence_shading,
         rover_observation_radii=rover_observation_radii,
         uav_observation_radii=uav_observation_radii,
         rover_bounds_list=all_rover_bounds,
@@ -500,7 +524,7 @@ def generate_joint_trajectory_plot(
     for i, poi_config in enumerate(config['env']['pois']['rover_pois']):
         plot_poi(ax, poi_config, x=df['rover_poi_'+str(i)+'_x'][0], y=df['rover_poi_'+str(i)+'_y'][0], color='tab:green', radius_shading=not no_shading)
     for i, poi_config in enumerate(config['env']['pois']['hidden_pois']):
-        plot_poi(ax, poi_config, x=df['hidden_poi_'+str(i)+'_x'][0], y=df['hidden_poi_'+str(i)+'_y'][0], color='tab:cyan', radius_shading=not no_shading)
+        plot_poi(ax, poi_config, x=df['hidden_poi_'+str(i)+'_x'][0], y=df['hidden_poi_'+str(i)+'_y'][0], color='tab:green', radius_shading=not no_shading)
 
     x_bound, y_bound = config['env']['map_size']
 
@@ -516,6 +540,7 @@ def plot_joint_trajectory(
         joint_traj_dir: Path,
         num_steps: Optional[int],
         individual_colors: bool,
+        use_image: bool,
         no_poi_shading: bool,
         no_grid: bool,
         influence_shading: bool,
@@ -528,6 +553,7 @@ def plot_joint_trajectory(
         joint_traj_dir,
         num_steps,
         individual_colors,
+        use_image,
         no_poi_shading,
         no_grid,
         influence_shading,
@@ -1061,6 +1087,7 @@ def generate_joint_trajectory_tree_plots(
         out_dir: Optional[Path] = None,
         num_steps: Optional[int] = None,
         individual_colors: bool = False,
+        use_image: bool = False,
         no_shading: bool = False,
         no_grid: bool = False,
         influence_shading: bool = False,
@@ -1102,6 +1129,7 @@ def generate_joint_trajectory_tree_plots(
             joint_traj_dir=jt_dir,
             num_steps=num_steps,
             individual_colors=individual_colors,
+            use_image=use_image,
             no_poi_shading=no_shading,
             no_grid=no_grid,
             influence_shading=influence_shading,
@@ -1119,6 +1147,7 @@ def plot_joint_trajectory_tree(
         out_dir: Optional[Path] = None,
         num_steps: Optional[int] = None,
         individual_colors: bool = False,
+        use_image: bool = False,
         no_poi_shading: bool = False,
         no_grid: bool = False,
         influence_shading: bool = False,
@@ -1133,6 +1162,7 @@ def plot_joint_trajectory_tree(
         out_dir,
         num_steps,
         individual_colors,
+        use_image,
         no_poi_shading,
         no_grid,
         influence_shading,

@@ -35,6 +35,11 @@ if __name__ == '__main__':
         action='store_true'
     )
     parser.add_argument(
+        '--use-image',
+        help='plot image for each agent instead of a marker',
+        action='store_true'
+    )
+    parser.add_argument(
         '--no-poi-shading',
         help='turn off shading for poi observation radii',
         action='store_true'
@@ -83,6 +88,7 @@ if __name__ == '__main__':
         out_dir,
         args.num_steps,
         args.individual_colors,
+        args.use_image,
         args.no_poi_shading,
         args.no_grid,
         args.influence_shading,
