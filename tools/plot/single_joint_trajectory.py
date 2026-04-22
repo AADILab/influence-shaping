@@ -27,6 +27,11 @@ if __name__ == '__main__':
         action='store_true'
     )
     parser.add_argument(
+        '--use-image',
+        help='plot image for each agent instead of a marker',
+        action='store_true'
+    )
+    parser.add_argument(
         '--no-poi-shading',
         help='turn off shading for poi observation radii',
         action='store_true'
@@ -63,14 +68,15 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     plot_joint_trajectory(
-        Path(args.joint_traj_dir),
-        args.num_steps,
-        args.individual_colors,
-        args.no_poi_shading,
-        args.no_grid,
-        args.influence_shading,
-        args.uav_observation_radius,
-        args.rover_observation_radius,
-        args.include_bounds,
-        parser.dump_plot_args(args)
+        joint_traj_dir=Path(args.joint_traj_dir),
+        num_steps=args.num_steps,
+        individual_colors=args.individual_colors,
+        use_image=args.use_image,
+        no_poi_shading=args.no_poi_shading,
+        no_grid=args.no_grid,
+        influence_shading=args.influence_shading,
+        uav_observation_radius=args.uav_observation_radius,
+        rover_observation_radius=args.rover_observation_radius,
+        include_bounds=args.include_bounds,
+        plot_args=parser.dump_plot_args(args)
     )

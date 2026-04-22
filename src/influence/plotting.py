@@ -6,10 +6,8 @@ import pandas as pd
 from pathlib import Path
 import matplotlib.pyplot as plt
 from matplotlib.axes import Axes
-import matplotlib.image as mpimg
 from matplotlib.offsetbox import OffsetImage, AnnotationBbox
 import numpy as np
-from pprint import pprint
 from PIL import Image
 
 from influence.config import load_config
