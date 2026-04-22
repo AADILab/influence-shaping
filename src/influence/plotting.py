@@ -433,7 +433,8 @@ def add_trajectories(
             num_steps=num_steps
         )
 
-def generate_joint_trajectory_plot(
+def plot_joint_trajectory_on_ax(
+        ax,
         joint_traj_dir: Path,
         num_steps: Optional[int],
         individual_colors: bool,
@@ -446,9 +447,6 @@ def generate_joint_trajectory_plot(
         include_bounds: bool,
         plot_args: PlotArgs
     ):
-    """Generate plot of the joint trajectory specified in joint_traj_dir"""
-
-    fig, ax = plot_args.init_figure()
     if not no_grid:
         ax.grid(zorder=0)
         ax.set_axisbelow(True)
@@ -533,6 +531,38 @@ def generate_joint_trajectory_plot(
     ax.set_aspect('equal')
 
     plot_args.apply(ax)
+
+
+def generate_joint_trajectory_plot(
+        joint_traj_dir: Path,
+        num_steps: Optional[int],
+        individual_colors: bool,
+        use_image: bool,
+        no_shading: bool,
+        no_grid: bool,
+        influence_shading: bool,
+        uav_observation_radius: bool,
+        rover_observation_radius: bool,
+        include_bounds: bool,
+        plot_args: PlotArgs
+    ):
+    """Generate plot of the joint trajectory specified in joint_traj_dir"""
+
+    fig, ax = plot_args.init_figure()
+    plot_joint_trajectory_on_ax(
+        ax,
+        joint_traj_dir=joint_traj_dir,
+        num_steps=num_steps,
+        individual_colors=individual_colors,
+        use_image=use_image,
+        no_shading=no_shading,
+        no_grid=no_grid,
+        influence_shading=influence_shading,
+        uav_observation_radius=uav_observation_radius,
+        rover_observation_radius=rover_observation_radius,
+        include_bounds=include_bounds,
+        plot_args=plot_args
+    )
 
     return fig
 
