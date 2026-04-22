@@ -1,4 +1,5 @@
 from typing import List, Optional, Union, Tuple
+from enum import Enum
 import os
 
 import pandas as pd
@@ -13,6 +14,10 @@ from PIL import Image
 
 from influence.config import load_config
 from influence.parsing import PlotArgs, LinePlotArgs, BatchPlotArgs, BatchLinePlotArgs
+
+class AgentType(Enum):
+    ROVER = 0
+    UAV = 1
 
 # Configure matplotlib to use LaTeX fonts
 # and nice text sizes
@@ -36,7 +41,7 @@ MODULE_DIR = Path(__file__).parent
 # Path to the assets directory (assuming it's at the repo root)
 ASSETS_DIR = MODULE_DIR.parent.parent / "assets"
 
-DRONE_IMAGE = ASSETS_DIR / "drone.png"
+UAV_IMAGE = ASSETS_DIR / "drone.png"
 ROVER_IMAGE = ASSETS_DIR / "rover.png"
 
 COMPARISON_NAMES = [
@@ -242,64 +247,64 @@ def get_rover_colors(individual_colors: bool):
     if individual_colors:
         rover_colors = plt.cm.Set1.colors[:1]+plt.cm.Set1.colors[3:]
     else:
-        rover_colors = [(123/255, 170/255, 210/255)]
+        rover_colors = [(162/255, 197/255, 202/255)]
     return rover_colors
 
 def get_uav_colors(individual_colors: bool):
     if individual_colors:
         uav_colors = plt.cm.Dark2.colors[1:]
     else:
-        uav_colors = [(189/255,112/255,208/255)]
+        uav_colors = [(114/255, 38/255, 115/255)]
     return uav_colors
 
-def add_rover_trajectories(
+def add_trajectory(
         ax: Axes,
-        df: pd.DataFrame,
-        num_rovers: int,
-        individual_colors: bool,
+        xs: np.ndarray,
+        ys: np.ndarray,
+        color: tuple,
         use_image: bool,
-        rover_observation_radii: Optional[List[float]],
-        all_rover_bounds: Optional[List[Optional[dict]]],
+        agent_type: AgentType,
+        observation_radius: Optional[float],
+        bounds: Optional[List[Optional[dict]]],
         num_steps: Optional[int]
     ):
-    rover_colors = get_rover_colors(individual_colors)
-    for i in range(num_rovers):
-        color = rover_colors[i%len(rover_colors)]
-        xs = df['rover_'+str(i)+'_x']
-        ys = df['rover_'+str(i)+'_y']
-        if num_steps is not None:
-            xs = xs.iloc[0:num_steps]
-            ys = ys.iloc[0:num_steps]
-        final_x = xs.iloc[-1]
-        final_y = ys.iloc[-1]
-        ax.plot(xs, ys, ':', lw=2, color=color)
-        # ax.plot(final_x, final_y, 's', ms=8, color=color)
+    # Cut down xs and ys according to num steps
+    if num_steps is not None:
+        xs = xs[0:num_steps]
+        ys = ys[0:num_steps]
 
-        # Grab the rover image
-        rover_img = Image.open(str(ROVER_IMAGE))
-        img_arr = np.array(rover_img)
+    # Plot the trajectory "trace" dots
+    # ax.plot(xs, ys, ':', lw=2, color=color)
+    ax.plot(xs, ys, linestyle='None', color=color, marker='o', markersize=0.5)
 
-        # Recolor the rover
-        orig_color = np.array([162, 197, 202, 255])  # RGBA
-        # orig_color = np.array([0, 0, 0, 255])  # RGBA
-        target_rgb = np.array([int(255*c) if c <= 1 else int(c) for c in color])  # Handles both 0-1 and 0-255
-        target_color = np.concatenate([target_rgb, [255]])  # RGBA
-
-        # Create mask for the original color
-        mask = np.all(img_arr[:, :, :3] == orig_color[:3], axis=-1)
-
-        # Replace color
-        img_arr[mask] = target_color
-
-        rover_img = Image.fromarray(img_arr)
-
-        # Get the last two positions for heading calculation
-        if len(xs) >= 2:
-            x_prev, y_prev = xs.iloc[-2], ys.iloc[-2]
-            x_final, y_final = xs.iloc[-1], ys.iloc[-1]
+    # Place the marker / image at the final position
+    x_final = xs[-1]
+    y_final = ys[-1]
+    if use_image:
+        # Set agent specific parameters
+        if agent_type == AgentType.ROVER:
+            image_path = ROVER_IMAGE
+            orig_color = np.array([162, 197, 202, 255]) # RGBA
         else:
-            x_prev, y_prev = xs.iloc[-1], ys.iloc[-1]
-            x_final, y_final = xs.iloc[-1], ys.iloc[-1]
+            image_path = UAV_IMAGE
+            orig_color = np.array([114, 38, 115, 255]) # RGBA
+
+        # Grab the appropriate image
+        img = Image.open(str(image_path))
+        img_arr = np.array(img)
+
+        # Swap the color. Convert back to PIL Image
+        target_rgb = np.array([int(255*c) if c <= 1 else int(c) for c in color])
+        target_color = np.array([*target_rgb, 255]) # RGBA
+        mask = np.all(img_arr[:, :, :3] == orig_color[:3], axis=-1)
+        img_arr[mask] = target_color
+        img = Image.fromarray(img_arr)
+
+        # Get last two positions for heading calculation
+        if len(xs) >= 2:
+            x_prev, y_prev = xs[-2], ys[-2]
+        else:
+            x_prev, y_prev = x_final, y_final
 
         # Compute angle in degrees (0 = right, 90 = up, etc.)
         dx = x_final - x_prev
@@ -310,101 +315,101 @@ def add_rover_trajectories(
             angle_rad = np.arctan2(dy, dx)
             rotation = np.degrees(angle_rad)
 
-        zoom = 0.01
-        # Rotate the image according to what we need
+        # Rotate PIL image according to heading. Convert to np array.
         if rotation != 0:
-            rover_img = rover_img.rotate(rotation, resample=Image.BICUBIC, expand=True)
-        img = np.array(rover_img)
+            img = img.rotate(rotation, resample=Image.BICUBIC, expand=True)
+        img = np.array(img)
 
+        # Add the image to the ax object
+        zoom = 0.01
         imagebox = OffsetImage(img, zoom=zoom)
-        ab = AnnotationBbox(imagebox, (final_x, final_y), frameon=False)
+        ab = AnnotationBbox(imagebox, (x_final, y_final), frameon=False)
         ax.add_artist(ab)
-        if rover_observation_radii is not None:
-            obs_rad = rover_observation_radii[i]
-            observation_circle = plt.Circle(
-                xy = (final_x, final_y),
-                radius = obs_rad,
-                color=color,
-                fill=False,
-                linewidth=1
-            )
-            ax.add_patch(observation_circle)
-        if all_rover_bounds is not None:
-            rover_bounds = all_rover_bounds[i]
-            if rover_bounds is not None:
-                low_x = rover_bounds['low_x']+0.05
-                high_x = rover_bounds['high_x']-0.05
-                low_y = rover_bounds['low_y']+0.05
-                high_y = rover_bounds['high_y']-0.05
-                bounds_rect = plt.Rectangle(
-                    xy=(low_x, low_y),
-                    width=high_x - low_x,
-                    height=high_y - low_y,
-                    color=color,
-                    fill=False,
-                    linewidth=2,
-                    linestyle='--'
-                )
-                ax.add_patch(bounds_rect)
 
-def add_uav_trajectories(
+    if observation_radius is not None:
+        observation_circle = plt.Circle(
+            xy=(x_final,y_final),
+            radius=observation_radius,
+            color=color,
+            fill=False,
+            linewidth=1
+        )
+        ax.add_patch(observation_circle)
+
+    if bounds is not None:
+        low_x = bounds['low_x']
+        high_x = bounds['high_x']
+        low_y = bounds['low_y']
+        high_y = bounds['high_y']
+        bounds_rect = plt.Rectangle(
+            xy=(low_x,low_y),
+            width=high_x-low_x,
+            height=high_y-low_y,
+            color=color,
+            fill=False,
+            linewidth=2,
+            linestyle=':'
+        )
+        ax.add_patch(bounds_rect)
+
+def add_trajectories(
         ax: Axes,
         df: pd.DataFrame,
+        num_rovers: int,
         num_uavs: int,
         individual_colors: bool,
-        influence_shading: bool,
+        use_image: bool,
+        rover_observation_radii: Optional[List[float]],
         uav_observation_radii: Optional[List[float]],
-        all_uav_bounds: Optional[List[Optional[dict]]],
-        num_steps: int
+        rover_bounds_list: Optional[List[Optional[dict]]],
+        uav_bounds_list: Optional[List[Optional[dict]]],
+        num_steps: Optional[int]
     ):
+    # Setting defaults
+    bounds = None
+    observation_radius = None
+    # Add the rover trajectories
+    rover_colors = get_rover_colors(individual_colors)
+    for i in range(num_rovers):
+        color = rover_colors[i%len(rover_colors)]
+        xs = np.array(df['rover_'+str(i)+'_x'])
+        ys = np.array(df['rover_'+str(i)+'_y'])
+        if rover_observation_radii is not None:
+            observation_radius = rover_observation_radii[i]
+        if rover_bounds_list is not None:
+            bounds = rover_bounds_list[i]
+        add_trajectory(
+            ax=ax,
+            xs=xs,
+            ys=ys,
+            color=color,
+            use_image=use_image,
+            agent_type=AgentType.ROVER,
+            observation_radius=observation_radius,
+            bounds=bounds,
+            num_steps=num_steps
+        )
+    # Add the uav trajectories
     uav_colors = get_uav_colors(individual_colors)
     for i in range(num_uavs):
         color = uav_colors[i%len(uav_colors)]
-        xs = df['uav_'+str(i)+'_x']
-        ys = df['uav_'+str(i)+'_y']
-        if num_steps is not None:
-            xs = xs.iloc[0:num_steps]
-            ys = ys.iloc[0:num_steps]
-        final_x = xs.iloc[-1]
-        final_y = ys.iloc[-1]
-        ax.plot(xs, ys, ':', lw=2, color=color)
-        ax.plot(final_x, final_y, 'x', ms=8, color=color)
-        if influence_shading:
-            influence_circle = plt.Circle(
-                xy = (final_x, final_y),
-                radius = 5.0,
-                color = color,
-                fill=True,
-                alpha=0.1
-            )
-            ax.add_patch(influence_circle)
+        xs = np.array(df['uav_'+str(i)+'_x'])
+        ys = np.array(df['uav_'+str(i)+'_y'])
         if uav_observation_radii is not None:
-            obs_rad = uav_observation_radii[i]
-            observation_circle = plt.Circle(
-                xy = (final_x, final_y),
-                radius = obs_rad,
-                color=color,
-                fill=False,
-                linewidth=1
-            )
-            ax.add_patch(observation_circle)
-        if all_uav_bounds is not None:
-            uav_bounds = all_uav_bounds[i]
-            if uav_bounds is not None:
-                low_x = uav_bounds['low_x']+0.05
-                high_x = uav_bounds['high_x']-0.05
-                low_y = uav_bounds['low_y']+0.05
-                high_y = uav_bounds['high_y']-0.05
-                bounds_rect = plt.Rectangle(
-                    xy=(low_x, low_y),
-                    width=high_x - low_x,
-                    height=high_y - low_y,
-                    color=color,
-                    fill=False,
-                    linewidth=2,
-                    linestyle='--'
-                )
-                ax.add_patch(bounds_rect)
+            observation_radius = uav_observation_radii[i]
+        if uav_bounds_list is not None:
+            bounds = uav_bounds_list[i]
+        add_trajectory(
+            ax=ax,
+            xs=xs,
+            ys=ys,
+            color=color,
+            use_image=use_image,
+            agent_type=AgentType.UAV,
+            observation_radius=observation_radius,
+            bounds=bounds,
+            num_steps=num_steps
+        )
 
 def generate_joint_trajectory_plot(
         joint_traj_dir: Path,
@@ -478,17 +483,20 @@ def generate_joint_trajectory_plot(
             else:
                 all_uav_bounds.append(None)
 
-    add_rover_trajectories(
-        ax,
-        df,
-        num_rovers,
-        individual_colors,
-        True,
-        rover_observation_radii,
-        all_rover_bounds,
-        num_steps
+    add_trajectories(
+        ax=ax,
+        df=df,
+        num_rovers=num_rovers,
+        num_uavs=num_uavs,
+        individual_colors=individual_colors,
+        use_image=True,
+        rover_observation_radii=rover_observation_radii,
+        uav_observation_radii=uav_observation_radii,
+        rover_bounds_list=all_rover_bounds,
+        uav_bounds_list=all_uav_bounds,
+        num_steps=num_steps
     )
-    add_uav_trajectories(ax, df, num_uavs, individual_colors, influence_shading, uav_observation_radii, all_uav_bounds, num_steps)
+
     for i, poi_config in enumerate(config['env']['pois']['rover_pois']):
         plot_poi(ax, poi_config, x=df['rover_poi_'+str(i)+'_x'][0], y=df['rover_poi_'+str(i)+'_y'][0], color='tab:green', radius_shading=not no_shading)
     for i, poi_config in enumerate(config['env']['pois']['hidden_pois']):
