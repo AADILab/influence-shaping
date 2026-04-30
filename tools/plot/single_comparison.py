@@ -26,7 +26,7 @@ if __name__ == '__main__':
     parser.add_argument(
         '--legend-order',
         type=str,
-        choices=['acm-telo'],
+        choices=['acm-telo', 'jaamas'],
         default=None,
         help='order the legend (default: no reordering)'
     )

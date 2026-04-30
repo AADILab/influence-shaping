@@ -44,19 +44,6 @@ ASSETS_DIR = MODULE_DIR.parent.parent / "assets"
 UAV_IMAGE = ASSETS_DIR / "drone.png"
 ROVER_IMAGE = ASSETS_DIR / "rover.png"
 
-COMPARISON_NAMES = [
-    'Global',
-    'Difference',
-    'D-Indirect-Traj',
-    'D-Indirect-Timestep',
-    'D-Indirect-Timestep-Local',
-    'D-Indirect-Timestep-System',
-    'D-Indirect-Timestep-Difference',
-    'D-I-Sys-uavs-D-rovers',
-    'G-uavs-D-rovers',
-    'D-Indirect-Timestep-No-Archive',
-    'D-Indirect-Traj-No-Archive'
-]
 COMPARISON_COLORS = [
     'tab:blue',
     'tab:orange',
@@ -70,6 +57,7 @@ COMPARISON_COLORS = [
     'tab:purple',
     'tab:olive'
 ]
+
 COMPARISON_MARKER_MAP = {
     'tab:blue': 's',     # square
     'tab:orange': '^',   # triangle-up
@@ -82,9 +70,22 @@ COMPARISON_MARKER_MAP = {
     'tab:olive': 'd',    # thin diamond
     None: None           # no marker if we don't set the color
 }
+
 COMPARISON_COLORS_DICT = {
-    name: color for name, color in zip(COMPARISON_NAMES, COMPARISON_COLORS)
+    'Global': 'tab:blue',
+    'Difference': 'tab:orange',
+    'D-Indirect-Traj': 'tab:green',
+    'D-Indirect-Timestep': 'tab:red',
+    'D-Indirect-Timestep-Local': 'tab:purple',
+    'D-Indirect-Timestep-System': 'tab:brown',
+    'D-Indirect-Timestep-Difference': 'tab:pink',
+    'D-I-Sys-uavs-D-rovers': 'tab:gray',
+    'G-uavs-D-rovers': 'tab:olive',
+    'D-Indirect-Timestep-No-Archive': 'tab:purple',
+    'D-Indirect-Traj-No-Archive': 'tab:olive',
+    'D-Indirect-Window-N1-n0': 'tab:purple'
 }
+
 LEGEND_LOC_CHOICES = [
     'best',
     'upper right',
@@ -98,6 +99,7 @@ LEGEND_LOC_CHOICES = [
     'upper center',
     'center'
 ]
+
 DEFAULT_FITNESS_NAME = 'fitness.csv'
 
 def compute_markevery(marker_spacing: Union[int, float], num_pts: int) -> int:
@@ -141,16 +143,16 @@ def sort_fitness_path_list(input_list: List[Path]):
     fit_list = []
     nonfit_list = []
     for path in input_list:
-        if path.name in COMPARISON_NAMES:
+        if path.name in COMPARISON_COLORS_DICT:
             fit_list.append(path)
         else:
             nonfit_list.append(path)
 
-    # Now sort the fitness names so they match the COMPARISON_NAMES list
+    # Now sort the fitness names so they match the COMPARISON_COLORS_DICT list
     # NOTE: This assumes a maximum 1:1 correspondence between fitness shaping method names and directories
     # If for whatever reason this assumption is wrong later, there could be issues.
     sorted_fit_list = []
-    for name in COMPARISON_NAMES:
+    for name in COMPARISON_COLORS_DICT:
         for path in fit_list:
             if path.name == name:
                 sorted_fit_list.append(path)
@@ -846,6 +848,25 @@ def sort_legend(ax, legend_order):
             'Difference'
         ]
 
+    elif legend_order == 'jaamas':
+        # Define label name mapping
+        label_name_map = {
+            'D-Indirect-Timestep': r'Dynamic',
+            'D-Indirect-Traj': r'Static',
+            'Global': r'Global',
+            'Difference': r'Direct',
+            'D-Indirect-Window-N1-n0': r'Adaptive, N=1'
+        }
+
+        # Define desired order
+        desired_order = [
+            'D-Indirect-Window-N1-n0',
+            'D-Indirect-Traj',
+            'Global',
+            'D-Indirect-Timestep',
+            'Difference'
+        ]
+
     # Get handles and labels
     handles, labels = ax.get_legend_handles_labels()
 
@@ -898,12 +919,12 @@ def generate_comparison_plot(
     xlim = 0
     for i, trials_dir in enumerate(sorted_dirs):
         color=None
-        if use_fitness_colors and trials_dir.name in COMPARISON_NAMES:
+        if use_fitness_colors and trials_dir.name in COMPARISON_COLORS_DICT:
             # Set color based on fitness shaping method (optional)
             # Use extra colors for names that have not been reserved
             color=COMPARISON_COLORS_DICT[trials_dir.name]
         else:
-            color = COMPARISON_COLORS[(i+len(COMPARISON_NAMES))%len(COMPARISON_COLORS)]
+            color = COMPARISON_COLORS[(i+len(COMPARISON_COLORS_DICT))%len(COMPARISON_COLORS)]
 
         # Add the marker associated with this color (if there is one)
         # print(COMPARISON_MARKER_MAP, color)
