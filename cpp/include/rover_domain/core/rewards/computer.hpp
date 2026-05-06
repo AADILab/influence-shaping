@@ -354,94 +354,75 @@ class RewardComputer {
         return G - global_without_inds(counterfactual_rovers, m_pois, std::vector<int>{i});
     }
 
-    /* Create a complete influence array that ends agent i's influence on k only once another N_agents
-    have stopped influencing k. This function NEVER REMOVES influence, ONLY EXTENDS existing influence.
-    IE: If mulitple agent i's influence the same agent k throughout the episode, we do not remove
-    anyone's influence. We only fill in gaps wherever agent k was not influence by any agent i.
-    */
     std::vector<std::vector<std::vector<bool>>> create_coupled_influence_array(
         std::vector<std::vector<std::vector<bool>>> complete_influence_array,
         int N_agents
     ) const {
-        // Start w. number of timesteps in each path
         int t_final = m_rovers[0]->path().size();
 
-        // Make an empty coupled_complete_influence_array
-        // initialize this array with all zeros
         std::vector<std::vector<std::vector<bool>>> coupled_complete_influence_array(
             t_final, std::vector<std::vector<bool>>(
                 m_rovers.size(), std::vector<bool>(m_rovers.size(), 0)
             )
         );
 
-        // k represents the agent being influenced. ie: rovers
-        // influencer_ind represents the agent that is influencing, ie: uavs
         for (int k = 0; k < m_rovers.size(); ++k) {
             for (int influencer_ind = 0; influencer_ind < m_rovers.size(); ++influencer_ind) {
-                // Initialize variables for extending influence
                 int N_remaining_influencers = 0;
-                std::vector<int> other_influencers_already_stopped;
-                std::vector<int> previous_other_influencers;
+                std::vector<int> previous_other_influencers;     // agents that have started influencing j
+                std::vector<int> other_influencers_already_stopped; // agents already counted as stopped
                 std::vector<int> current_other_influencers;
+
                 for (int t = 0; t < t_final; ++t) {
                     if (complete_influence_array[t][influencer_ind][k]) {
-                        // Set influence as true
                         coupled_complete_influence_array[t][influencer_ind][k] = true;
-                        // Reset everything
                         N_remaining_influencers = N_agents;
-                        other_influencers_already_stopped = {};
                         previous_other_influencers = {};
+                        other_influencers_already_stopped = {};
                         current_other_influencers = {};
                     } else {
-                        // Figure out who else is influencing agent k
+                        // Build current set of other influencers (exclude influencer_ind and k)
                         current_other_influencers = {};
                         for (int i = 0; i < m_rovers.size(); ++i) {
-                            // Don't count yourself
-                            if (i != influencer_ind) {
-                                // Check complete influence array to figure out if i influenced k at t
+                            if (i != influencer_ind && i != k) {
                                 if (complete_influence_array[t][i][k]) {
                                     current_other_influencers.push_back(i);
                                 }
                             }
                         }
-                        // Now figure out if we need to subtract from remaining influencers
-                        for (int prev_idx : previous_other_influencers) {
-                            // Tell me if this previous idx is also present in current influencers
-                            bool prev_idx_in_current_influencers = (
-                                std::find(
-                                    current_other_influencers.begin(),
-                                    current_other_influencers.end(),
-                                    prev_idx
-                                ) != current_other_influencers.end()
+
+                        // Detect stops: agents that previously started but are now absent
+                        for (int prev : previous_other_influencers) {
+                            bool still_active = (
+                                std::find(current_other_influencers.begin(),
+                                        current_other_influencers.end(), prev)
+                                != current_other_influencers.end()
                             );
-                            bool prev_idx_NOT_in_current_influencers = !prev_idx_in_current_influencers;
-                            // Tell me if this previous idx has already stopped influencing before
-                            // ie: We don't care about it if it stops influencing multiple times
-                            bool prev_idx_already_stopped = (
-                                std::find(
-                                    other_influencers_already_stopped.begin(),
-                                    other_influencers_already_stopped.end(),
-                                    prev_idx
-                                ) != other_influencers_already_stopped.end()
+                            bool already_counted = (
+                                std::find(other_influencers_already_stopped.begin(),
+                                        other_influencers_already_stopped.end(), prev)
+                                != other_influencers_already_stopped.end()
                             );
-                            bool prev_idx_NOT_already_stopped = !prev_idx_already_stopped;
-                            // If this prev idx is NOT in current influencers, then it means this idx just stopped influencing k
-                            // AND if this prev idx has NOT been counted already, then we want to decrement our counter
-                            if (prev_idx_NOT_in_current_influencers && prev_idx_NOT_already_stopped) {
-                                // Decrease the counter
+                            if (!still_active && !already_counted) {
                                 N_remaining_influencers--;
-                                // Add prev idx to vector of influencers that we have already counted
-                                other_influencers_already_stopped.push_back(prev_idx);
+                                other_influencers_already_stopped.push_back(prev);
                             }
                         }
-                        // Now we set the influence bool based on the counter
-                        if (N_remaining_influencers > 0) {
-                            // Set influence to true if our counter is still greater than 0
-                            coupled_complete_influence_array[t][influencer_ind][k] = true;
-                        } else {
-                            // Otherwise, time to set influence to false
-                            coupled_complete_influence_array[t][influencer_ind][k] = false;
+
+                        // Accumulate new starters into previous_other_influencers
+                        for (int curr : current_other_influencers) {
+                            bool already_seen = (
+                                std::find(previous_other_influencers.begin(),
+                                        previous_other_influencers.end(), curr)
+                                != previous_other_influencers.end()
+                            );
+                            if (!already_seen) {
+                                previous_other_influencers.push_back(curr);
+                            }
                         }
+
+                        coupled_complete_influence_array[t][influencer_ind][k] =
+                            (N_remaining_influencers > 0);
                     }
                 }
             }
