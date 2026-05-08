@@ -1,0 +1,255 @@
+ccea:
+  evaluation:
+    multi_rollout:
+      num_rollouts: 1
+  mutation:
+    independent_probability: 0.5
+    mean: 0.0
+    std_deviation: 0.1
+  network:
+    hidden_layers:
+    - 15
+    rover_max_velocity: 1.0
+    uav_max_velocity: 1.0
+  num_generations: 50000
+  num_steps: 50
+  populations:
+    agent_population_size: 50
+  selection:
+    n_elites_binary_tournament:
+      n_individual_elites: 10
+      n_individual_elites_based_on_team_fitness: 0
+      n_team_elites: 10
+  team_formation:
+    type: softmax_teams
+  weight_initialization:
+    lower_bound: -0.5
+    upper_bound: 0.5
+experiment:
+  num_trials: 50
+processing:
+  num_threads: 15
+  use_multiprocessing: true
+data:
+  checkpoints:
+    delete_previous: true
+    frequency: 1
+    save: true
+  save_trajectories:
+    test:
+      num_gens_between_save: 250
+      switch: true
+    train:
+      num_gens_between_save: 100
+      switch: false
+debug:
+  random_seed:
+    increment_every_trial: true
+    set_seed: null
+  reward_equals_G: false
+ccea:
+  num_steps: 225
+env:
+  agents:
+    rovers:
+    - action:
+        type: dxdy
+      needs_uav_to_move: true
+      observation_radius: 5.0
+      policy:
+        type: network
+      position:
+        fixed:
+        - 5.0
+        - 5.0
+        spawn_rule: fixed
+      resolution: 90
+      reward_spec:
+        reward_type: Global
+      sensor:
+        accum_type: sum
+        type: RoverLidar
+    uavs:
+    - action:
+        type: dxdy
+      bounds:
+        high_x: 20
+        high_y: 20
+        low_x: 0
+        low_y: 0
+      observation_radius: 100.0
+      position:
+        fixed:
+        - 5
+        - 5.0
+        spawn_rule: fixed
+      resolution: 90
+      reward_spec:
+        reward_type: Global
+    - action:
+        type: dxdy
+      bounds:
+        high_x: 40
+        high_y: 20
+        low_x: 20
+        low_y: 0
+      observation_radius: 100.0
+      position:
+        fixed:
+        - 25
+        - 15.0
+        spawn_rule: fixed
+      resolution: 90
+      reward_spec:
+        reward_type: Global
+    - action:
+        type: dxdy
+      bounds:
+        high_x: 60
+        high_y: 20
+        low_x: 40
+        low_y: 0
+      observation_radius: 100.0
+      position:
+        fixed:
+        - 45
+        - 5.0
+        spawn_rule: fixed
+      resolution: 90
+      reward_spec:
+        reward_type: Global
+    - action:
+        type: dxdy
+      bounds:
+        high_x: 80
+        high_y: 20
+        low_x: 60
+        low_y: 0
+      observation_radius: 100.0
+      position:
+        fixed:
+        - 65
+        - 15.0
+        spawn_rule: fixed
+      resolution: 90
+      reward_spec:
+        reward_type: Global
+    - action:
+        type: dxdy
+      bounds:
+        high_x: 100
+        high_y: 20
+        low_x: 80
+        low_y: 0
+      observation_radius: 100.0
+      position:
+        fixed:
+        - 85
+        - 5.0
+        spawn_rule: fixed
+      resolution: 90
+      reward_spec:
+        reward_type: Global
+    - action:
+        type: dxdy
+      bounds:
+        high_x: 120
+        high_y: 20
+        low_x: 100
+        low_y: 0
+      observation_radius: 100.0
+      position:
+        fixed:
+        - 105
+        - 15.0
+        spawn_rule: fixed
+      resolution: 90
+      reward_spec:
+        reward_type: Global
+    - action:
+        type: dxdy
+      bounds:
+        high_x: 140
+        high_y: 20
+        low_x: 120
+        low_y: 0
+      observation_radius: 100.0
+      position:
+        fixed:
+        - 125
+        - 5.0
+        spawn_rule: fixed
+      resolution: 90
+      reward_spec:
+        reward_type: Global
+    - action:
+        type: dxdy
+      bounds:
+        high_x: 160
+        high_y: 20
+        low_x: 140
+        low_y: 0
+      observation_radius: 100.0
+      position:
+        fixed:
+        - 145
+        - 15.0
+        spawn_rule: fixed
+      resolution: 90
+      reward_spec:
+        reward_type: Global
+    - action:
+        type: dxdy
+      bounds:
+        high_x: 180
+        high_y: 20
+        low_x: 160
+        low_y: 0
+      observation_radius: 100.0
+      position:
+        fixed:
+        - 165
+        - 5.0
+        spawn_rule: fixed
+      resolution: 90
+      reward_spec:
+        reward_type: Global
+  map_size:
+  - 180
+  - 20
+  pois:
+    hidden_pois:
+    - capture_radius: 10.0
+      constraint: sequential
+      coupling: 1
+      dissapear_bool: true
+      observation_radius: 5.0
+      position:
+        fixed:
+        - 55
+        - 15.0
+        spawn_rule: fixed
+      value: 1.0
+    - capture_radius: 10.0
+      constraint: sequential
+      coupling: 1
+      dissapear_bool: true
+      observation_radius: 5.0
+      position:
+        fixed:
+        - 115
+        - 5.0
+        spawn_rule: fixed
+      value: 1.0
+    - capture_radius: 10.0
+      constraint: sequential
+      coupling: 1
+      dissapear_bool: true
+      observation_radius: 5.0
+      position:
+        fixed:
+        - 175
+        - 15.0
+        spawn_rule: fixed
+      value: 1.0
+    rover_pois: []
