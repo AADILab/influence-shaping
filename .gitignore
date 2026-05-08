@@ -33,8 +33,6 @@ build
 *.out
 *.app
 
-
-
 ## Python bindings
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -59,8 +57,6 @@ env.bak/
 venv.bak/
 .python-version
 
-
-
 ## Editors
 #emacs
 .projectile
@@ -76,7 +72,7 @@ thyme.cxxflags
 thyme.files
 thyme.includes
 
-# Random folders and files
+# Additional folders and files
 debugging/
 env_backup/
 prototyping/configs/trial_*
@@ -88,3 +84,5 @@ outfigs
 temp.sh
 **/trial_*
 tmp
+.DS_Store
+outvids/
