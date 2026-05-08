@@ -260,6 +260,24 @@ class RewardComputer {
         return counterfactual_rovers;
     }
 
+    std::vector<int> prep_local_static_influence(int i) const {
+        int t_final = m_rovers[0]->path().size();
+        std::vector<int> influence_set = {i};
+
+        if (m_rovers[i]->type() != AgentType::UAV) return influence_set;
+
+        for (int k = 0; k < (int)m_rovers.size(); ++k) {
+            if (m_rovers[k]->type() != AgentType::Rover) continue;
+            for (int t = 0; t < t_final; ++t) {
+                if (is_influencing(m_rovers[i], m_rovers[k], t)) {
+                    influence_set.push_back(k);
+                    break;
+                }
+            }
+        }
+        return influence_set;
+    }
+
     std::vector<std::vector<int>> prep_all_or_nothing_influence() const {
         // Each element contains the indicies of rovers (as in, nominal type "rover") influenced
         // by the agent in this index.
@@ -522,7 +540,11 @@ class RewardComputer {
                 reward = G - global_without_inds(m_rovers, m_pois, manual.manual);
             } else if (std::holds_alternative<IDStaticAutomatic>(static_mode)) {
                 const IDStaticAutomatic& automatic = std::get<IDStaticAutomatic>(static_mode);
-                reward = G - global_without_inds(m_rovers, m_pois, influence_sets[i]);
+                if (automatic.credit == IDStaticAutomatic::Credit::Local) {
+                    reward = G - global_without_inds(m_rovers, m_pois, prep_local_static_influence(i));
+                } else {
+                    reward = G - global_without_inds(m_rovers, m_pois, influence_sets[i]);
+                }
             } else {
                 throw std::runtime_error("Unhandled IDStatic variant");
             }
