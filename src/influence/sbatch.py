@@ -108,11 +108,10 @@ def extract_path_after_results(path: Path):
 def generate_bash_files(config_dirs: List[Path], out_root: Path, time: str, seperate_trials: bool, cnv: bool, _any):
     # Define the string you want to write
     nodelist = 'cn-v-[1-9],cn-t-1,cn-s-[1-5],cn-r-[1-4]'
-    if cnv:
-        nodelist ='cn-v-[1-9]'
+    partitions = 'preempt'
     common_sbatch_directives = [
         "#SBATCH -A kt-lab",
-        "#SBATCH --partition=share,preempt",
+        "#SBATCH --partition="+partitions,
         "#SBATCH -c 12",
         "#SBATCH --mem=16G",
         "#SBATCH --nodes=1",
