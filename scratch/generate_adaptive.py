@@ -34,11 +34,13 @@ def is_gap_space(idx: int, gap_size: int)->bool:
 def is_poi_space(idx: int, gap_size: int)->bool:
     return not is_gap_space(idx=idx, gap_size=gap_size)
 
-def generate_space(idx: int, gap_size: int) -> dict:
+def generate_space(idx: int, gap_size: int, lane_idx: int, num_lanes: int, share_workspaces: bool) -> dict:
     space_dict = {}
-    # start means this is the first space
-    # so place a rover
-    if idx==0:
+    # Lane offset for y coordinates
+    lane_offset = lane_idx * 20
+
+    # Place rover only in the first space of each lane
+    if idx == 0:
         rover = {
             'action': {
                 'type': 'dxdy'
@@ -51,7 +53,7 @@ def generate_space(idx: int, gap_size: int) -> dict:
             'position': {
                 'fixed': [
                     5.0,
-                    5.0
+                    5.0 + lane_offset
                 ],
                 'spawn_rule': 'fixed'
             },
@@ -69,13 +71,22 @@ def generate_space(idx: int, gap_size: int) -> dict:
     # Then place a uav based on parity and space
     # bounds based on the space number
     size = 20
-    low_x = idx*size
-    high_x = (idx+1)*size
-    pos_x = idx*size+5
+    low_x = idx * size
+    high_x = (idx + 1) * size
+    pos_x = idx * size + 5
     if is_odd(idx):
-        pos_y=15.0
+        pos_y = 15.0 + lane_offset
     else:
-        pos_y=5.0
+        pos_y = 5.0 + lane_offset
+
+    # Vertical bounds depend on share_workspaces flag
+    if share_workspaces:
+        low_y = 0
+        high_y = num_lanes * 20
+    else:
+        low_y = lane_offset
+        high_y = lane_offset + 20
+
     uav = {
         'action': {
             'type': 'dxdy'
@@ -83,8 +94,8 @@ def generate_space(idx: int, gap_size: int) -> dict:
         'bounds': {
             'high_x': high_x,
             'low_x': low_x,
-            'high_y': 20,
-            'low_y': 0
+            'high_y': high_y,
+            'low_y': low_y
         },
         'observation_radius': 100.0,
         'position': {
@@ -100,13 +111,14 @@ def generate_space(idx: int, gap_size: int) -> dict:
         }
     }
     space_dict['uavs'] = [uav]
-    # # Then check if we have a POI in this space
+
+    # Then check if we have a POI in this space
     if is_poi_space(idx=idx, gap_size=gap_size):
-        pos_x = idx*size+15
+        pos_x = idx * size + 15
         if is_odd(idx):
-            pos_y=5.0
+            pos_y = 5.0 + lane_offset
         else:
-            pos_y=15.0
+            pos_y = 15.0 + lane_offset
         poi = {
             'capture_radius': 10.0,
             'constraint': 'sequential',
@@ -129,11 +141,11 @@ def generate_space(idx: int, gap_size: int) -> dict:
 def compute_total_spaces(num_pois: int, gap_size: int)->int:
     return num_pois*(gap_size+1)
 
-def compute_sequence_params(num_pois: int, gap_size: int)->dict:
+def compute_sequence_params(num_pois: int, gap_size: int, num_lanes: int, share_workspaces: bool)->dict:
     total_spaces = compute_total_spaces(num_pois=num_pois, gap_size=gap_size)
-    x_size = total_spaces*20
-    y_size = 20
-    num_steps = total_spaces*25
+    x_size = total_spaces * 20
+    y_size = num_lanes * 20
+    num_steps = total_spaces * 25
     sequence_dict = {
         'hidden_pois': [],
         'uavs': [],
@@ -144,17 +156,32 @@ def compute_sequence_params(num_pois: int, gap_size: int)->dict:
             y_size
         ]
     }
-    for idx in range(total_spaces):
-        space_dict = generate_space(idx=idx, gap_size=gap_size)
-        for key in ['rovers', 'uavs', 'hidden_pois']:
-            if key in space_dict:
-                for item in space_dict[key]:
-                    sequence_dict[key].append(item)
+
+    # Iterate over lanes and spaces
+    for lane_idx in range(num_lanes):
+        for idx in range(total_spaces):
+            space_dict = generate_space(
+                idx=idx,
+                gap_size=gap_size,
+                lane_idx=lane_idx,
+                num_lanes=num_lanes,
+                share_workspaces=share_workspaces
+            )
+            for key in ['rovers', 'uavs', 'hidden_pois']:
+                if key in space_dict:
+                    for item in space_dict[key]:
+                        sequence_dict[key].append(item)
+
     return sequence_dict
 
-def generate_config_snippet(num_pois: int, gap_size: int)->dict:
+def generate_config_snippet(num_pois: int, gap_size: int, num_lanes: int, share_workspaces: bool)->dict:
     # Figure out where rovers, uavs, pois go
-    sequence_dict = compute_sequence_params(num_pois=num_pois, gap_size=gap_size)
+    sequence_dict = compute_sequence_params(
+        num_pois=num_pois,
+        gap_size=gap_size,
+        num_lanes=num_lanes,
+        share_workspaces=share_workspaces
+    )
     config = {
         'env': {
             'agents': {},
@@ -201,13 +228,24 @@ def test():
 
 def main():
     parser = argparse.ArgumentParser(description="Generate adaptive influence experiment configuration.")
-    parser.add_argument('--num_pois', type=int, required=True, help='Number of POIs')
+    parser.add_argument('--num_pois', type=int, required=True, help='Number of POIs in a lane')
     parser.add_argument('--gap_size', type=int, required=True, help='Gap size (number of empty spaces between POIs)')
+    parser.add_argument('--num_lanes', type=int, default=1, help='Number of lanes (positive integer, default: 1)')
+    parser.add_argument('--share_workspaces', action='store_true', help='Whether drones in same column share vertical bounds')
     parser.add_argument('--output', type=str, default=None, help='Output file (optional, prints to stdout if not set)')
     args = parser.parse_args()
 
+    # Validate num_lanes
+    if args.num_lanes < 1:
+        raise ValueError(f"num_lanes must be a positive integer (>= 1), got {args.num_lanes}")
+
     # Call sequence generator function with parsed arguments
-    result = generate_config_snippet(num_pois=args.num_pois, gap_size=args.gap_size)
+    result = generate_config_snippet(
+        num_pois=args.num_pois,
+        gap_size=args.gap_size,
+        num_lanes=args.num_lanes,
+        share_workspaces=args.share_workspaces
+    )
 
     # Output result to file or print
     if args.output:
