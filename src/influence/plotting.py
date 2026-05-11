@@ -1009,6 +1009,101 @@ def plot_comparison(
     )
     plot_args.finish_figure(fig)
 
+def get_bar_snapshot(
+        trials_dir: Path,
+        csv_name: str,
+        generation: Optional[int],
+        line_plot_args: LinePlotArgs
+    ) -> Tuple[float, float]:
+    dirs = [trials_dir/dir for dir in os.listdir(trials_dir) if 'trial_' in dir]
+    dirs.sort(key=lambda x: int(str(x).split('_')[-1]))
+    dfs = [pd.read_csv(dir/csv_name) for dir in dirs]
+
+    ind = min(len(df['collapsed_team_fitness']) for df in dfs)
+
+    fits_at_snapshot = []
+    for df in dfs:
+        fits = np.array(df['collapsed_team_fitness'][:ind])
+        fits = line_plot_args.get_ys(fits)
+        snap_idx = generation if generation is not None else -1
+        fits_at_snapshot.append(float(fits[snap_idx]))
+
+    avg = float(np.mean(fits_at_snapshot))
+    err = float(np.std(fits_at_snapshot) / np.sqrt(len(fits_at_snapshot)))
+    return avg, err
+
+def generate_bar_comparison_plot(
+        experiment_dir: Path,
+        use_fitness_colors: bool,
+        generation: Optional[int],
+        xtick_rotation: int,  # adjust label rotation here
+        csv_name: str,
+        line_plot_args: LinePlotArgs,
+        plot_args: PlotArgs
+    ):
+    fig, ax = plot_args.init_figure()
+
+    ax.set_facecolor('#e6e6e6')
+    ax.grid(True, color='white', linewidth=1.0, axis='y')
+    ax.set_axisbelow(True)
+
+    dirs = [experiment_dir/dir for dir in os.listdir(experiment_dir)]
+    sorted_dirs = sort_fitness_path_list(dirs)
+
+    labels = []
+    avgs = []
+    errs = []
+    colors = []
+
+    for i, trials_dir in enumerate(sorted_dirs):
+        if use_fitness_colors and trials_dir.name in COMPARISON_COLORS_DICT:
+            color = COMPARISON_COLORS_DICT[trials_dir.name]
+        else:
+            color = COMPARISON_COLORS[(i + len(COMPARISON_COLORS_DICT)) % len(COMPARISON_COLORS)]
+
+        avg, err = get_bar_snapshot(trials_dir, csv_name, generation, line_plot_args)
+        labels.append(trials_dir.name)
+        avgs.append(avg)
+        errs.append(err)
+        colors.append(color)
+
+    x = np.arange(len(labels))
+    ax.bar(x, avgs, yerr=errs, color=colors, capsize=5, error_kw={'linewidth': 1.5})
+    ax.set_xticks(x)
+    ha = 'right' if xtick_rotation != 0 else 'center'
+    ax.set_xticklabels(labels, rotation=xtick_rotation, ha=ha)
+    ax.set_ylabel('Performance')
+
+    config = load_config(sorted_dirs[0] / 'config.yaml')
+    high_y = sum(
+        poi_config['value'] for poi_config in
+        config['env']['pois']['hidden_pois'] + config['env']['pois']['rover_pois']
+    )
+    ax.set_ylim([0, high_y])
+
+    plot_args.apply(ax)
+    return fig
+
+def plot_bar_comparison(
+        experiment_dir: Path,
+        use_fitness_colors: bool,
+        generation: Optional[int],
+        xtick_rotation: int,
+        csv_name: str,
+        line_plot_args: LinePlotArgs,
+        plot_args: PlotArgs
+    ):
+    fig = generate_bar_comparison_plot(
+        experiment_dir=experiment_dir,
+        use_fitness_colors=use_fitness_colors,
+        generation=generation,
+        xtick_rotation=xtick_rotation,
+        csv_name=csv_name,
+        line_plot_args=line_plot_args,
+        plot_args=plot_args
+    )
+    plot_args.finish_figure(fig)
+
 def get_example_trial_dirs(parent_dir: Path):
     dirs = [parent_dir/dir for dir in os.list(parent_dir) if 'trial_' in dir]
     dfs = [pd.read_csv(dir/'fitness.csv') for dir in dirs]
