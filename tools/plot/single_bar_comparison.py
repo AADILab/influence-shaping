@@ -36,6 +36,11 @@ if __name__ == '__main__':
         default=45
     )
     parser.add_argument(
+        '--showbest',
+        help='draw a dashed line at the highest possible score',
+        action='store_true'
+    )
+    parser.add_argument(
         '--grouping',
         help='cluster bars into named groups with bracket labels below x-axis',
         type=str,
@@ -64,6 +69,7 @@ if __name__ == '__main__':
         xtick_rotation=args.xtick_rotation,
         labelmap=args.labelmap,
         grouping=args.grouping,
+        show_best=args.showbest,
         csv_name=args.csv_name,
         line_plot_args=parser.dump_line_plot_args(args),
         plot_args=parser.dump_plot_args(args)

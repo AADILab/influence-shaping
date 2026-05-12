@@ -1,4 +1,5 @@
 from typing import List, Optional, Union, Tuple
+from collections import OrderedDict
 from enum import Enum
 import os
 import re
@@ -70,10 +71,13 @@ COMPARISON_MARKER_MAP = {
     None: None           # no marker if we don't set the color
 }
 
+PASTEL_COLORS = plt.get_cmap('Pastel1').colors
+TAB20_COLORS = plt.get_cmap('tab20').colors
 COMPARISON_COLORS_DICT = {
     'Global': 'tab:blue',
     'Difference': 'tab:orange',
     'D-Indirect-Traj': 'tab:green',
+    'D-Indirect-Traj-Local': TAB20_COLORS[5],
     'D-Indirect-Timestep': 'tab:red',
     'D-Indirect-Timestep-Local': 'tab:purple',
     'D-Indirect-Timestep-System': 'tab:brown',
@@ -82,7 +86,7 @@ COMPARISON_COLORS_DICT = {
     'G-uavs-D-rovers': 'tab:olive',
     'D-Indirect-Timestep-No-Archive': 'tab:purple',
     'D-Indirect-Traj-No-Archive': 'tab:olive',
-    'D-Indirect-Window-N1-n0': 'tab:purple'
+    'D-Indirect-Window-N0-n0': TAB20_COLORS[7]
 }
 
 JAAMAS_ALL_LABELMAP = {
@@ -111,6 +115,52 @@ def apply_labelmap(label: str, labelmap: Optional[str]) -> str:
     if m:
         return f'Adaptive, N={m.group(1)}'
     return label
+
+JAAMAS_SPLIT_GROUPING = OrderedDict([
+    ('No Influence',           ['Global', 'Difference']),
+    ('Influence Based\n(Implemented)', ['D-Indirect-Traj', 'D-Indirect-Timestep']),
+    ('Influence Based\n(Theorized)',             ['D-Indirect-Traj-Local', 'D-Indirect-Window-N0-n0']),
+    ('Adaptive + Influence Based',                  [r'D-Indirect-Window-N[1-9]\d*-n\d+']),
+])
+
+GROUPING_CHOICES = ['jaamas-split']
+
+_GROUPINGS = {
+    'jaamas-split': JAAMAS_SPLIT_GROUPING,
+}
+
+def _dir_matches_group_member(dir_name: str, member: str) -> bool:
+    if dir_name == member:
+        return True
+    try:
+        return bool(re.fullmatch(member, dir_name))
+    except re.error:
+        return False
+
+def apply_grouping(dirs: List[Path], grouping: str) -> List[Tuple[str, List[Path]]]:
+    """Order dirs by group and return [(group_label, [dirs_in_group]), ...].
+    Dirs not matching any group are appended as 'Other'."""
+    grouping_config = _GROUPINGS[grouping]
+    result = []
+    assigned = set()
+
+    for group_name, members in grouping_config.items():
+        group_dirs = []
+        for dir_ in dirs:
+            if dir_.name not in assigned:
+                for member in members:
+                    if _dir_matches_group_member(dir_.name, member):
+                        group_dirs.append(dir_)
+                        assigned.add(dir_.name)
+                        break
+        if group_dirs:
+            result.append((group_name, group_dirs))
+
+    ungrouped = [d for d in dirs if d.name not in assigned]
+    if ungrouped:
+        result.append(('Other', ungrouped))
+
+    return result
 
 LEGEND_LOC_CHOICES = [
     'best',
@@ -1068,12 +1118,16 @@ def generate_bar_comparison_plot(
         experiment_dir: Path,
         use_fitness_colors: bool,
         generation: Optional[int],
-        xtick_rotation: int,  # adjust label rotation here
+        xtick_rotation: int,  # adjust bar label rotation here
         labelmap: Optional[str],
+        grouping: Optional[str],
+        show_best: bool,
         csv_name: str,
         line_plot_args: LinePlotArgs,
         plot_args: PlotArgs
     ):
+    from matplotlib.transforms import blended_transform_factory
+
     fig, ax = plot_args.init_figure()
 
     ax.set_facecolor('#e6e6e6')
@@ -1089,10 +1143,34 @@ def generate_bar_comparison_plot(
         config['env']['pois']['hidden_pois'] + config['env']['pois']['rover_pois']
     )
 
-    labels = [apply_labelmap(d.name, labelmap) for d in sorted_dirs]
-    x = np.arange(len(labels))
+    # Determine draw order and x positions
+    # Within-group bar spacing (center-to-center) and extra gap between groups
+    BAR_SPACING = 1.0
+    GROUP_GAP   = 0.8
 
-    for i, trials_dir in enumerate(sorted_dirs):
+    if grouping is not None:
+        grouped = apply_grouping(sorted_dirs, grouping)
+        ordered_dirs = []
+        x_positions = []
+        group_spans = []  # (group_label, x_first_bar, x_last_bar)
+        x_cursor = 0.0
+        for group_name, group_dirs in grouped:
+            x_first = x_cursor
+            for dir_ in group_dirs:
+                x_positions.append(x_cursor)
+                ordered_dirs.append(dir_)
+                x_cursor += BAR_SPACING
+            x_last = x_cursor - BAR_SPACING
+            group_spans.append((group_name, x_first, x_last))
+            x_cursor += GROUP_GAP
+        fig.subplots_adjust(top=0.78)
+    else:
+        ordered_dirs = sorted_dirs
+        x_positions = list(np.arange(len(sorted_dirs), dtype=float))
+        group_spans = []
+
+    # Draw bars
+    for i, (trials_dir, x_pos) in enumerate(zip(ordered_dirs, x_positions)):
         if use_fitness_colors and trials_dir.name in COMPARISON_COLORS_DICT:
             color = COMPARISON_COLORS_DICT[trials_dir.name]
         else:
@@ -1101,20 +1179,50 @@ def generate_bar_comparison_plot(
         avg, err = get_bar_snapshot(trials_dir, csv_name, generation, line_plot_args)
 
         if avg is None:
-            ax.bar(x[i], high_y * 0.8, color='none', edgecolor='gray', linewidth=1.5, linestyle='--')
+            ax.bar(x_pos, high_y * 0.8, color='none', edgecolor='gray', linewidth=1.5, linestyle='--')
             ax.text(
-                x[i], high_y * 0.02, 'Results pending',
+                x_pos, high_y * 0.02, 'Results pending',
                 ha='center', va='bottom',
                 rotation=90, fontsize=10, color='gray', style='italic'
             )
         else:
-            ax.bar(x[i], avg, yerr=err, color=color, capsize=5, error_kw={'linewidth': 1.5})
+            ax.bar(x_pos, avg, yerr=err, color=color, capsize=5, error_kw={'linewidth': 1.5})
 
-    ax.set_xticks(x)
+    # Bar labels (labelmap applied here, after grouping order is fixed)
+    labels = [apply_labelmap(d.name, labelmap) for d in ordered_dirs]
+    ax.set_xticks(x_positions)
     ha = 'right' if xtick_rotation != 0 else 'center'
     ax.set_xticklabels(labels, rotation=xtick_rotation, ha=ha)
+
+    # Draw group brackets above bars
+    if group_spans:
+        trans = blended_transform_factory(ax.transData, ax.transAxes)
+        half_bar = 0.4  # matches default matplotlib bar width of 0.8
+        for group_label, x_first, x_last in group_spans:
+            x_lo = x_first - half_bar
+            x_hi = x_last  + half_bar
+            x_mid = (x_first + x_last) / 2
+            # Horizontal bracket line
+            ax.plot([x_lo, x_hi], [1.06, 1.06],
+                    transform=trans, color='black', lw=1.0, clip_on=False)
+            # End ticks pointing down from the line
+            ax.plot([x_lo, x_lo], [1.02, 1.06],
+                    transform=trans, color='black', lw=1.0, clip_on=False)
+            ax.plot([x_hi, x_hi], [1.02, 1.06],
+                    transform=trans, color='black', lw=1.0, clip_on=False)
+            # Group label above the line
+            ax.text(x_mid, 1.09, group_label,
+                    transform=trans, ha='center', va='bottom',
+                    clip_on=False, fontsize=11, style='italic')
+
     ax.set_ylabel('Performance')
     ax.set_ylim([0, high_y])
+
+    if show_best:
+        ax.axhline(y=high_y, color='black', linestyle='--', linewidth=1.5)
+        text_trans = blended_transform_factory(ax.transAxes, ax.transData)
+        ax.text(0.05, high_y * 1.06, 'Highest Possible Score',
+                transform=text_trans, ha='left', va='top', color='black', fontsize=12)
 
     plot_args.apply(ax)
     return fig
@@ -1125,6 +1233,8 @@ def plot_bar_comparison(
         generation: Optional[int],
         xtick_rotation: int,
         labelmap: Optional[str],
+        grouping: Optional[str],
+        show_best: bool,
         csv_name: str,
         line_plot_args: LinePlotArgs,
         plot_args: PlotArgs
@@ -1135,6 +1245,8 @@ def plot_bar_comparison(
         generation=generation,
         xtick_rotation=xtick_rotation,
         labelmap=labelmap,
+        grouping=grouping,
+        show_best=show_best,
         csv_name=csv_name,
         line_plot_args=line_plot_args,
         plot_args=plot_args
