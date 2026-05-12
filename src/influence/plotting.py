@@ -1,6 +1,7 @@
 from typing import List, Optional, Union, Tuple
 from enum import Enum
 import os
+import re
 
 import pandas as pd
 from pathlib import Path
@@ -83,6 +84,33 @@ COMPARISON_COLORS_DICT = {
     'D-Indirect-Traj-No-Archive': 'tab:olive',
     'D-Indirect-Window-N1-n0': 'tab:purple'
 }
+
+JAAMAS_ALL_LABELMAP = {
+    'Global': 'Global',
+    'Difference': 'Difference',
+    'D-Indirect-Traj': 'Static-Competitive',
+    'D-Indirect-Traj-Local': 'Static-Loose',
+    'D-Indirect-Timestep': 'Dynamic-Competitive',
+    'D-Indirect-Window-N0-n0': 'Dynamic-Loose',
+}
+
+LABELMAP_CHOICES = ['jaamas-all']
+
+_LABELMAPS = {
+    'jaamas-all': JAAMAS_ALL_LABELMAP,
+}
+
+def apply_labelmap(label: str, labelmap: Optional[str]) -> str:
+    if labelmap is None:
+        return label
+    mapping = _LABELMAPS.get(labelmap, {})
+    if label in mapping:
+        return mapping[label]
+    # Pattern for adaptive methods: D-Indirect-Window-N{X}-n0, X > 0
+    m = re.match(r'D-Indirect-Window-N(\d+)-n0', label)
+    if m:
+        return f'Adaptive, N={m.group(1)}'
+    return label
 
 LEGEND_LOC_CHOICES = [
     'best',
@@ -1014,10 +1042,14 @@ def get_bar_snapshot(
         csv_name: str,
         generation: Optional[int],
         line_plot_args: LinePlotArgs
-    ) -> Tuple[float, float]:
+    ) -> Tuple[Optional[float], Optional[float]]:
     dirs = [trials_dir/dir for dir in os.listdir(trials_dir) if 'trial_' in dir]
+    if not dirs:
+        return None, None
     dirs.sort(key=lambda x: int(str(x).split('_')[-1]))
-    dfs = [pd.read_csv(dir/csv_name) for dir in dirs]
+    dfs = [pd.read_csv(dir/csv_name) for dir in dirs if (dir/csv_name).exists()]
+    if not dfs:
+        return None, None
 
     ind = min(len(df['collapsed_team_fitness']) for df in dfs)
 
@@ -1037,6 +1069,7 @@ def generate_bar_comparison_plot(
         use_fitness_colors: bool,
         generation: Optional[int],
         xtick_rotation: int,  # adjust label rotation here
+        labelmap: Optional[str],
         csv_name: str,
         line_plot_args: LinePlotArgs,
         plot_args: PlotArgs
@@ -1050,10 +1083,14 @@ def generate_bar_comparison_plot(
     dirs = [experiment_dir/dir for dir in os.listdir(experiment_dir)]
     sorted_dirs = sort_fitness_path_list(dirs)
 
-    labels = []
-    avgs = []
-    errs = []
-    colors = []
+    config = load_config(sorted_dirs[0] / 'config.yaml')
+    high_y = sum(
+        poi_config['value'] for poi_config in
+        config['env']['pois']['hidden_pois'] + config['env']['pois']['rover_pois']
+    )
+
+    labels = [apply_labelmap(d.name, labelmap) for d in sorted_dirs]
+    x = np.arange(len(labels))
 
     for i, trials_dir in enumerate(sorted_dirs):
         if use_fitness_colors and trials_dir.name in COMPARISON_COLORS_DICT:
@@ -1062,23 +1099,21 @@ def generate_bar_comparison_plot(
             color = COMPARISON_COLORS[(i + len(COMPARISON_COLORS_DICT)) % len(COMPARISON_COLORS)]
 
         avg, err = get_bar_snapshot(trials_dir, csv_name, generation, line_plot_args)
-        labels.append(trials_dir.name)
-        avgs.append(avg)
-        errs.append(err)
-        colors.append(color)
 
-    x = np.arange(len(labels))
-    ax.bar(x, avgs, yerr=errs, color=colors, capsize=5, error_kw={'linewidth': 1.5})
+        if avg is None:
+            ax.bar(x[i], high_y * 0.8, color='none', edgecolor='gray', linewidth=1.5, linestyle='--')
+            ax.text(
+                x[i], high_y * 0.02, 'Results pending',
+                ha='center', va='bottom',
+                rotation=90, fontsize=10, color='gray', style='italic'
+            )
+        else:
+            ax.bar(x[i], avg, yerr=err, color=color, capsize=5, error_kw={'linewidth': 1.5})
+
     ax.set_xticks(x)
     ha = 'right' if xtick_rotation != 0 else 'center'
     ax.set_xticklabels(labels, rotation=xtick_rotation, ha=ha)
     ax.set_ylabel('Performance')
-
-    config = load_config(sorted_dirs[0] / 'config.yaml')
-    high_y = sum(
-        poi_config['value'] for poi_config in
-        config['env']['pois']['hidden_pois'] + config['env']['pois']['rover_pois']
-    )
     ax.set_ylim([0, high_y])
 
     plot_args.apply(ax)
@@ -1089,6 +1124,7 @@ def plot_bar_comparison(
         use_fitness_colors: bool,
         generation: Optional[int],
         xtick_rotation: int,
+        labelmap: Optional[str],
         csv_name: str,
         line_plot_args: LinePlotArgs,
         plot_args: PlotArgs
@@ -1098,6 +1134,7 @@ def plot_bar_comparison(
         use_fitness_colors=use_fitness_colors,
         generation=generation,
         xtick_rotation=xtick_rotation,
+        labelmap=labelmap,
         csv_name=csv_name,
         line_plot_args=line_plot_args,
         plot_args=plot_args

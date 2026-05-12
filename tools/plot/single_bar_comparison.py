@@ -3,7 +3,7 @@ and it will plot the performance of each parameter combination as a bar chart at
 '''
 
 from pathlib import Path
-from influence.plotting import plot_bar_comparison, DEFAULT_FITNESS_NAME
+from influence.plotting import plot_bar_comparison, DEFAULT_FITNESS_NAME, LABELMAP_CHOICES
 from influence.parsing import LinePlotParser
 
 if __name__ == '__main__':
@@ -36,6 +36,13 @@ if __name__ == '__main__':
         default=45
     )
     parser.add_argument(
+        '--labelmap',
+        help='map directory names to paper-ready labels',
+        type=str,
+        choices=LABELMAP_CHOICES,
+        default=None
+    )
+    parser.add_argument(
         '--csv-name',
         help='name of csv to use for fitness',
         type=str,
@@ -48,6 +55,7 @@ if __name__ == '__main__':
         use_fitness_colors=args.fitness_colors,
         generation=args.generation,
         xtick_rotation=args.xtick_rotation,
+        labelmap=args.labelmap,
         csv_name=args.csv_name,
         line_plot_args=parser.dump_line_plot_args(args),
         plot_args=parser.dump_plot_args(args)
