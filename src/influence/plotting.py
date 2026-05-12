@@ -1246,7 +1246,7 @@ def generate_bar_comparison_plot(
     if show_best:
         ax.axhline(y=high_y, color='black', linestyle='--', linewidth=1.5)
         text_trans = blended_transform_factory(ax.transAxes, ax.transData)
-        ax.text(0.05, high_y * 1.06, 'Highest Possible Score',
+        ax.text(0.05, high_y * 1.06, 'All POIs Captured',
                 transform=text_trans, ha='left', va='top', color='black', fontsize=12)
 
     plot_args.apply(ax)
