@@ -772,7 +772,7 @@ def add_stat_learning_curve(
     if color is None:
         color = COMPARISON_COLORS[0]
     if marker is None:
-        marker = COMPARISON_MARKER_MAP[color]
+        marker = COMPARISON_MARKER_MAP.get(color, None)
 
     # Get the directories of trials
     dirs = [trials_dir/dir for dir in os.listdir(trials_dir) if 'trial_' in dir]
@@ -1042,19 +1042,19 @@ def generate_comparison_plot(
     # If we are using the fitness color set, then sort the methods so order is always consistent
     sorted_dirs = sort_fitness_path_list(dirs)
 
+    adaptive_color_map = _build_adaptive_color_map([d.name for d in sorted_dirs])
+
     xlim = 0
     for i, trials_dir in enumerate(sorted_dirs):
         color=None
-        if use_fitness_colors and trials_dir.name in COMPARISON_COLORS_DICT:
-            # Set color based on fitness shaping method (optional)
-            # Use extra colors for names that have not been reserved
+        if use_fitness_colors and _get_adaptive_n(trials_dir.name) is not None:
+            color = adaptive_color_map[trials_dir.name]
+        elif use_fitness_colors and trials_dir.name in COMPARISON_COLORS_DICT:
             color=COMPARISON_COLORS_DICT[trials_dir.name]
         else:
             color = COMPARISON_COLORS[(i+len(COMPARISON_COLORS_DICT))%len(COMPARISON_COLORS)]
 
-        # Add the marker associated with this color (if there is one)
-        # print(COMPARISON_MARKER_MAP, color)
-        marker=COMPARISON_MARKER_MAP[color]
+        marker=COMPARISON_MARKER_MAP.get(color, None)
         gens = add_stat_learning_curve(
             ax,
             False,
