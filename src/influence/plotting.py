@@ -162,6 +162,26 @@ def apply_grouping(dirs: List[Path], grouping: str) -> List[Tuple[str, List[Path
 
     return result
 
+_ADAPTIVE_WINDOW_PATTERN = re.compile(r'D-Indirect-Window-N([1-9]\d*)-n\d+')
+
+def _get_adaptive_n(dir_name: str) -> Optional[int]:
+    """Return N from D-Indirect-Window-NX-nY (X>=1), or None if not a match."""
+    m = _ADAPTIVE_WINDOW_PATTERN.fullmatch(dir_name)
+    return int(m.group(1)) if m else None
+
+def _build_adaptive_color_map(dir_names: List[str]) -> dict:
+    """Map each adaptive window dir name to a fixed yellow shade based on its N value.
+    N=1 maps to the light end, N=6 maps to the dark end of YlOrBr [0.30, 0.75].
+    N values above 6 are not supported without revisiting this function."""
+    cmap = plt.cm.YlOrBr
+    result = {}
+    for name in dir_names:
+        n = _get_adaptive_n(name)
+        if n is not None:
+            pos = 0.05 + 0.95 * (n - 1) / 6  # N=1 -> 0.05 (pale yellow), N=10 -> 1.00 (darkest brown)
+            result[name] = cmap(pos)
+    return result
+
 LEGEND_LOC_CHOICES = [
     'best',
     'upper right',
@@ -1169,9 +1189,14 @@ def generate_bar_comparison_plot(
         x_positions = list(np.arange(len(sorted_dirs), dtype=float))
         group_spans = []
 
+    # Pre-build yellow shades for adaptive window variants
+    adaptive_color_map = _build_adaptive_color_map([d.name for d in ordered_dirs])
+
     # Draw bars
     for i, (trials_dir, x_pos) in enumerate(zip(ordered_dirs, x_positions)):
-        if use_fitness_colors and trials_dir.name in COMPARISON_COLORS_DICT:
+        if use_fitness_colors and _get_adaptive_n(trials_dir.name) is not None:
+            color = adaptive_color_map[trials_dir.name]
+        elif use_fitness_colors and trials_dir.name in COMPARISON_COLORS_DICT:
             color = COMPARISON_COLORS_DICT[trials_dir.name]
         else:
             color = COMPARISON_COLORS[(i + len(COMPARISON_COLORS_DICT)) % len(COMPARISON_COLORS)]
