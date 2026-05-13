@@ -182,6 +182,16 @@ def _build_adaptive_color_map(dir_names: List[str]) -> dict:
             result[name] = cmap(pos)
     return result
 
+ENV_ORDER_CHOICES = ['influence-extension']
+
+_ENV_ORDER_PRESETS = {
+    'influence-extension': OrderedDict([
+        # Maps raw env setup folder name -> x-axis display label.
+        # Entries define the left-to-right ordering; unlisted dirs append alphabetically.
+        # Example: ('env_setup_A', '1'), ('env_setup_B', '2')
+    ])
+}
+
 LEGEND_LOC_CHOICES = [
     'best',
     'upper right',
@@ -1599,3 +1609,161 @@ def plot_learning_curve_tree(
         batch_plot_args,
         batch_line_plot_args
     )
+
+def get_gens_to_target(
+        trials_dir: Path,
+        csv_name: str,
+        target_score: Optional[float],
+        line_plot_args: LinePlotArgs
+    ) -> Tuple[Optional[int], int]:
+    """Return (first_gen_reaching_target, max_gen).
+
+    Averages collapsed_team_fitness across all stat runs in trials_dir, applies
+    the moving-average filter from line_plot_args, then returns the first
+    generation index at which the filtered average meets or exceeds target_score.
+    Returns None for first_gen if the target is never reached.
+    """
+    dirs = sorted(
+        [trials_dir/d for d in os.listdir(trials_dir) if 'trial_' in d],
+        key=lambda x: int(str(x).split('_')[-1])
+    )
+    if not dirs:
+        return None, 0
+    dfs = [pd.read_csv(d/csv_name) for d in dirs if (d/csv_name).exists()]
+    if not dfs:
+        return None, 0
+
+    ind = min(len(df['collapsed_team_fitness']) for df in dfs)
+    avg = np.mean([np.array(df['collapsed_team_fitness'][:ind]) for df in dfs], axis=0)
+    avg = line_plot_args.get_ys(avg)
+    gens = list(dfs[0]['generation'][:ind])
+    max_gen = int(gens[-1])
+
+    if target_score is None:
+        config = load_config(trials_dir/'config.yaml')
+        target_score = sum(
+            poi['value'] for poi in
+            config['env']['pois']['hidden_pois'] + config['env']['pois']['rover_pois']
+        )
+
+    for gen, fit in zip(gens, avg):
+        if fit >= target_score:
+            return int(gen), max_gen
+
+    return None, max_gen
+
+def generate_gens_comparison_plot(
+        parent_dir: Path,
+        use_fitness_colors: bool,
+        env_order: Optional[str],
+        target_score: Optional[float],
+        no_legend: bool,
+        legend_loc: Optional[str],
+        csv_name: str,
+        line_plot_args: LinePlotArgs,
+        plot_args: PlotArgs
+    ):
+    """Generate a line plot of generations-to-target across environmental setups.
+
+    parent_dir contains one sub-directory per environmental setup, each of which
+    contains one sub-directory per CCEA method (which in turn contains trial folders).
+    Each line represents one method; each x-tick is one environmental setup.
+    Points where the target was never reached are plotted at max_gen with a hollow
+    upward-triangle marker to distinguish them from genuine convergence values.
+    """
+    fig, ax = plot_args.init_figure()
+    ax.set_facecolor('#e6e6e6')
+    ax.grid(True, color='white', linewidth=1.0)
+    ax.set_axisbelow(True)
+
+    # Discover and order env setup directories
+    env_dirs = sorted([d for d in parent_dir.iterdir() if d.is_dir()])
+    if env_order is not None:
+        preset = _ENV_ORDER_PRESETS.get(env_order, OrderedDict())
+        ordered = [d for name in preset for d in env_dirs if d.name == name]
+        remaining = [d for d in env_dirs if d.name not in preset]
+        env_dirs = ordered + remaining
+        env_labels = [preset.get(d.name, d.name) for d in env_dirs]
+    else:
+        env_labels = [d.name for d in env_dirs]
+
+    x_positions = list(range(len(env_dirs)))
+
+    # Collect all method names across every env setup
+    all_method_names: set = set()
+    for env_dir in env_dirs:
+        for d in env_dir.iterdir():
+            if d.is_dir():
+                all_method_names.add(d.name)
+
+    # Sort methods: fitness-color order first (if enabled), then alphabetical remainder
+    sorted_method_paths = sort_fitness_path_list([Path(m) for m in all_method_names])
+    sorted_methods = [p.name for p in sorted_method_paths]
+    adaptive_color_map = _build_adaptive_color_map(sorted_methods)
+
+    for i, method_name in enumerate(sorted_methods):
+        if use_fitness_colors and _get_adaptive_n(method_name) is not None:
+            color = adaptive_color_map[method_name]
+        elif use_fitness_colors and method_name in COMPARISON_COLORS_DICT:
+            color = COMPARISON_COLORS_DICT[method_name]
+        else:
+            color = COMPARISON_COLORS[(i + len(COMPARISON_COLORS_DICT)) % len(COMPARISON_COLORS)]
+
+        marker = COMPARISON_MARKER_MAP.get(color, 'o')
+
+        xs, ys, dnf_flags = [], [], []
+        for x_pos, env_dir in zip(x_positions, env_dirs):
+            method_dir = env_dir / method_name
+            if not method_dir.exists():
+                continue
+            gen_reached, max_gen = get_gens_to_target(method_dir, csv_name, target_score, line_plot_args)
+            xs.append(x_pos)
+            ys.append(gen_reached if gen_reached is not None else max_gen)
+            dnf_flags.append(gen_reached is None)
+
+        if not xs:
+            continue
+
+        ax.plot(xs, ys, color=color, marker=marker, label=method_name, markersize=8)
+
+        # Overplot DNF points with a hollow upward-triangle to signal non-convergence
+        dnf_xs = [x for x, dnf in zip(xs, dnf_flags) if dnf]
+        dnf_ys = [y for y, dnf in zip(ys, dnf_flags) if dnf]
+        if dnf_xs:
+            ax.scatter(dnf_xs, dnf_ys, marker='^', s=120,
+                       facecolors='none', edgecolors=color, linewidths=2, zorder=5)
+
+    ax.set_xticks(x_positions)
+    ax.set_xticklabels(env_labels)
+    ax.set_xlabel('Environmental Setup')
+    ax.set_ylabel('Generations to Target Score')
+
+    if not no_legend:
+        ax.legend(loc=legend_loc)
+
+    plot_args.apply(ax)
+    return fig
+
+def plot_gens_comparison(
+        parent_dir: Path,
+        use_fitness_colors: bool,
+        env_order: Optional[str],
+        target_score: Optional[float],
+        no_legend: bool,
+        legend_loc: Optional[str],
+        csv_name: str,
+        line_plot_args: LinePlotArgs,
+        plot_args: PlotArgs
+    ):
+    fig = generate_gens_comparison_plot(
+        parent_dir=parent_dir,
+        use_fitness_colors=use_fitness_colors,
+        env_order=env_order,
+        target_score=target_score,
+        no_legend=no_legend,
+        legend_loc=legend_loc,
+        csv_name=csv_name,
+        line_plot_args=line_plot_args,
+        plot_args=plot_args
+    )
+    plot_args.finish_figure(fig)
