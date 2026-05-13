@@ -113,7 +113,7 @@ def apply_labelmap(label: str, labelmap: Optional[str]) -> str:
     # Pattern for adaptive methods: D-Indirect-Window-N{X}-n0, X > 0
     m = re.match(r'D-Indirect-Window-N(\d+)-n0', label)
     if m:
-        return f'Adaptive, N={m.group(1)}'
+        return f'Adaptive, $\eta={m.group(1)}$'
     return label
 
 JAAMAS_SPLIT_GROUPING = OrderedDict([
@@ -1246,7 +1246,7 @@ def generate_bar_comparison_plot(
     if show_best:
         ax.axhline(y=high_y, color='black', linestyle='--', linewidth=1.5)
         text_trans = blended_transform_factory(ax.transAxes, ax.transData)
-        ax.text(0.05, high_y * 1.06, 'All POIs Captured',
+        ax.text(0.05, high_y * 1.06, 'Highest Possible Score',
                 transform=text_trans, ha='left', va='top', color='black', fontsize=12)
 
     plot_args.apply(ax)
