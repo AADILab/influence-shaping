@@ -21,6 +21,7 @@ from influence.plotting import (
     DEFAULT_FITNESS_NAME,
     LEGEND_LOC_CHOICES,
     ENV_ORDER_CHOICES,
+    LABELMAP_CHOICES,
 )
 from influence.parsing import LinePlotParser
 
@@ -72,6 +73,13 @@ if __name__ == '__main__':
         help='use log scale for the y axis'
     )
     parser.add_argument(
+        '--labelmap',
+        type=str,
+        choices=LABELMAP_CHOICES,
+        default=None,
+        help='named preset for remapping method names in the legend'
+    )
+    parser.add_argument(
         '--csv-name',
         help='name of csv to use for fitness',
         type=str,
@@ -87,6 +95,7 @@ if __name__ == '__main__':
         no_legend=args.no_legend,
         legend_loc=args.legend_loc,
         log_scale=args.log_scale,
+        labelmap=args.labelmap,
         csv_name=args.csv_name,
         line_plot_args=parser.dump_line_plot_args(args),
         plot_args=parser.dump_plot_args(args)

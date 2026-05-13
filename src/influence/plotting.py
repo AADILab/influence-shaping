@@ -98,10 +98,11 @@ JAAMAS_ALL_LABELMAP = {
     'D-Indirect-Window-N0-n0': 'Dynamic-Loose',
 }
 
-LABELMAP_CHOICES = ['jaamas-all']
+LABELMAP_CHOICES = ['jaamas-all', 'influence-extension']
 
 _LABELMAPS = {
     'jaamas-all': JAAMAS_ALL_LABELMAP,
+    'influence-extension': {},  # relies entirely on pattern matching below
 }
 
 def apply_labelmap(label: str, labelmap: Optional[str]) -> str:
@@ -110,10 +111,12 @@ def apply_labelmap(label: str, labelmap: Optional[str]) -> str:
     mapping = _LABELMAPS.get(labelmap, {})
     if label in mapping:
         return mapping[label]
-    # Pattern for adaptive methods: D-Indirect-Window-N{X}-n0, X > 0
+    # Pattern for adaptive methods: D-Indirect-Window-N{X}-n0
     m = re.match(r'D-Indirect-Window-N(\d+)-n0', label)
     if m:
-        return f'Adaptive, $\eta={m.group(1)}$'
+        if labelmap == 'influence-extension':
+            return rf'$\eta={m.group(1)}$'
+        return rf'Adaptive, $\eta={m.group(1)}$'
     return label
 
 JAAMAS_SPLIT_GROUPING = OrderedDict([
@@ -182,15 +185,17 @@ def _build_adaptive_color_map(dir_names: List[str]) -> dict:
             result[name] = cmap(pos)
     return result
 
-ENV_ORDER_CHOICES = ['influence-extension']
-
 _ENV_ORDER_PRESETS = {
-    'influence-extension': OrderedDict([
-        # Maps raw env setup folder name -> x-axis display label.
-        # Entries define the left-to-right ordering; unlisted dirs append alphabetically.
-        # Example: ('env_setup_A', '1'), ('env_setup_B', '2')
-    ])
+    # Each preset is a dict with:
+    #   'sort_key': callable(dir_name: str) -> sortable value
+    #   'label':    callable(dir_name: str) -> display string
+    'influence-extension': {
+        'sort_key': lambda name: int(name.split('_')[-1]),
+        'label':    lambda name: str(int(name.split('_')[-1]) + 1),
+    },
 }
+
+ENV_ORDER_CHOICES = list(_ENV_ORDER_PRESETS.keys())
 
 LEGEND_LOC_CHOICES = [
     'best',
@@ -1660,6 +1665,7 @@ def generate_gens_comparison_plot(
         no_legend: bool,
         legend_loc: Optional[str],
         log_scale: bool,
+        labelmap: Optional[str],
         csv_name: str,
         line_plot_args: LinePlotArgs,
         plot_args: PlotArgs
@@ -1678,14 +1684,13 @@ def generate_gens_comparison_plot(
     ax.set_axisbelow(True)
 
     # Discover and order env setup directories
-    env_dirs = sorted([d for d in parent_dir.iterdir() if d.is_dir()])
+    env_dirs = [d for d in parent_dir.iterdir() if d.is_dir()]
     if env_order is not None:
-        preset = _ENV_ORDER_PRESETS.get(env_order, OrderedDict())
-        ordered = [d for name in preset for d in env_dirs if d.name == name]
-        remaining = [d for d in env_dirs if d.name not in preset]
-        env_dirs = ordered + remaining
-        env_labels = [preset.get(d.name, d.name) for d in env_dirs]
+        preset = _ENV_ORDER_PRESETS[env_order]
+        env_dirs = sorted(env_dirs, key=lambda d: preset['sort_key'](d.name))
+        env_labels = [preset['label'](d.name) for d in env_dirs]
     else:
+        env_dirs = sorted(env_dirs)
         env_labels = [d.name for d in env_dirs]
 
     x_positions = list(range(len(env_dirs)))
@@ -1725,7 +1730,7 @@ def generate_gens_comparison_plot(
         if not xs:
             continue
 
-        ax.plot(xs, ys, color=color, marker=marker, label=method_name, markersize=8)
+        ax.plot(xs, ys, color=color, marker=marker, label=apply_labelmap(method_name, labelmap), markersize=8)
 
         # Overplot DNF points with a hollow upward-triangle to signal non-convergence
         dnf_xs = [x for x, dnf in zip(xs, dnf_flags) if dnf]
@@ -1755,6 +1760,7 @@ def plot_gens_comparison(
         no_legend: bool,
         legend_loc: Optional[str],
         log_scale: bool,
+        labelmap: Optional[str],
         csv_name: str,
         line_plot_args: LinePlotArgs,
         plot_args: PlotArgs
@@ -1767,6 +1773,7 @@ def plot_gens_comparison(
         no_legend=no_legend,
         legend_loc=legend_loc,
         log_scale=log_scale,
+        labelmap=labelmap,
         csv_name=csv_name,
         line_plot_args=line_plot_args,
         plot_args=plot_args

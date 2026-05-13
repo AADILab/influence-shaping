@@ -35,7 +35,8 @@ class PlotArgs():
             axes_position: Optional[List[float]]=None,
             silent: bool=False,
             remove_border: bool=False,
-            dpi: Optional[int]=None
+            dpi: Optional[int]=None,
+            legend_facecolor: Optional[str]=None
         ):
         self.title = title
         if output is not None:
@@ -53,6 +54,7 @@ class PlotArgs():
         self.silent = silent
         self.remove_border = remove_border
         self.dpi = dpi
+        self.legend_facecolor = legend_facecolor
 
     def init_figure(self, nrows:int=1, ncols:int=1):
         return plt.subplots(nrows, ncols, figsize=self.figsize)
@@ -79,6 +81,10 @@ class PlotArgs():
             ax.spines['right'].set_visible(False)
             ax.spines['left'].set_visible(False)
             ax.spines['bottom'].set_visible(False)
+        if self.legend_facecolor is not None:
+            legend = ax.get_legend()
+            if legend is not None:
+                legend.get_frame().set_facecolor(self.legend_facecolor)
 
     def finish_figure(self, fig: Figure):
         if self.output is not None:
@@ -234,6 +240,12 @@ class PlotParser(argparse.ArgumentParser):
             type=int,
             default=None
         )
+        self.add_argument(
+            '--legend-facecolor',
+            help='background color of the legend (any matplotlib color string, e.g. "lightgray", "0.7")',
+            type=str,
+            default=None
+        )
         return None
 
     def dump_plot_args(self, args):
@@ -250,7 +262,8 @@ class PlotParser(argparse.ArgumentParser):
             axes_position=args.axes_position,
             silent=args.silent,
             remove_border=args.remove_border,
-            dpi=args.dpi
+            dpi=args.dpi,
+            legend_facecolor=args.legend_facecolor
         )
 
 class LinePlotParser(PlotParser):
