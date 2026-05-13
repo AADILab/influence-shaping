@@ -1659,6 +1659,7 @@ def generate_gens_comparison_plot(
         target_score: Optional[float],
         no_legend: bool,
         legend_loc: Optional[str],
+        log_scale: bool,
         csv_name: str,
         line_plot_args: LinePlotArgs,
         plot_args: PlotArgs
@@ -1737,6 +1738,8 @@ def generate_gens_comparison_plot(
     ax.set_xticklabels(env_labels)
     ax.set_xlabel('Environmental Setup')
     ax.set_ylabel('Generations to Target Score')
+    if log_scale:
+        ax.set_yscale('log')
 
     if not no_legend:
         ax.legend(loc=legend_loc)
@@ -1751,6 +1754,7 @@ def plot_gens_comparison(
         target_score: Optional[float],
         no_legend: bool,
         legend_loc: Optional[str],
+        log_scale: bool,
         csv_name: str,
         line_plot_args: LinePlotArgs,
         plot_args: PlotArgs
@@ -1762,6 +1766,7 @@ def plot_gens_comparison(
         target_score=target_score,
         no_legend=no_legend,
         legend_loc=legend_loc,
+        log_scale=log_scale,
         csv_name=csv_name,
         line_plot_args=line_plot_args,
         plot_args=plot_args
