@@ -172,18 +172,32 @@ def _get_adaptive_n(dir_name: str) -> Optional[int]:
     m = _ADAPTIVE_WINDOW_PATTERN.fullmatch(dir_name)
     return int(m.group(1)) if m else None
 
+def _get_adaptive_color(n: int):
+    """Return the YlOrBr colormap color for adaptive window size N=n.
+    N=1 maps to the light end, N=6 maps to the dark end of YlOrBr."""
+    return plt.cm.YlOrBr(0.05 + 0.95 * (n - 1) / 6)
+
+def _get_adaptive_marker(n: int):
+    """Return the matplotlib marker for adaptive window size N=n.
+    N=1 -> circle, N=2 -> tri_up, N>=3 -> regular polygon with N sides."""
+    if n == 1:
+        return 'o'
+    if n == 2:
+        return 'P'
+    return (n, 0, 0)
+
 def _build_adaptive_color_map(dir_names: List[str]) -> dict:
-    """Map each adaptive window dir name to a fixed yellow shade based on its N value.
-    N=1 maps to the light end, N=6 maps to the dark end of YlOrBr [0.30, 0.75].
-    N values above 6 are not supported without revisiting this function."""
-    cmap = plt.cm.YlOrBr
+    """Map each adaptive window dir name to a fixed yellow shade based on its N value."""
     result = {}
     for name in dir_names:
         n = _get_adaptive_n(name)
         if n is not None:
-            pos = 0.05 + 0.95 * (n - 1) / 6  # N=1 -> 0.05 (pale yellow), N=10 -> 1.00 (darkest brown)
-            result[name] = cmap(pos)
+            result[name] = _get_adaptive_color(n)
     return result
+
+# Populate COMPARISON_MARKER_MAP with adaptive color -> marker entries for N=1..10
+for _n in range(1, 11):
+    COMPARISON_MARKER_MAP[_get_adaptive_color(_n)] = _get_adaptive_marker(_n)
 
 _ENV_ORDER_PRESETS = {
     # Each preset is a dict with:
@@ -1217,6 +1231,7 @@ def generate_bar_comparison_plot(
             color = COMPARISON_COLORS[(i + len(COMPARISON_COLORS_DICT)) % len(COMPARISON_COLORS)]
 
         avg, err = get_bar_snapshot(trials_dir, csv_name, generation, line_plot_args)
+        print(f"trials_dir: {trials_dir} | avg: {avg} | err: {err}")
 
         if avg is None:
             ax.bar(x_pos, high_y * 0.8, color='none', edgecolor='gray', linewidth=1.5, linestyle='--')
@@ -1666,6 +1681,7 @@ def generate_gens_comparison_plot(
         legend_loc: Optional[str],
         log_scale: bool,
         labelmap: Optional[str],
+        exclude: set,
         csv_name: str,
         line_plot_args: LinePlotArgs,
         plot_args: PlotArgs
@@ -1695,11 +1711,11 @@ def generate_gens_comparison_plot(
 
     x_positions = list(range(len(env_dirs)))
 
-    # Collect all method names across every env setup
+    # Collect all method names across every env setup, skipping excluded ones
     all_method_names: set = set()
     for env_dir in env_dirs:
         for d in env_dir.iterdir():
-            if d.is_dir():
+            if d.is_dir() and d.name not in exclude:
                 all_method_names.add(d.name)
 
     # Sort methods: fitness-color order first (if enabled), then alphabetical remainder
@@ -1715,7 +1731,7 @@ def generate_gens_comparison_plot(
         else:
             color = COMPARISON_COLORS[(i + len(COMPARISON_COLORS_DICT)) % len(COMPARISON_COLORS)]
 
-        marker = COMPARISON_MARKER_MAP.get(color, 'o')
+        marker = COMPARISON_MARKER_MAP.get(color, None)
 
         xs, ys, dnf_flags = [], [], []
         for x_pos, env_dir in zip(x_positions, env_dirs):
@@ -1730,14 +1746,17 @@ def generate_gens_comparison_plot(
         if not xs:
             continue
 
-        ax.plot(xs, ys, color=color, marker=marker, label=apply_labelmap(method_name, labelmap), markersize=8)
+        ax.plot(xs, ys, color=color, marker=marker, label=apply_labelmap(method_name, labelmap), markersize=20, linewidth=3, markeredgewidth=1, markeredgecolor='black')
 
-        # Overplot DNF points with a hollow upward-triangle to signal non-convergence
+        # Overplot DNF points with a hollow downward-triangle to signal non-convergence
         dnf_xs = [x for x, dnf in zip(xs, dnf_flags) if dnf]
         dnf_ys = [y for y, dnf in zip(ys, dnf_flags) if dnf]
         if dnf_xs:
-            ax.scatter(dnf_xs, dnf_ys, marker='^', s=120,
-                       facecolors='none', edgecolors=color, linewidths=2, zorder=5)
+            ax.plot(dnf_xs, dnf_ys, linestyle='none', marker=(3, 0, 180), markersize=50,
+                    markerfacecolor='none', markeredgecolor='black', zorder=10, markeredgewidth=2)
+            for x, y in zip(dnf_xs, dnf_ys):
+                ax.annotate('DNF', xy=(x, y), xytext=(-25, 0),
+                            textcoords='offset points', va='center', ha='right', fontsize=10, zorder=10)
 
     ax.set_xticks(x_positions)
     ax.set_xticklabels(env_labels)
@@ -1761,6 +1780,7 @@ def plot_gens_comparison(
         legend_loc: Optional[str],
         log_scale: bool,
         labelmap: Optional[str],
+        exclude: set,
         csv_name: str,
         line_plot_args: LinePlotArgs,
         plot_args: PlotArgs
@@ -1774,6 +1794,7 @@ def plot_gens_comparison(
         legend_loc=legend_loc,
         log_scale=log_scale,
         labelmap=labelmap,
+        exclude=exclude,
         csv_name=csv_name,
         line_plot_args=line_plot_args,
         plot_args=plot_args

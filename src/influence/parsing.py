@@ -36,7 +36,8 @@ class PlotArgs():
             silent: bool=False,
             remove_border: bool=False,
             dpi: Optional[int]=None,
-            legend_facecolor: Optional[str]=None
+            legend_facecolor: Optional[str]=None,
+            legend_labelspacing: Optional[float]=None
         ):
         self.title = title
         if output is not None:
@@ -55,6 +56,7 @@ class PlotArgs():
         self.remove_border = remove_border
         self.dpi = dpi
         self.legend_facecolor = legend_facecolor
+        self.legend_labelspacing = legend_labelspacing
 
     def init_figure(self, nrows:int=1, ncols:int=1):
         return plt.subplots(nrows, ncols, figsize=self.figsize)
@@ -81,9 +83,17 @@ class PlotArgs():
             ax.spines['right'].set_visible(False)
             ax.spines['left'].set_visible(False)
             ax.spines['bottom'].set_visible(False)
-        if self.legend_facecolor is not None:
-            legend = ax.get_legend()
-            if legend is not None:
+        legend = ax.get_legend()
+        if legend is not None:
+            if self.legend_labelspacing is not None:
+                # labelspacing must be baked in at creation time, so recreate the legend
+                handles = legend.legend_handles
+                labels = [t.get_text() for t in legend.get_texts()]
+                loc = legend._loc
+                legend.remove()
+                legend = ax.legend(handles, labels, loc=loc,
+                                   labelspacing=self.legend_labelspacing)
+            if self.legend_facecolor is not None:
                 legend.get_frame().set_facecolor(self.legend_facecolor)
 
     def finish_figure(self, fig: Figure):
@@ -246,6 +256,12 @@ class PlotParser(argparse.ArgumentParser):
             type=str,
             default=None
         )
+        self.add_argument(
+            '--legend-labelspacing',
+            help='vertical space between legend entries in font-size units (default: 0.5)',
+            type=float,
+            default=None
+        )
         return None
 
     def dump_plot_args(self, args):
@@ -263,7 +279,8 @@ class PlotParser(argparse.ArgumentParser):
             silent=args.silent,
             remove_border=args.remove_border,
             dpi=args.dpi,
-            legend_facecolor=args.legend_facecolor
+            legend_facecolor=args.legend_facecolor,
+            legend_labelspacing=args.legend_labelspacing
         )
 
 class LinePlotParser(PlotParser):

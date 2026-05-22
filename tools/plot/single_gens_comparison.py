@@ -80,6 +80,14 @@ if __name__ == '__main__':
         help='named preset for remapping method names in the legend'
     )
     parser.add_argument(
+        '--exclude',
+        nargs='+',
+        type=str,
+        default=None,
+        metavar='METHOD',
+        help='method directory names to exclude from plotting'
+    )
+    parser.add_argument(
         '--csv-name',
         help='name of csv to use for fitness',
         type=str,
@@ -96,6 +104,7 @@ if __name__ == '__main__':
         legend_loc=args.legend_loc,
         log_scale=args.log_scale,
         labelmap=args.labelmap,
+        exclude=set(args.exclude) if args.exclude else set(),
         csv_name=args.csv_name,
         line_plot_args=parser.dump_line_plot_args(args),
         plot_args=parser.dump_plot_args(args)
