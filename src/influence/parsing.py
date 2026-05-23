@@ -33,6 +33,7 @@ class PlotArgs():
             ylabel: Optional[str]=None,
             figsize: Optional[List[float]]=None,
             axes_position: Optional[List[float]]=None,
+            xticklabels: Optional[List[str]]=None,
             silent: bool=False,
             remove_border: bool=False,
             dpi: Optional[int]=None,
@@ -52,6 +53,7 @@ class PlotArgs():
         self.ylabel = ylabel
         self.figsize = figsize
         self.axes_position = axes_position
+        self.xticklabels = xticklabels
         self.silent = silent
         self.remove_border = remove_border
         self.dpi = dpi
@@ -70,6 +72,8 @@ class PlotArgs():
             ax.set_ylim(self.ylim)
         if self.xticks is not None:
             ax.set_xticks(self.xticks)
+        if self.xticklabels is not None:
+            ax.set_xticklabels(self.xticklabels)
         if self.yticks is not None:
             ax.set_yticks(self.yticks)
         if self.xlabel is not None:
@@ -128,6 +132,9 @@ class BatchPlotArgs():
             yticks: Optional[List[float]]=None,
             xlabel: Optional[str]=None,
             ylabel: Optional[str]=None,
+            figsize: Optional[List[float]]=None,
+            axes_position: Optional[List[float]]=None,
+            xticklabels: Optional[List[str]]=None,
             silent: bool=False,
             remove_border: bool=False,
             dpi: Optional[int]=None
@@ -138,6 +145,9 @@ class BatchPlotArgs():
         self.yticks = yticks
         self.xlabel = xlabel
         self.ylabel = ylabel
+        self.figsize = figsize
+        self.axes_position = axes_position
+        self.xticklabels = xticklabels
         self.silent = silent
         self.remove_border = remove_border
         self.dpi = dpi
@@ -152,6 +162,9 @@ class BatchPlotArgs():
             yticks=self.yticks,
             xlabel=self.xlabel,
             ylabel=self.ylabel,
+            figsize=self.figsize,
+            axes_position=self.axes_position,
+            xticklabels=self.xticklabels,
             silent=self.silent,
             remove_border=self.remove_border,
             dpi=self.dpi
@@ -235,6 +248,12 @@ class PlotParser(argparse.ArgumentParser):
             help='Axes position as fractions of figure: left bottom width height (all between 0 and 1)'
         )
         self.add_argument(
+            '--xticklabels',
+            nargs='*',
+            type=str,
+            help='Custom x-tick labels (space separated strings)'
+        )
+        self.add_argument(
             '-s', '--silent',
             help='run silently without showing the plot',
             action='store_true'
@@ -276,6 +295,7 @@ class PlotParser(argparse.ArgumentParser):
             ylabel=args.ylabel,
             figsize=args.figsize,
             axes_position=args.axes_position,
+            xticklabels=args.xticklabels,
             silent=args.silent,
             remove_border=args.remove_border,
             dpi=args.dpi,
@@ -362,6 +382,12 @@ class BatchPlotParser(argparse.ArgumentParser):
             help='Axes position as fractions of figure: left bottom width height (all between 0 and 1)'
         )
         self.add_argument(
+            '--xticklabels',
+            nargs='*',
+            type=str,
+            help='Custom x-tick labels (space separated strings)'
+        )
+        self.add_argument(
             '-s', '--silent',
             help='run silently without showing any plots',
             action='store_true'
@@ -387,6 +413,9 @@ class BatchPlotParser(argparse.ArgumentParser):
             yticks=args.yticks,
             xlabel=args.xlabel,
             ylabel=args.ylabel,
+            figsize=args.figsize,
+            axes_position=args.axes_position,
+            xticklabels=args.xticklabels,
             silent=args.silent,
             remove_border=args.remove_border,
             dpi=args.dpi

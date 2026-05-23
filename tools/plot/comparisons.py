@@ -32,7 +32,7 @@ if __name__ == '__main__':
     parser.add_argument(
         '--legend-order',
         type=str,
-        choices=['acm-telo'],
+        choices=['acm-telo', 'jaamas'],
         default=None,
         help='order the legend (default: no reordering)'
     )
@@ -47,6 +47,18 @@ if __name__ == '__main__':
         '--no-legend',
         action='store_true',
         help='turn off the legend'
+    )
+    parser.add_argument(
+        '--marker-outline',
+        action='store_true',
+        help='draw a thin black outline around markers'
+    )
+    parser.add_argument(
+        '--num-markers',
+        type=int,
+        default=None,
+        metavar='N',
+        help='number of markers to show per line (default: 10%% of visible points)'
     )
     parser.add_argument(
         '--csv-name',
@@ -67,5 +79,7 @@ if __name__ == '__main__':
         no_legend=args.no_legend,
         csv_name=args.csv_name,
         batch_plot_args=parser.dump_batch_plot_args(args),
-        batch_line_plot_args=parser.dump_batch_line_plot_args(args)
+        batch_line_plot_args=parser.dump_batch_line_plot_args(args),
+        marker_outline=args.marker_outline,
+        num_markers=args.num_markers
     )

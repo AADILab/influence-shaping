@@ -9,6 +9,7 @@ from matplotlib.animation import FuncAnimation
 from pathlib import Path
 from influence.plotting import generate_joint_trajectory_plot
 from influence.parsing import PlotParser
+from influence.config import load_config
 
 def update(frame, ax, args, parser):
     ax.clear()
@@ -90,38 +91,14 @@ if __name__ == '__main__':
     )
     args = parser.parse_args()
 
-    # plot_joint_trajectory(
-    #     joint_traj_dir=Path(args.joint_traj_dir),
-    #     num_steps=args.num_steps,
-    #     individual_colors=args.individual_colors,
-    #     use_image=args.use_image,
-    #     no_poi_shading=args.no_poi_shading,
-    #     no_grid=args.no_grid,
-    #     influence_shading=args.influence_shading,
-    #     uav_observation_radius=args.uav_observation_radius,
-    #     rover_observation_radius=args.rover_observation_radius,
-    #     include_bounds=args.include_bounds,
-    #     plot_args=parser.dump_plot_args(args)
-    # )
+    config_dir = Path(args.joint_traj_dir.parent.parent.parent.parent) / 'config.yaml'
+    cfg = load_config(config_dir)
 
-    # for i in range(100):
-    #     fig = generate_joint_trajectory_plot(
-    #         joint_traj_dir=Path(args.joint_traj_dir),
-    #         num_steps=i,
-    #         individual_colors=args.individual_colors,
-    #         use_image=args.use_image,
-    #         no_shading=args.no_poi_shading,
-    #         no_grid=args.no_grid,
-    #         influence_shading=args.influence_shading,
-    #         uav_observation_radius=args.uav_observation_radius,
-    #         rover_observation_radius=args.rover_observation_radius,
-    #         include_bounds=args.include_bounds,
-    #         plot_args=parser.dump_plot_args(args)
-    #     )
+    num_frames = cfg['ccea']['num_steps']+1
 
     fig, ax = plt.subplots()
     ani = FuncAnimation(
-        fig, update, frames=151, fargs=(ax, args, parser), interval=100
+        fig, update, frames=num_frames, fargs=(ax, args, parser), interval=100
     )
     # Save as mp4
     ani.save('animation.mp4', writer='ffmpeg', fps=10)  # Adjust fps as needed

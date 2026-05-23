@@ -43,6 +43,18 @@ if __name__ == '__main__':
         help='turn off the legend'
     )
     parser.add_argument(
+        '--marker-outline',
+        action='store_true',
+        help='draw a thin black outline around markers'
+    )
+    parser.add_argument(
+        '--num-markers',
+        type=int,
+        default=None,
+        metavar='N',
+        help='number of markers to show per line (default: 10%% of visible points)'
+    )
+    parser.add_argument(
         '--csv-name',
         help='name of csv to use for fitness',
         type=str,
@@ -58,5 +70,7 @@ if __name__ == '__main__':
         no_legend=args.no_legend,
         csv_name=args.csv_name,
         line_plot_args=parser.dump_line_plot_args(args),
-        plot_args=parser.dump_plot_args(args)
+        plot_args=parser.dump_plot_args(args),
+        marker_outline=args.marker_outline,
+        num_markers=args.num_markers
     )

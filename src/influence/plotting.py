@@ -58,18 +58,25 @@ COMPARISON_COLORS = [
     'tab:olive'
 ]
 
-COMPARISON_MARKER_MAP = {
-    'tab:blue': 's',     # square
-    'tab:orange': '^',   # triangle-up
-    'tab:green': 'o',    # circle
-    'tab:red': 'D',      # diamond
-    'tab:purple': 'P',   # plus (filled)
-    'tab:brown': 'X',    # x (filled)
-    'tab:pink': 'v',     # triangle-down
-    'tab:gray': '*',     # star
-    'tab:olive': 'd',    # thin diamond
-    None: None           # no marker if we don't set the color
+COMPARISON_MARKER_SIZE_MAP = {
+    's': 13,
+    '^': 12,
+    (3,0,0): 20,
+    (4,0,0): 15,
+    'o': 10,
+    'D': 10,
+    'P': 12,
+    'X': 12,
+    'v': 10,
+    '*': 14,
+    'd': 10,
+    '*': 20,
+    '2': 20,
+    'X': 15,
 }
+
+def get_marker_size(marker) -> int:
+    return COMPARISON_MARKER_SIZE_MAP.get(marker, 10)
 
 PASTEL_COLORS = plt.get_cmap('Pastel1').colors
 TAB20_COLORS = plt.get_cmap('tab20').colors
@@ -87,6 +94,21 @@ COMPARISON_COLORS_DICT = {
     'D-Indirect-Timestep-No-Archive': 'tab:purple',
     'D-Indirect-Traj-No-Archive': 'tab:olive',
     'D-Indirect-Window-N0-n0': TAB20_COLORS[7]
+}
+
+COMPARISON_MARKER_MAP = {
+    'tab:blue': 's',     # square
+    'tab:orange': '^',   # triangle-up
+    'tab:green': 'o',    # circle
+    'tab:red': 'D',      # diamond
+    'tab:purple': 'P',   # plus (filled)
+    'tab:brown': 'X',    # x (filled)
+    'tab:pink': 'v',     # triangle-down
+    'tab:gray': '*',     # star
+    'tab:olive': 'd',    # thin diamond
+    TAB20_COLORS[5]: '*',# star
+    TAB20_COLORS[7]: 'X',# marker tri up
+    None: None           # no marker if we don't set the color
 }
 
 JAAMAS_ALL_LABELMAP = {
@@ -198,6 +220,11 @@ def _build_adaptive_color_map(dir_names: List[str]) -> dict:
 # Populate COMPARISON_MARKER_MAP with adaptive color -> marker entries for N=1..10
 for _n in range(1, 11):
     COMPARISON_MARKER_MAP[_get_adaptive_color(_n)] = _get_adaptive_marker(_n)
+
+# # Populate COMPARISON_MARKER_SIZE_MAP with adaptive polygon marker sizes for N=3..10
+# # (N=1 -> 'o' and N=2 -> 'P' are already covered by their string keys)
+# for _n in range(3, 11):
+#     COMPARISON_MARKER_SIZE_MAP[_get_adaptive_marker(_n)] = 12
 
 _ENV_ORDER_PRESETS = {
     # Each preset is a dict with:
@@ -795,7 +822,8 @@ def add_stat_learning_curve(
         label: str,
         line_plot_args: LinePlotArgs,
         color: Optional[Union[str,Tuple[float]]] = None,
-        marker: Optional[str] = None
+        marker: Optional[str] = None,
+        marker_outline: bool = False
     ):
     # Set default color and marker
     if color is None:
@@ -855,7 +883,9 @@ def add_stat_learning_curve(
             color=color,
             marker=marker,
             markevery=markevery,
-            markersize=10
+            markersize=get_marker_size(marker),
+            markeredgecolor='black' if marker_outline else 'none',
+            markeredgewidth=1.0 if marker_outline else 0
         )
         ax.fill_between(
             gens,
@@ -1008,9 +1038,15 @@ def sort_legend(ax, legend_order):
         label_name_map = {
             'D-Indirect-Timestep': r'Dynamic',
             'D-Indirect-Traj': r'Static',
+            'D-Indirect-Traj-Local': r'Static',
             'Global': r'Global',
-            'Difference': r'Direct',
-            'D-Indirect-Window-N1-n0': r'Adaptive, N=1'
+            'Difference': r'Difference',
+            'D-Indirect-Window-N0-n0': r'Dynamic',
+            'D-Indirect-Window-N1-n0': r'Adaptive, $\eta=1$',
+            'D-Indirect-Window-N2-n0': r'Adaptive, $\eta=2$',
+            'D-Indirect-Window-N3-n0': r'Adaptive, $\eta=3$',
+            # 'D-Indirect-Window-N4-n0': r'Adaptive, $\eta=4$',
+            'D-Indirect-Window-N4-n0': r'Adaptive',
         }
 
         # Define desired order
@@ -1052,7 +1088,9 @@ def generate_comparison_plot(
         no_legend: bool,
         csv_name: str,
         line_plot_args: LinePlotArgs,
-        plot_args: PlotArgs
+        plot_args: PlotArgs,
+        marker_outline: bool = False,
+        num_markers: Optional[int] = None
     ):
     """Generate plot of experiment using experiment directory
     experiment_dir is parent of parent of trial directories
@@ -1092,7 +1130,8 @@ def generate_comparison_plot(
             label=trials_dir.name,
             line_plot_args=line_plot_args,
             color=color,
-            marker=marker
+            marker=marker,
+            marker_outline=marker_outline
         )
 
         if gens[-1] > xlim:
@@ -1112,6 +1151,19 @@ def generate_comparison_plot(
 
     plot_args.apply(ax)
 
+    x_min, x_max = ax.get_xlim()
+    for line in ax.get_lines():
+        if line.get_marker() not in (None, 'None', ''):
+            xdata = np.asarray(line.get_xdata())
+            visible_indices = np.where((xdata >= x_min) & (xdata <= x_max))[0]
+            if len(visible_indices) > 1:
+                if num_markers is not None:
+                    chosen = np.linspace(0, len(visible_indices) - 1, num_markers, dtype=int)
+                    markevery = list(visible_indices[chosen])
+                else:
+                    markevery = compute_markevery(marker_spacing=0.1, num_pts=len(visible_indices))
+                line.set_markevery(markevery)
+
     return fig
 
 def plot_comparison(
@@ -1122,7 +1174,9 @@ def plot_comparison(
         no_legend: bool,
         csv_name: str,
         line_plot_args: LinePlotArgs,
-        plot_args: PlotArgs
+        plot_args: PlotArgs,
+        marker_outline: bool = False,
+        num_markers: Optional[int] = None
     ):
     fig = generate_comparison_plot(
         experiment_dir=experiment_dir,
@@ -1132,7 +1186,9 @@ def plot_comparison(
         no_legend=no_legend,
         csv_name=csv_name,
         line_plot_args=line_plot_args,
-        plot_args=plot_args
+        plot_args=plot_args,
+        marker_outline=marker_outline,
+        num_markers=num_markers
     )
     plot_args.finish_figure(fig)
 
@@ -1342,7 +1398,9 @@ def generate_experiment_tree_plots(
         no_legend: bool = False,
         csv_name: str = DEFAULT_FITNESS_NAME,
         batch_plot_args: BatchPlotArgs = None,
-        batch_line_plot_args: BatchLinePlotArgs = None
+        batch_line_plot_args: BatchLinePlotArgs = None,
+        marker_outline: bool = False,
+        num_markers: Optional[int] = None
     ):
     """Generate all the plots in this experiment tree"""
 
@@ -1380,7 +1438,9 @@ def generate_experiment_tree_plots(
             line_plot_args=batch_line_plot_args.build_line_plot_args(),
             plot_args=batch_plot_args.build_plot_args(
                 title=dir_name, output=out_dir/dir_name/('comparison'+file_append+'.png')
-            )
+            ),
+            marker_outline=marker_outline,
+            num_markers=num_markers
         )
 
 def sort_jt_dirs(root_dir: Path, jt_dirs: List[str]):
@@ -1416,7 +1476,9 @@ def plot_comparison_tree(
         no_legend: bool = False,
         csv_name: str = DEFAULT_FITNESS_NAME,
         batch_plot_args: BatchPlotArgs = None,
-        batch_line_plot_args: BatchLinePlotArgs = None
+        batch_line_plot_args: BatchLinePlotArgs = None,
+        marker_outline: bool = False,
+        num_markers: Optional[int] = None
     ):
     generate_experiment_tree_plots(
         root_dir=root_dir,
@@ -1427,7 +1489,9 @@ def plot_comparison_tree(
         no_legend=no_legend,
         csv_name=csv_name,
         batch_plot_args=batch_plot_args,
-        batch_line_plot_args=batch_line_plot_args
+        batch_line_plot_args=batch_line_plot_args,
+        marker_outline=marker_outline,
+        num_markers=num_markers
     )
 
 def generate_joint_trajectory_tree_plots(
@@ -1746,7 +1810,7 @@ def generate_gens_comparison_plot(
         if not xs:
             continue
 
-        ax.plot(xs, ys, color=color, marker=marker, label=apply_labelmap(method_name, labelmap), markersize=20, linewidth=3, markeredgewidth=1, markeredgecolor='black')
+        ax.plot(xs, ys, color=color, marker=marker, label=apply_labelmap(method_name, labelmap), markersize=get_marker_size(marker), linewidth=3, markeredgewidth=1, markeredgecolor='black')
 
         # Overplot DNF points with a hollow downward-triangle to signal non-convergence
         dnf_xs = [x for x, dnf in zip(xs, dnf_flags) if dnf]
