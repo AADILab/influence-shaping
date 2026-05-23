@@ -22,5 +22,10 @@ python tools/plot/single_gens_comparison.py /nfs/stak/users/gonzaeve/influence-s
 
 Learning Curves:
 1 rover, 3 drones, 1 POI
+python tools/plot/comparisons.py /nfs/stak/users/gonzaeve/influence-shaping/results/2026_05_06/17_jaamas_edits/single_chain/1_poi --xlim 0 3000 --window 500 --fitness-colors --no-legend --marker-outline --dpi 300 --yticks 0 0.5 1.0 --xticks 0 1000 2000 3000 --ylabel "POIs Captured" --xlabel "Num. Generations" --figsize 3 4 --num-markers 4 --axes-position 0.21 0.15 0.72 0.82 --xticklabels 0 1K 2K 3K --ylim -0.1 1.1
 
-python tools/plot/comparisons.py /nfs/stak/users/gonzaeve/influence-shaping/results/2026_05_06/17_jaamas_edits/single_chain/1_poi --xlim 0 3000 --window 500 --fitness-colors --no-legend --marker-outline --dpi 300 --yticks 0 0.5 1.0 --xticks 0 1000 2000 3000 --ylabel "POIs Captured" --xlabel "Num. Generations" --figsize 3 4 --num-markers 3 --axes-position 0.21 0.15 0.74 0.8 --xticklabels 0 1K 2K 3K --ylim -0.1 1.1
+1 rover, 6 drones, 2 POIs
+python tools/plot/comparisons.py /nfs/stak/users/gonzaeve/influence-shaping/results/2026_05_06/17_jaamas_edits/single_chain/2_pois --window 500 --fitness-colors --no-legend --marker-outline --dpi 300 --ylabel "POIs Captured" --xlabel "Num. Generations" --figsize 3 4 --num-markers 5 --axes-position 0.21 0.15 0.72 0.82 --ylim -0.2 2.2 --xlim 0 20000 --xticks 0 5000 10000 15000 20000 --xticklabels 0 5K 10K 15K 20K
+
+1 rover, 9 drones, 3 POIs
+python tools/plot/comparisons.py /nfs/stak/users/gonzaeve/influence-shaping/results/2026_05_06/17_jaamas_edits/single_chain/3_pois --window 500 --fitness-colors --no-legend --marker-outline --dpi 300 --ylabel "POIs Captured" --xlabel "Num. Generations" --figsize 3 4 --num-markers 6 --axes-position 0.21 0.15 0.72 0.82 --ylim -0.3 3.3 --xlim 0 50000 --xticks 0 10000 20000 30000 40000 50000 --xticklabels 0 10K 20K 30K 40K 50K
