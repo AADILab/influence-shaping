@@ -197,7 +197,7 @@ def _get_adaptive_n(dir_name: str) -> Optional[int]:
 def _get_adaptive_color(n: int):
     """Return the YlOrBr colormap color for adaptive window size N=n.
     N=1 maps to the light end, N=6 maps to the dark end of YlOrBr."""
-    return plt.cm.YlOrBr(0.05 + 0.95 * (n - 1) / 6)
+    return plt.cm.PuRd(0.2 + 0.8 * (n - 1) / 6)
 
 def _get_adaptive_marker(n: int):
     """Return the matplotlib marker for adaptive window size N=n.
@@ -253,6 +253,31 @@ LEGEND_LOC_CHOICES = [
 ]
 
 DEFAULT_FITNESS_NAME = 'fitness.csv'
+
+COMPARISON_HATCHES = ['+', 'x', 'o', '.', '//', '\\\\', '/', '\\', '|', '-']
+
+BAR_ORDER_CHOICES = ['jaamas']
+
+_BAR_ORDERS = {
+    'jaamas': [
+        'D-Indirect-Window-N4-n0',
+        'D-Indirect-Window-N1-n0',
+        'D-Indirect-Traj-Local',
+        'D-Indirect-Traj',
+        'Global',
+        'D-Indirect-Timestep',
+        'D-Indirect-Window-N0-n0',
+        'Difference',
+    ],
+}
+
+def apply_bar_order(methods: List[str], bar_order: Optional[str]) -> List[str]:
+    if bar_order is None:
+        return methods
+    desired = _BAR_ORDERS[bar_order]
+    ordered = [m for m in desired if m in methods]
+    remaining = [m for m in methods if m not in set(desired)]
+    return ordered + remaining
 
 def compute_markevery(marker_spacing: Union[int, float], num_pts: int) -> int:
     """
@@ -1051,10 +1076,13 @@ def sort_legend(ax, legend_order):
 
         # Define desired order
         desired_order = [
+            'D-Indirect-Window-N4-n0',
             'D-Indirect-Window-N1-n0',
+            'D-Indirect-Traj-Local',
             'D-Indirect-Traj',
             'Global',
             'D-Indirect-Timestep',
+            'D-Indirect-Window-N0-n0',
             'Difference'
         ]
 
@@ -1363,6 +1391,164 @@ def plot_bar_comparison(
         plot_args=plot_args
     )
     plot_args.finish_figure(fig)
+
+def generate_multibar_comparison_plot(
+        parent_dir: Path,
+        use_fitness_colors: bool,
+        generation: Optional[int],
+        labelmap: Optional[str],
+        show_best: bool,
+        no_legend: bool,
+        legend_order: Optional[str],
+        legend_loc: Optional[str],
+        normalize_yscores: bool,
+        bar_order: Optional[str],
+        colorblind: bool,
+        csv_name: str,
+        line_plot_args: LinePlotArgs,
+        plot_args: PlotArgs
+    ):
+    """Grouped bar chart where each group of bars is one comparison subdirectory.
+
+    parent_dir layout:
+        parent_dir/
+            comparison1/   <- one group of bars
+                method_a/trial_0/ ...
+                method_b/trial_0/ ...
+            comparison2/
+                ...
+    """
+    fig, ax = plot_args.init_figure()
+    ax.set_facecolor('#e6e6e6')
+    ax.grid(True, color='white', linewidth=1.0, axis='y')
+    ax.set_axisbelow(True)
+
+    comparison_dirs = sorted([d for d in parent_dir.iterdir() if d.is_dir()])
+
+    all_method_names: set = set()
+    for comp_dir in comparison_dirs:
+        for d in comp_dir.iterdir():
+            if d.is_dir():
+                all_method_names.add(d.name)
+
+    sorted_method_paths = sort_fitness_path_list([Path(m) for m in all_method_names])
+    sorted_methods = apply_bar_order([p.name for p in sorted_method_paths], bar_order)
+    adaptive_color_map = _build_adaptive_color_map(sorted_methods)
+
+    # Per-comparison highest possible score; global max used for shared y-limit
+    comp_high_y: dict = {}
+    for comp_dir in comparison_dirs:
+        for method_dir in comp_dir.iterdir():
+            if method_dir.is_dir():
+                config_path = method_dir / 'config.yaml'
+                if config_path.exists():
+                    config = load_config(config_path)
+                    comp_high_y[comp_dir] = sum(
+                        poi['value'] for poi in
+                        config['env']['pois']['hidden_pois'] + config['env']['pois']['rover_pois']
+                    )
+                    break
+    high_y = max(comp_high_y.values()) if comp_high_y else None
+
+    num_methods = len(sorted_methods)
+    num_comparisons = len(comparison_dirs)
+    bar_width = 0.8 / num_methods
+    group_positions = np.arange(num_comparisons, dtype=float)
+
+    for j, method_name in enumerate(sorted_methods):
+        if use_fitness_colors and _get_adaptive_n(method_name) is not None:
+            color = adaptive_color_map[method_name]
+        elif use_fitness_colors and method_name in COMPARISON_COLORS_DICT:
+            color = COMPARISON_COLORS_DICT[method_name]
+        else:
+            color = COMPARISON_COLORS[(j + len(COMPARISON_COLORS_DICT)) % len(COMPARISON_COLORS)]
+
+        bar_offset = (j - num_methods / 2 + 0.5) * bar_width
+        legend_label = apply_labelmap(method_name, labelmap)
+        hatch = COMPARISON_HATCHES[j % len(COMPARISON_HATCHES)] if colorblind else None
+
+        for i, comp_dir in enumerate(comparison_dirs):
+            trials_dir = comp_dir / method_name
+            x_pos = group_positions[i] + bar_offset
+            bar_label = legend_label if i == 0 else '_nolegend_'
+
+            comp_max = comp_high_y.get(comp_dir)
+            divisor = comp_max if (normalize_yscores and comp_max) else 1.0
+            placeholder_h = 0.8 if normalize_yscores else ((comp_max or 1.0) * 0.8)
+
+            if not trials_dir.exists():
+                ax.bar(x_pos, placeholder_h, width=bar_width, color='none',
+                       edgecolor='gray', linewidth=1.5, linestyle='--')
+                continue
+
+            avg, err = get_bar_snapshot(trials_dir, csv_name, generation, line_plot_args)
+            if avg is None:
+                ax.bar(x_pos, placeholder_h, width=bar_width, color='none',
+                       edgecolor='gray', linewidth=1.5, linestyle='--')
+                ax.text(x_pos, placeholder_h * 0.02, 'Results pending', ha='center', va='bottom',
+                        rotation=90, fontsize=8, color='gray', style='italic')
+            else:
+                ax.bar(x_pos, avg / divisor, width=bar_width, yerr=err / divisor, color=color,
+                       capsize=3, error_kw={'linewidth': 1.5}, label=bar_label,
+                       hatch=hatch, edgecolor='black' if colorblind else color)
+
+    comp_labels = [d.name for d in comparison_dirs]
+    ax.set_xticks(group_positions)
+    ax.set_xticklabels(comp_labels)
+
+    ax.set_ylabel('Normalized Performance' if normalize_yscores else 'Performance')
+    if normalize_yscores:
+        ax.set_ylim([0, 1.0])
+    elif high_y is not None:
+        ax.set_ylim([0, high_y])
+
+    if show_best:
+        best_line_y = 1.0 if normalize_yscores else high_y
+        if best_line_y is not None:
+            ax.axhline(y=best_line_y, color='black', linestyle='--', linewidth=1.5)
+
+    handles, labels = sort_legend(ax, legend_order)
+    if not no_legend:
+        ax.legend(handles, labels, loc=legend_loc)
+
+    plot_args.apply(ax)
+    return fig
+
+
+def plot_multibar_comparison(
+        parent_dir: Path,
+        use_fitness_colors: bool,
+        generation: Optional[int],
+        labelmap: Optional[str],
+        show_best: bool,
+        no_legend: bool,
+        legend_order: Optional[str],
+        legend_loc: Optional[str],
+        normalize_yscores: bool,
+        bar_order: Optional[str],
+        colorblind: bool,
+        csv_name: str,
+        line_plot_args: LinePlotArgs,
+        plot_args: PlotArgs
+    ):
+    fig = generate_multibar_comparison_plot(
+        parent_dir=parent_dir,
+        use_fitness_colors=use_fitness_colors,
+        generation=generation,
+        labelmap=labelmap,
+        show_best=show_best,
+        no_legend=no_legend,
+        legend_order=legend_order,
+        legend_loc=legend_loc,
+        normalize_yscores=normalize_yscores,
+        bar_order=bar_order,
+        colorblind=colorblind,
+        csv_name=csv_name,
+        line_plot_args=line_plot_args,
+        plot_args=plot_args
+    )
+    plot_args.finish_figure(fig)
+
 
 def get_example_trial_dirs(parent_dir: Path):
     dirs = [parent_dir/dir for dir in os.list(parent_dir) if 'trial_' in dir]
