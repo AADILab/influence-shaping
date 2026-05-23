@@ -34,10 +34,10 @@ def is_gap_space(idx: int, gap_size: int)->bool:
 def is_poi_space(idx: int, gap_size: int)->bool:
     return not is_gap_space(idx=idx, gap_size=gap_size)
 
-def generate_space(idx: int, gap_size: int, lane_idx: int, num_lanes: int, share_workspaces: bool) -> dict:
+def generate_space(idx: int, gap_size: int, lane_idx: int, num_lanes: int, share_workspaces: bool, yspace: int) -> dict:
     space_dict = {}
     # Lane offset for y coordinates
-    lane_offset = lane_idx * 20
+    lane_offset = lane_idx * (20 + yspace)
 
     # Place rover only in the first space of each lane
     if idx == 0:
@@ -82,7 +82,7 @@ def generate_space(idx: int, gap_size: int, lane_idx: int, num_lanes: int, share
     # Vertical bounds depend on share_workspaces flag
     if share_workspaces:
         low_y = 0
-        high_y = num_lanes * 20
+        high_y = num_lanes * 20 + (num_lanes - 1) * yspace
     else:
         low_y = lane_offset
         high_y = lane_offset + 20
@@ -141,10 +141,10 @@ def generate_space(idx: int, gap_size: int, lane_idx: int, num_lanes: int, share
 def compute_total_spaces(num_pois: int, gap_size: int)->int:
     return num_pois*(gap_size+1)
 
-def compute_sequence_params(num_pois: int, gap_size: int, num_lanes: int, share_workspaces: bool)->dict:
+def compute_sequence_params(num_pois: int, gap_size: int, num_lanes: int, share_workspaces: bool, yspace: int)->dict:
     total_spaces = compute_total_spaces(num_pois=num_pois, gap_size=gap_size)
     x_size = total_spaces * 20
-    y_size = num_lanes * 20
+    y_size = num_lanes * 20 + (num_lanes - 1) * yspace
     num_steps = total_spaces * 25
     sequence_dict = {
         'hidden_pois': [],
@@ -165,7 +165,8 @@ def compute_sequence_params(num_pois: int, gap_size: int, num_lanes: int, share_
                 gap_size=gap_size,
                 lane_idx=lane_idx,
                 num_lanes=num_lanes,
-                share_workspaces=share_workspaces
+                share_workspaces=share_workspaces,
+                yspace=yspace
             )
             for key in ['rovers', 'uavs', 'hidden_pois']:
                 if key in space_dict:
@@ -174,13 +175,14 @@ def compute_sequence_params(num_pois: int, gap_size: int, num_lanes: int, share_
 
     return sequence_dict
 
-def generate_config_snippet(num_pois: int, gap_size: int, num_lanes: int, share_workspaces: bool)->dict:
+def generate_config_snippet(num_pois: int, gap_size: int, num_lanes: int, share_workspaces: bool, yspace: int)->dict:
     # Figure out where rovers, uavs, pois go
     sequence_dict = compute_sequence_params(
         num_pois=num_pois,
         gap_size=gap_size,
         num_lanes=num_lanes,
-        share_workspaces=share_workspaces
+        share_workspaces=share_workspaces,
+        yspace=yspace
     )
     config = {
         'env': {
@@ -232,6 +234,7 @@ def main():
     parser.add_argument('--gap_size', type=int, required=True, help='Gap size (number of empty spaces between POIs)')
     parser.add_argument('--num_lanes', type=int, default=1, help='Number of lanes (positive integer, default: 1)')
     parser.add_argument('--share_workspaces', action='store_true', help='Whether drones in same column share vertical bounds')
+    parser.add_argument('--yspace', type=int, default=0, help='Extra vertical spacing between lanes (default: 0)')
     parser.add_argument('--output', type=str, default=None, help='Output file (optional, prints to stdout if not set)')
     args = parser.parse_args()
 
@@ -244,7 +247,8 @@ def main():
         num_pois=args.num_pois,
         gap_size=args.gap_size,
         num_lanes=args.num_lanes,
-        share_workspaces=args.share_workspaces
+        share_workspaces=args.share_workspaces,
+        yspace=args.yspace
     )
 
     # Output result to file or print
