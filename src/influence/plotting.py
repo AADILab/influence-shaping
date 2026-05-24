@@ -456,7 +456,7 @@ def add_trajectory(
         ys = ys[0:num_steps+1]
 
     # Plot the trajectory "trace" dots
-    ax.plot(xs, ys, linestyle='None', color=color, marker='o', markersize=0.5, alpha=0.75)
+    ax.plot(xs, ys, color=color, alpha=0.75)
 
     # Place the marker / image at the final position
     x_final = xs[-1]
