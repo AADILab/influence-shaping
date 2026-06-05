@@ -3,13 +3,10 @@
 from pathlib import Path
 from influence.plotting import plot_joint_trajectory, plot_joint_trajectory_on_ax
 from influence.parsing import PlotParser
+from influence.config import load_config
 
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
-from pathlib import Path
-from influence.plotting import generate_joint_trajectory_plot
-from influence.parsing import PlotParser
-from influence.config import load_config
 
 def update(frame, ax, args, parser):
     ax.clear()
@@ -91,15 +88,24 @@ if __name__ == '__main__':
     )
     args = parser.parse_args()
 
-    config_dir = Path(args.joint_traj_dir.parent.parent.parent.parent) / 'config.yaml'
+    config_dir = Path(args.joint_traj_dir).parent.parent.parent.parent / 'config.yaml'
     cfg = load_config(config_dir)
 
     num_frames = cfg['ccea']['num_steps']+1
 
-    fig, ax = plt.subplots()
+    fig, ax = parser.dump_plot_args(args).init_figure()
     ani = FuncAnimation(
-        fig, update, frames=num_frames, fargs=(ax, args, parser), interval=100
+        fig,
+        update,
+        frames=num_frames,
+        fargs=(ax, args, parser),
+        interval=100
     )
     # Save as mp4
-    ani.save('animation.mp4', writer='ffmpeg', fps=10)  # Adjust fps as needed
+    ani.save(
+        'animation.mp4',
+        writer='ffmpeg',
+        fps=5,
+        dpi=args.dpi
+    )  # Adjust fps as needed
     plt.show()
