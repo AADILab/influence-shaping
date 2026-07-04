@@ -3,7 +3,6 @@
 from pathlib import Path
 from influence.plotting import plot_joint_trajectory, plot_joint_trajectory_on_ax
 from influence.parsing import PlotParser
-from influence.config import load_config
 
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
@@ -88,10 +87,19 @@ if __name__ == '__main__':
     )
     args = parser.parse_args()
 
-    config_dir = Path(args.joint_traj_dir).parent.parent.parent.parent / 'config.yaml'
-    cfg = load_config(config_dir)
+    num_frames = sum(1 for _ in open(args.joint_traj_dir)) - 2
 
-    num_frames = cfg['ccea']['num_steps']+1
+    # Derive output path: swap 'results' for 'outvids' in the input path chain.
+    # Fall back to outvids/animation.mp4 if no 'results' folder is found.
+    csv_path = Path(args.joint_traj_dir).resolve()
+    parts = csv_path.parts
+    if 'results' in parts:
+        idx = parts.index('results')
+        out_path = Path(*parts[:idx]) / 'outvids' / Path(*parts[idx+1:])
+        out_path = out_path.with_suffix('.mp4')
+    else:
+        out_path = Path('outvids') / 'animation.mp4'
+    out_path.parent.mkdir(parents=True, exist_ok=True)
 
     fig, ax = parser.dump_plot_args(args).init_figure()
     ani = FuncAnimation(
@@ -101,11 +109,10 @@ if __name__ == '__main__':
         fargs=(ax, args, parser),
         interval=100
     )
-    # Save as mp4
     ani.save(
-        'animation.mp4',
+        str(out_path),
         writer='ffmpeg',
-        fps=5,
+        fps=30,
         dpi=args.dpi
-    )  # Adjust fps as needed
+    )
     plt.show()

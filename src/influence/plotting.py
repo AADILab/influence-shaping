@@ -403,16 +403,31 @@ def get_num_entities_fit(labels: List[str]):
 
     return num_rovers, num_uavs, num_rover_pois, num_hidden_pois
 
-def plot_poi(ax, poi_config, x, y, color, radius_shading):
-    center_circle = plt.Circle(
-        xy = (x, y),
-        radius = min(1.0, poi_config['capture_radius']),
-        facecolor=color,
-        edgecolor='none',
-        fill=True,
-        alpha=1.0
-        )
-    ax.add_patch(center_circle)
+def _poi_shading_alpha(poi_x, poi_y, poi_config, rover_xs_list, rover_ys_list,
+                       alpha_far=0.2, alpha_close=0.7):
+    capture_radius = poi_config['capture_radius']
+    inner_radius = min(1.0, capture_radius)
+    min_dist = min(
+        np.sqrt((xs - poi_x)**2 + (ys - poi_y)**2).min()
+        for xs, ys in zip(rover_xs_list, rover_ys_list)
+    )
+    if min_dist >= capture_radius:
+        return alpha_far
+    if min_dist <= inner_radius:
+        return alpha_close
+    t = (capture_radius - min_dist) / (capture_radius - inner_radius)
+    return alpha_far + t * (alpha_close - alpha_far)
+
+def plot_poi(ax, poi_config, x, y, color, radius_shading, shading_alpha=0.2):
+    # center_circle = plt.Circle(
+    #     xy = (x, y),
+    #     radius = min(1.0, poi_config['capture_radius']),
+    #     facecolor=color,
+    #     edgecolor='none',
+    #     fill=True,
+    #     alpha=1.0
+    #     )
+    # ax.add_patch(center_circle)
     if radius_shading:
         outer_circle = plt.Circle(
             xy = (x, y),
@@ -420,20 +435,20 @@ def plot_poi(ax, poi_config, x, y, color, radius_shading):
             facecolor=color,
             edgecolor='none',
             fill=True,
-            alpha=0.2
+            alpha=shading_alpha
             )
         ax.add_patch(outer_circle)
 
 def get_rover_colors(individual_colors: bool):
     if individual_colors:
-        rover_colors = plt.cm.Set1.colors[:1]+plt.cm.Set1.colors[3:]
+        rover_colors = ((162/255, 197/255, 202/255),) + plt.cm.Set1.colors[:1] + plt.cm.Set1.colors[3:]
     else:
         rover_colors = [(162/255, 197/255, 202/255)]
     return rover_colors
 
 def get_uav_colors(individual_colors: bool):
     if individual_colors:
-        uav_colors = plt.cm.Dark2.colors[1:]
+        uav_colors = ((114/255, 38/255, 115/255),) + plt.cm.Dark2.colors[1:]
     else:
         uav_colors = [(114/255, 38/255, 115/255)]
     return uav_colors
@@ -494,14 +509,21 @@ def add_trajectory(
         mask = np.all(img_arr[:, :, :3] == orig_color[:3], axis=-1)
         img_arr[mask] = target_color
         img = Image.fromarray(img_arr)
+        orig_img_w, _ = img.size  # pixel width before rotation, used for zoom calc
 
         # Rotate PIL image according to heading. Convert to np array.
         if rotation != 0:
             img = img.rotate(rotation, resample=Image.BICUBIC, expand=True)
         img = np.array(img)
 
-        # Add the image to the ax object
-        zoom = 0.01
+        # Scale icon to occupy 1x1 data unit regardless of figure size
+        fig = ax.get_figure()
+        fig_w_in, _ = fig.get_size_inches()
+        dpi = fig.dpi
+        ax_w_px = fig_w_in * dpi
+        xlim = ax.get_xlim()
+        px_per_unit = ax_w_px / (xlim[1] - xlim[0])
+        zoom = px_per_unit / orig_img_w
         imagebox = OffsetImage(img, zoom=zoom)
         ab = AnnotationBbox(imagebox, (x_final, y_final), frameon=False)
         ax.add_artist(ab)
@@ -647,6 +669,14 @@ def plot_joint_trajectory_on_ax(
         raise FileNotFoundError(f"No config.yaml found in any parent directory of {joint_traj_dir}")
 
     config = load_config(config_dir)
+
+    x_bound, y_bound = config['env']['map_size']
+
+    ax.set_xlim([0, x_bound])
+    ax.set_ylim([0, y_bound])
+    ax.set_aspect('equal')
+    plot_args.apply(ax)
+
     rover_configs = config['env']['agents']['rovers']
     uav_configs = config['env']['agents']['uavs']
 
@@ -698,19 +728,27 @@ def plot_joint_trajectory_on_ax(
         num_steps=num_steps
     )
 
+    rover_xs_list = []
+    rover_ys_list = []
+    for i in range(num_rovers):
+        xs = np.array(df['rover_' + str(i) + '_x'])
+        ys = np.array(df['rover_' + str(i) + '_y'])
+        if num_steps is not None:
+            xs = xs[:num_steps + 1]
+            ys = ys[:num_steps + 1]
+        rover_xs_list.append(xs)
+        rover_ys_list.append(ys)
+
     for i, poi_config in enumerate(config['env']['pois']['rover_pois']):
-        plot_poi(ax, poi_config, x=df['rover_poi_'+str(i)+'_x'][0], y=df['rover_poi_'+str(i)+'_y'][0], color='tab:green', radius_shading=not no_shading)
+        poi_x = df['rover_poi_' + str(i) + '_x'][0]
+        poi_y = df['rover_poi_' + str(i) + '_y'][0]
+        alpha = _poi_shading_alpha(poi_x, poi_y, poi_config, rover_xs_list, rover_ys_list)
+        plot_poi(ax, poi_config, x=poi_x, y=poi_y, color='tab:green', radius_shading=not no_shading, shading_alpha=alpha)
     for i, poi_config in enumerate(config['env']['pois']['hidden_pois']):
-        plot_poi(ax, poi_config, x=df['hidden_poi_'+str(i)+'_x'][0], y=df['hidden_poi_'+str(i)+'_y'][0], color='tab:green', radius_shading=not no_shading)
-
-    x_bound, y_bound = config['env']['map_size']
-
-    ax.set_xlim([0, x_bound])
-    ax.set_ylim([0, y_bound])
-    ax.set_aspect('equal')
-
-    plot_args.apply(ax)
-
+        poi_x = df['hidden_poi_' + str(i) + '_x'][0]
+        poi_y = df['hidden_poi_' + str(i) + '_y'][0]
+        alpha = _poi_shading_alpha(poi_x, poi_y, poi_config, rover_xs_list, rover_ys_list)
+        plot_poi(ax, poi_config, x=poi_x, y=poi_y, color='tab:green', radius_shading=not no_shading, shading_alpha=alpha)
 
 def generate_joint_trajectory_plot(
         joint_traj_dir: Path,
