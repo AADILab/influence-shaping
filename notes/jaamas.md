@@ -17,8 +17,11 @@ clear && python tools/plot/single_bar_comparison.py /nfs/stak/users/gonzaeve/inf
 ### 4 POIs (2 rovers), 0pt spacing:
 clear && python tools/plot/single_bar_comparison.py /nfs/stak/users/gonzaeve/influence-shaping/results/2026_05_06/16_double_lane/0_spacing/ -o /nfs/stak/users/gonzaeve/influence-shaping/outfigs/2026_05_06/16_double_lane/0_spacing/bar.pdf --window 500 --ylabel "POIs Captured" --yticks 0 0.5 1.0 1.5 2.0 2.5 3.0 3.5 4.0 --axes-position 0.1 0.3 0.89 0.57 --fitness-colors --figsize 8 6 --labelmap jaamas-all --xtick-rotation 60 --grouping jaamas-split --dpi 300 --ylim 0 4.4 --showbest --generation 50000
 
+## 4 POIs (2 rovers), 10pt spacing:
+clear && python tools/plot/single_bar_comparison.py /nfs/stak/users/gonzaeve/influence-shaping/results/2026_05_06/16_double_lane/10_spacing/ -o /nfs/stak/users/gonzaeve/influence-shaping/outfigs/2026_05_06/16_double_lane/10_spacing/bar.pdf --window 500 --ylabel "POIs Captured" --yticks 0 0.5 1.0 1.5 2.0 2.5 3.0 3.5 4.0 --axes-position 0.1 0.3 0.89 0.57 --fitness-colors --figsize 8 6 --labelmap jaamas-all --xtick-rotation 60 --grouping jaamas-split --dpi 300 --ylim 0 4.4 --showbest --generation 50000
+
 # To plot generations convergence comparison:
-python tools/plot/single_gens_comparison.py /nfs/stak/users/gonzaeve/influence-shaping/results/2026_05_06/13_5x5_tmp --dpi 300 -o /nfs/stak/users/gonzaeve/influence-shaping/outfigs/2026_05_06/13_5x5_tmp/gens_comparison.pdf --log-scale --fitness-colors --ylim 1 200000 --xlim -0.2 3.2 --yticks 10 100 1000 10000 100000 --ylabel "Num. Generations Required" --methods influence-extension --xlabel  "Number of Drones in Chain" --labelmap influence-extension --exclude D-Indirect-Window-N6-n0 D-Indirect-Window-N5-n0 D-Indirect-Window-N4-n0 --legend-facecolor "lightgray" --legend-labelspacing 1.8 --axes-position 0.12 0.12 0.87 0.86
+python tools/plot/single_gens_comparison.py /nfs/stak/users/gonzaeve/influence-shaping/results/2026_05_06/13_5x5_tmp --dpi 300 -o /nfs/stak/users/gonzaeve/influence-shaping/outfigs/2026_05_06/13_5x5_tmp/gens_comparison.pdf --log-scale --fitness-colors --ylim 1 200000 --xlim -0.2 3.2 --yticks 10 100 1000 10000 100000 --ylabel "Num. Generations Required" --methods influence-extension --xlabel  "Number of Drones in Chain" --labelmap influence-extension --exclude D-Indirect-Window-N6-n0 D-Indirect-Window-N5-n0 D-Indirect-Window-N4-n0 --legend-facecolor "lightgray" --legend-labelspacing 1.8 --axes-position 0.12 0.12 0.87 0.86 --window 100
 
 # Learning Curves:
 ## 1 rover, 3 drones, 1 POI
@@ -27,12 +30,21 @@ python tools/plot/single_comparison.py /nfs/stak/users/gonzaeve/influence-shapin
 ## 1 rover, 6 drones, 2 POIs
 python tools/plot/single_comparison.py /nfs/stak/users/gonzaeve/influence-shaping/results/2026_05_06/17_jaamas_edits/single_chain/2_pois --window 500 --fitness-colors --no-legend --marker-outline --dpi 300 --ylabel "POIs Captured" --xlabel "Num. Generations" --figsize 3 4 --num-markers 5 --axes-position 0.21 0.15 0.72 0.82 --ylim -0.2 2.2 --xlim 0 20000 --xticks 0 5000 10000 15000 20000 --xticklabels 0 5K 10K 15K 20K -o /nfs/stak/users/gonzaeve/influence-shaping/outfigs/2026_05_06/17_jaamas_edits/single_chain/2_pois/comparison.pdf
 
+### PhD Presentation
+python tools/plot/single_comparison.py /nfs/stak/users/gonzaeve/influence-shaping/results/2026_05_06/17_jaamas_edits/single_chain/2_pois --window 500 --fitness-colors --no-legend --marker-outline --dpi 300 --ylabel "POIs Captured" --xlabel "Num. Generations" --figsize 5 4 --num-markers 5 --ylim -0.2 2.2 --xlim 0 20000 --xticks 0 5000 10000 15000 20000 --xticklabels 0 5K 10K 15K 20K -o /nfs/stak/users/gonzaeve/influence-shaping/outfigs/2026_05_06/17_jaamas_edits/single_chain/2_pois/comparison_presentation.png --axes-position 0.15 0.15 0.8 0.8 --dpi 500
+
 ## 1 rover, 9 drones, 3 POIs
 python tools/plot/single_comparison.py /nfs/stak/users/gonzaeve/influence-shaping/results/2026_05_06/17_jaamas_edits/single_chain/3_pois --window 500 --fitness-colors --no-legend --marker-outline --dpi 300 --ylabel "POIs Captured" --xlabel "Num. Generations" --figsize 3 4 --num-markers 6 --axes-position 0.21 0.15 0.72 0.82 --ylim -0.3 3.3 --xlim 0 50000 --xticks 0 10000 20000 30000 40000 50000 --xticklabels 0 10K 20K 30K 40K 50K -o /nfs/stak/users/gonzaeve/influence-shaping/outfigs/2026_05_06/17_jaamas_edits/single_chain/3_pois/comparison.pdf
+
+### PhD Presentation
+python tools/plot/single_comparison.py /nfs/stak/users/gonzaeve/influence-shaping/results/2026_05_06/17_jaamas_edits/single_chain/3_pois --window 500 --fitness-colors --no-legend --marker-outline --dpi 300 --ylabel "POIs Captured" --xlabel "Num. Generations" --figsize 5 4 --num-markers 6 --ylim -0.3 3.3 --xlim 0 50000 --xticks 0 10000 20000 30000 40000 50000 --xticklabels 0 10K 20K 30K 40K 50K -o /nfs/stak/users/gonzaeve/influence-shaping/outfigs/2026_05_06/17_jaamas_edits/single_chain/3_pois/comparison_presentation.png --axes-position 0.15 0.15 0.8 0.8 --dpi 500
 
 ## 2 rovers, 12 drones, 4 POIs (10spacing)
 python tools/plot/single_comparison.py /nfs/stak/users/gonzaeve/influence-shaping/results/2026_05_06/17_jaamas_edits/double_chain/1-10spacing --window 500 --fitness-colors --no-legend --marker-outline --dpi 300 --ylabel "POIs Captured" --xlabel "Num. Generations" --figsize 4.5 4 --num-markers 6 --axes-position 0.12 0.15 0.83 0.82 --ylim -0.4 4.4 --xlim 0 50000 --xticks 0 10000 20000 30000 40000 50000 --xticklabels 0 10K 20K 30K 40K 50K -o /nfs/stak/u
 sers/gonzaeve/influence-shaping/outfigs/2026_05_06/17_jaamas_edits/double_chain/1-10spacing/comparison.pdf
+
+### PhD Presentation
+python tools/plot/single_comparison.py /nfs/stak/users/gonzaeve/influence-shaping/results/2026_05_06/17_jaamas_edits/double_chain/1-10spacing --window 500 --fitness-colors --no-legend --marker-outline --dpi 300 --ylabel "POIs Captured" --xlabel "Num. Generations" --figsize 5 4 --num-markers 6 --axes-position 0.12 0.15 0.83 0.82 --ylim -0.4 4.4 --xlim 0 50000 --xticks 0 10000 20000 30000 40000 50000 --xticklabels 0 10K 20K 30K 40K 50K -o /nfs/stak/users/gonzaeve/influence-shaping/outfigs/2026_05_06/17_jaamas_edits/double_chain/1-10spacing/comparison.png
 
 ## 2 rovers, 12 drones, 4 POIs (0spacing, or NO spacing)
 python tools/plot/single_comparison.py /nfs/stak/users/gonzaeve/influence-shaping/results/2026_05_06/17_jaamas_edits/double_chain/2-nospacing --window 500 --fitness-colors --no-legend --marker-outline --dpi 300 --ylabel "POIs Captured" --xlabel "Num. Generations" --figsize 4.5 4 --num-markers 6 --axes-position 0.12 0.15 0.83 0.82 --ylim -0.4 4.4 --xlim 0 50000 --xticks 0 10000 20000 30000 40000 50000 --xticklabels 0 10K 20K 30K 40K 50K -o /nfs/stak/users/gonzaeve/influence-shaping/outfigs/2026_05_06/17_jaamas_edits/double_chain/2-nospacing/comparison.pdf
@@ -68,3 +80,27 @@ python tools/plot/single_joint_trajectory.py /nfs/stak/users/gonzaeve/influence-
 
 ## 1 rover, 4 drones, 1 POI
 python tools/plot/single_joint_trajectory.py /nfs/stak/users/gonzaeve/influence-shaping/results/2026_05_06/13_5x5_tmp/gap_size_3/D-Indirect-Window-N3-n0/trial_1/gen_20000/test/team_0_joint_traj.csv -o /nfs/stak/users/gonzaeve/influence-shaping/outfigs/2026_05_06/13_5x5_tmp/gap_size_3/D-Indirect-Window-N3-n0/trial_1/gen_20000/test/team_0_joint_traj.svg --ind --figsize 6 2.5 --rover-observation-radius --ylabel "Y Position" --xlabel "X Position" --ylim -5 25 --xlim -5 85 --axes-position 0.1 0.1 0.7 0.8
+
+# Animations
+## 1 Rover, 1 Drone, 1 POI
+### Curvy Trajectory
+python tools/animate/single_joint_trajectory.py /Users/ever/influence-shaping/results/2026_06_09/01_video_edits/36_fix_sweep/1rover_1drone/trial_0/gen_1000/test/team_0_joint_traj_interpolated_edit.csv --use-image --xlim 20 40 --ylim 0 20 --yticks --xticks --icon-scale 0.5 --figsize 3 3 --axes-position 0.01 0.01 0.98 0.98 --dpi 2000
+
+### Nice Trajectory
+python tools/animate/single_joint_trajectory.py /Users/ever/influence-shaping/results/2026_06_09/01_video_edits/36_fix_sweep/1rover_1drone/trial_2/gen_1000/test/team_0_joint_traj_interpolated_edit_v2.csv --use-image --xlim 15 35 --ylim 10 30 --yticks --xticks --icon-scale 0.5 --figsize 3 3 --axes-position 0.01 0.01 0.98 0.98 --dpi 2000
+
+## 4 Rovers, 4 Drones, 4 POIs
+### Round Robin Trajectory
+python tools/animate/single_joint_trajectory.py /Users/ever/influence-shaping/results/2026_06_09/01_video_edits/36_fix_sweep/4rovers_4drones/trial_0/gen_1000/test/team_0_joint_traj_interpolated.csv --use-image --xlim 10 90 --ylim 0 80 --yticks --xticks --icon-scale 0.7 --figsize 12 12 --axes-position 0.01 0.01 0.98 0.98
+
+### Double Bottom Trajectory
+python tools/animate/single_joint_trajectory.py /Users/ever/influence-shaping/results/2026_06_09/01_video_edits/36_fix_sweep/4rovers_4drones/trial_20/gen_500/test/team_0_joint_traj_interpolated.csv --use-image --xlim 10 90 --ylim 0 80 --yticks --xticks --icon-scale 0.7 --figsize 12 12 --axes-position 0.01 0.01 0.98 0.98
+
+## 1 Rover, 4 Drones, 4 POIs
+python tools/animate/single_joint_trajectory.py /Users/ever/influence-shaping/results/2026_06_09/01_video_edits/41_4uavhallway/D-Indirect-Timestep/trial_1/gen_5000/test/team_0_joint_traj_interpolated_corrected.csv --use-image --yticks --xticks 20 40 60 80 --icon-scale 0.5 --figsize 12 3 --axes-position 0.01 0.01 0.98 0.98 --dpi 1000 --individual --influence-shading
+
+## 1 Rover, 6 Drones, 2 POIs
+python tools/animate/single_joint_trajectory.py /Users/ever/influence-shaping/results/2026_06_09/01_video_edits/17_jaamas_edits/single_chain/2_pois/trial_0/gen_20000/test/team_0_joint_traj_interpolated_corrected.csv --use-image --yticks --xticks 20 40 60 80 100 --icon-scale 0.7 --figsize 18 3 --axes-position 0.05 0.05 0.9 0.9 --individual --influence-shading
+
+## 2 Rovers, 12 Drones, 4 POIs
+python tools/animate/single_joint_trajectory.py /Users/ever/influence-shaping/results/2026_06_09/01_video_edits/17_jaamas_edits/double_chain/1-10spacing/trial_1/gen_100000/test/team_0_joint_traj_interpolated_corrected.csv --use-image --yticks 20 30 --xticks 20 40 60 80 100 --icon-scale 0.7 --figsize 18 6 --axes-position 0.05 0.05 0.9 0.9 --individual --influence-shading
